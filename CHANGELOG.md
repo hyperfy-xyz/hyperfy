@@ -19,6 +19,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Docker configuration for production deployment
 - Multi-stage build optimization
 - Volume mounting for assets and source code
+- GitHub Container Registry integration
+- Automated Docker image builds via GitHub Actions
 
 ### Changed
 - Updated development dependencies
@@ -29,6 +31,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Enhanced Docker configuration
 - Optimized Docker image size using Alpine base
 - Enhanced container environment configuration
+- Streamlined CI/CD pipeline configuration
 
 ### Fixed
 - ESLint configuration for ESM compatibility
@@ -37,6 +40,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Development environment setup process
 - Docker build process for Node.js 22
 - Volume permissions for assets directory
+- Container registry authentication process
 
 ## [0.1.0] - 2025-01-14
 
