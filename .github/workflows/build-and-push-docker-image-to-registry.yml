@@ -2,7 +2,7 @@ name: Build and Push Docker Image
 
 on:
   push:
-    branches: ['main']
+    branches: ['main', 'feat/github-registry']
 
 env:
   REGISTRY: ghcr.io
