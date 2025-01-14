@@ -3,9 +3,9 @@
   "version": "0.1.0",
   "type": "module",
   "main": "index.js",
-  "homepage": "https://github.com/numengames/numinia-hyperfy2#readme",
+  "homepage": "https://github.com/hyperfy-xyz/hyperfy#readme",
   "bugs": {
-    "url": "https://github.com/numengames/numinia-hyperfy2/issues"
+    "url": "https://github.com/hyperfy-xyz/hyperfy/issues"
   },
   "keywords": [
     "hyperfy",
