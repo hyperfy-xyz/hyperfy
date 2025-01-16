@@ -11,6 +11,7 @@ export function CodePane({ entity, onClose }) {
   const containerRef = useRef()
   const codeRef = useRef()
   const [editor, setEditor] = useState(null)
+
   const save = async () => {
     const world = entity.world
     const blueprint = entity.blueprint
@@ -34,9 +35,60 @@ export function CodePane({ entity, onClose }) {
     // broadcast blueprint change to server + other clients
     world.network.send('blueprintModified', { id: blueprint.id, version, script: url })
   }
+
   usePane('code', paneRef, headRef)
   useEffect(() => {
     let dead
+
+    // Load saved dimensions and position from localStorage
+    const saved = localStorage.getItem('codePaneDimensions')
+    if (saved) {
+      const { width, height, left, top } = JSON.parse(saved)
+      paneRef.current.style.width = `${width}px`
+      paneRef.current.style.height = `${height}px`
+      paneRef.current.style.left = `${left}px`
+      paneRef.current.style.top = `${top}px`
+    }
+
+    const resizeObserver = new ResizeObserver(entries => {
+      for (const entry of entries) {
+        const rect = paneRef.current.getBoundingClientRect()
+        localStorage.setItem(
+          'codePaneDimensions',
+          JSON.stringify({
+            width: entry.contentRect.width,
+            height: entry.contentRect.height,
+            left: rect.left,
+            top: rect.top,
+          })
+        )
+      }
+    })
+
+    // Add position change observer
+    const observer = new MutationObserver(() => {
+      const rect = paneRef.current.getBoundingClientRect()
+      const saved = localStorage.getItem('codePaneDimensions')
+      const dimensions = saved ? JSON.parse(saved) : {}
+      localStorage.setItem(
+        'codePaneDimensions',
+        JSON.stringify({
+          ...dimensions,
+          left: rect.left,
+          top: rect.top,
+        })
+      )
+    })
+
+    if (paneRef.current) {
+      resizeObserver.observe(paneRef.current)
+      observer.observe(paneRef.current, {
+        attributes: true,
+        attributeFilter: ['style'],
+      })
+    }
+
+    // Initialize Monaco editor
     load().then(monaco => {
       if (dead) return
       codeRef.current = entity.script?.code || '// ...'
@@ -53,21 +105,29 @@ export function CodePane({ entity, onClose }) {
         tabSize: 2,
         insertSpaces: true,
       })
+
       editor.onDidChangeModelContent(event => {
         codeRef.current = editor.getValue()
       })
+
       editor.addAction({
         id: 'save',
         label: 'Save',
         keybindings: [monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyS],
         run: save,
       })
+
       setEditor(editor)
     })
+
+    // Cleanup function
     return () => {
       dead = true
+      resizeObserver.disconnect()
+      observer.disconnect()
     }
   }, [])
+
   return (
     <div
       ref={paneRef}
@@ -85,6 +145,8 @@ export function CodePane({ entity, onClose }) {
         pointer-events: auto;
         display: flex;
         flex-direction: column;
+        resize: both;
+        overflow: auto;
         .acode-head {
           height: 40px;
           border-bottom: 1px solid rgba(255, 255, 255, 0.05);
@@ -116,6 +178,14 @@ export function CodePane({ entity, onClose }) {
           position: absolute;
           inset: 0;
           top: 20px;
+        }
+        .acode-resize-handle {
+          position: absolute;
+          right: 0;
+          bottom: 0;
+          width: 10px;
+          height: 10px;
+          cursor: se-resize;
         }
       `}
     >
