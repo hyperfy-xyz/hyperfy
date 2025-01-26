@@ -112,6 +112,10 @@ export class ClientNetwork extends System {
     this.world.entities.player?.teleport(data)
   }
 
+  onGlobalEvent = ({name, data}) => {
+    this.world.events.emit(name, data)
+  }
+
   onClose = code => {
     this.world.emit('disconnect', code || true)
     console.log('disconnect', code)

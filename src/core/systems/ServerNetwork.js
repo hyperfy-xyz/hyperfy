@@ -348,6 +348,10 @@ export class ServerNetwork extends System {
     this.sendTo(data.networkId, 'playerTeleport', data)
   }
 
+  onGlobalEvent = (socket, payload) => {
+    this.send('globalEvent', payload)
+  }
+
   onDisconnect = (socket, code) => {
     socket.player.destroy(true)
     this.sockets.delete(socket.id)
