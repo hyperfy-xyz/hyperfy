@@ -116,6 +116,10 @@ export class ClientNetwork extends System {
     this.world.events.emit(name, data)
   }
 
+  onPlayerEvent = ({name, data}) => {
+    this.world.events.emit(name, data)
+  }
+
   onClose = code => {
     this.world.emit('disconnect', code || true)
     console.log('disconnect', code)

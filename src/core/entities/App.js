@@ -448,7 +448,12 @@ export class App extends Entity {
         world.chat.add(msg, broadcast)
       },
       emit(name, data) {
-        world.network.send('globalEvent', {name, data})
+        world.network.send('globalEvent', { name, data })
+      },
+      sendTo(nid, name, data) {
+        if (world.isClient) return // client cant send events to other clients
+        
+        world.network.sendTo(nid, 'playerEvent', { name, data })
       },
       getPlayer(playerId) {
         const player = world.entities.getPlayer(playerId)
