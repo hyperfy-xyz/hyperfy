@@ -469,7 +469,7 @@ export class ClientEditor extends System {
         console.error('URL processing error:', err)
     }
   }
-  onDrop = e => {
+  onDrop = async e => {
     e.preventDefault()
     this.dropping = false
     // ensure we have admin/builder role
@@ -484,17 +484,17 @@ export class ClientEditor extends System {
         file = item.getAsFile()
       }
       if (item.kind === 'string') {
-            // Handle both text/uri-list and text/plain
-            const text = await new Promise(resolve => {
-                item.getAsString(resolve)
-            })
-            // Try to handle as URL
-            try {
-                await this.handleUrl(text.trim())
-            } catch (err) {
-                console.log('Not a valid URL:', text)
-            }
-            return
+        // Handle both text/uri-list and text/plain
+        const text = await new Promise(resolve => {
+          item.getAsString(resolve)
+        })
+        // Try to handle as URL
+        try {
+          await this.handleUrl(text.trim())
+        } catch (err) {
+          console.log('Not a valid URL:', text)
+        }
+        return
       }
     } else if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
       file = e.dataTransfer.files[0]
