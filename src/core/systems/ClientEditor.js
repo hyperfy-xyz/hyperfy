@@ -1089,4 +1089,19 @@ export class ClientEditor extends System {
     window.removeEventListener('paste', this.onPaste)
     window.removeEventListener('keydown', this.onKeyDown)
   }
+
+  // Convert asset:// URL to full URL
+  assetToFullUrl(assetUrl) {
+    if (!assetUrl || !assetUrl.startsWith('asset://')) return assetUrl
+    const filename = assetUrl.replace('asset://', '')
+    return `${window.location.origin}/assets/${filename}`
+  }
+
+  // Convert full URL back to asset:// URL
+  fullUrlToAsset(fullUrl) {
+    if (!fullUrl) return fullUrl
+    const match = fullUrl.match(/\/assets\/(.+)$/)
+    if (!match) return fullUrl
+    return `asset://${match[1]}`
+  }
 }
