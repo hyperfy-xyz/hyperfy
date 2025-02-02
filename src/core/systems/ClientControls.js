@@ -47,7 +47,8 @@ export class ClientControls extends System {
       transformMode: null,
       snapToGrid: true,
       gridSize: 1,
-      hoveredEntity: null, // Track entity under mouse
+      hoveredEntity: null,
+      transform: null
     }
     this.hyperFone = null
     this.hyperFoneActive = false
@@ -195,106 +196,115 @@ export class ClientControls extends System {
   onKeyDown = e => {
     if (this.isInputFocused()) return
     
-    // Handle build mode shortcuts
-    if (e.ctrlKey || e.metaKey) {
-      switch (e.key.toLowerCase()) {
-        case 'c': // Copy
-          if (this.buildMode.hoveredEntity?.isApp) {
-            e.preventDefault()
-            this.copyEntity(this.buildMode.hoveredEntity)
-          }
-          break
+    // Only allow editor shortcuts in build mode
+    if ((e.ctrlKey || e.metaKey) && this.buildMode.active) {
+        switch (e.key.toLowerCase()) {
+            case 'c': // Copy
+                if (this.buildMode.hoveredEntity?.isApp) {
+                    e.preventDefault()
+                    this.copyEntity(this.buildMode.hoveredEntity)
+                }
+                break
 
-        case 'x': // Cut
-          if (this.buildMode.hoveredEntity?.isApp) {
-            e.preventDefault()
-            this.copyEntity(this.buildMode.hoveredEntity)
-            this.buildMode.hoveredEntity.destroy(true)
-            this.buildMode.hoveredEntity = null
-          }
-          break
+            case 'x': // Cut
+                if (this.buildMode.hoveredEntity?.isApp) {
+                    e.preventDefault()
+                    this.copyEntity(this.buildMode.hoveredEntity)
+                    this.buildMode.hoveredEntity.destroy(true)
+                    this.buildMode.hoveredEntity = null
+                }
+                break
 
-        case 'v': // Paste
-          e.preventDefault()
-          this.pasteEntity()
-          break
-      }
-      return
+            case 'v': // Paste
+                e.preventDefault()
+                this.pasteEntity()
+                break
+        }
+        return
     }
 
-    // Single key shortcuts
-    switch (e.key.toLowerCase()) {
-      case 'delete':
-      case 'backspace':
-        if (this.buildMode.hoveredEntity?.isApp) {
-          e.preventDefault()
-          this.buildMode.hoveredEntity.destroy(true)
-          this.buildMode.hoveredEntity = null
-          this.buildMode.selectedEntity = null
-        }
-        break
+    // Single key shortcuts - only in build mode
+    if (this.buildMode.active) {
+        switch (e.key.toLowerCase()) {
+            case 'delete':
+            case 'backspace':
+                if (this.buildMode.hoveredEntity?.isApp) {
+                    e.preventDefault()
+                    this.buildMode.hoveredEntity.destroy(true)
+                    this.buildMode.hoveredEntity = null
+                    this.buildMode.selectedEntity = null
+                }
+                break
 
-      case 'g': // Grab/Move
-        if (this.buildMode.hoveredEntity?.isApp) {
-          e.preventDefault()
-          this.buildMode.selectedEntity = this.buildMode.hoveredEntity
-          this.buildMode.transformMode = 'translate'
-          this.startTransform()
-        }
-        break
+            case 'g': // Grab/Move
+                if (this.buildMode.hoveredEntity?.isApp) {
+                    e.preventDefault()
+                    this.buildMode.selectedEntity = this.buildMode.hoveredEntity
+                    this.buildMode.transformMode = 'translate'
+                    this.startTransform()
+                }
+                break
 
-      case 'r': // Rotate
-        if (this.buildMode.hoveredEntity?.isApp) {
-          e.preventDefault()
-          this.buildMode.selectedEntity = this.buildMode.hoveredEntity
-          this.buildMode.transformMode = 'rotate'
-          this.startTransform()
-        }
-        break
+            case 'r': // Rotate
+                if (this.buildMode.hoveredEntity?.isApp) {
+                    e.preventDefault()
+                    this.buildMode.selectedEntity = this.buildMode.hoveredEntity
+                    this.buildMode.transformMode = 'rotate'
+                    this.startTransform()
+                }
+                break
 
-      case 's': // Scale
-        if (this.buildMode.hoveredEntity?.isApp) {
-          e.preventDefault()
-          this.buildMode.selectedEntity = this.buildMode.hoveredEntity
-          this.buildMode.transformMode = 'scale'
-          this.startTransform()
-        }
-        break
+            case 's': // Scale
+                if (this.buildMode.hoveredEntity?.isApp) {
+                    e.preventDefault()
+                    this.buildMode.selectedEntity = this.buildMode.hoveredEntity
+                    this.buildMode.transformMode = 'scale'
+                    this.startTransform()
+                }
+                break
 
-      case 'escape':
-        if (this.buildMode.transformMode) {
-          this.cancelTransform()
+            case 'escape':
+                if (this.buildMode.transformMode) {
+                    this.cancelTransform()
+                }
+                this.buildMode.selectedEntity = null
+                break
         }
-        this.buildMode.selectedEntity = null
-        break
+    }
 
-      case 't': // Quick VRM avatar swap
-        if (this.buildMode.hoveredEntity?.isApp) {
-          const entity = this.buildMode.hoveredEntity
-          const blueprint = this.world.blueprints.get(entity.data.blueprint)
-          const isVrm = blueprint?.model?.toLowerCase().endsWith('.vrm')
-          
-          if (isVrm) {
-            e.preventDefault()
-            this.handleVrmSwap(entity, blueprint)
-          }
+    // VRM avatar swap - available at all times
+    if (e.key.toLowerCase() === 't') {
+        const hits = this.world.stage.raycastPointer(this.pointer.position)
+        let entity = null
+        for (const hit of hits) {
+            entity = hit.getEntity?.()
+            if (entity && entity.isApp) break
         }
-        break
+        
+        if (entity?.isApp) {
+            const blueprint = this.world.blueprints.get(entity.data.blueprint)
+            const isVrm = blueprint?.model?.toLowerCase().endsWith('.vrm')
+            
+            if (isVrm) {
+                e.preventDefault()
+                this.handleVrmSwap(entity, blueprint)
+            }
+        }
     }
 
     // Add HyperFone toggle
     if (e.code === 'KeyP') {
-      this.toggleHyperFone()
+        this.toggleHyperFone()
     }
 
     // Handle existing key events
     if (e.repeat) return
     const code = e.code
     for (const control of this.controls) {
-      control.api.buttons[code] = true
-      control.api.pressed[code] = true
-      const consume = control.options.onPress?.(code)
-      if (consume) break
+        control.api.buttons[code] = true
+        control.api.pressed[code] = true
+        const consume = control.options.onPress?.(code)
+        if (consume) break
     }
   }
 
@@ -324,8 +334,8 @@ export class ClientControls extends System {
                 e.button === 2 ? RMB_CODE : null
     
     if (code) {
-        // Handle middle click grab with optional duplication
-        if (code === MMB_CODE && this.buildMode.hoveredEntity?.isApp) {
+        // Handle middle click grab with optional duplication - only in build mode
+        if (code === MMB_CODE && this.buildMode.active && this.buildMode.hoveredEntity?.isApp) {
             e.preventDefault()
             
             // If Ctrl is held, duplicate the entity first
@@ -365,8 +375,8 @@ export class ClientControls extends System {
         }
     }
 
-    // Handle build mode selection
-    if (e.button === 0) { // Left click
+    // Handle build mode selection - only in build mode
+    if (this.buildMode.active && e.button === 0) { // Left click
         if (this.buildMode.hoveredEntity) {
             this.buildMode.selectedEntity = this.buildMode.hoveredEntity
         } else {
@@ -760,22 +770,19 @@ export class ClientControls extends System {
     const transform = this.buildMode.transform
     const mode = this.buildMode.transformMode
 
-    // Raycasting to transform plane
+    // Create raycaster for transform operations
     const raycaster = new THREE.Raycaster()
-    raycaster.setFromCamera(
-      new THREE.Vector2(
+    const pointer = new THREE.Vector2(
         (this.pointer.position.x / this.screen.width) * 2 - 1,
         -(this.pointer.position.y / this.screen.height) * 2 + 1
-      ),
-      this.world.camera
     )
+    raycaster.setFromCamera(pointer, this.world.camera)
 
     const intersection = raycaster.ray.intersectPlane(transform.plane, new THREE.Vector3())
     if (!intersection) return
 
     switch (mode) {
       case 'translate':
-        // Update position based on plane intersection
         const newPos = intersection.toArray()
         if (this.buildMode.snapToGrid) {
           newPos[0] = Math.round(newPos[0] / this.buildMode.gridSize) * this.buildMode.gridSize
@@ -786,7 +793,6 @@ export class ClientControls extends System {
         break
 
       case 'rotate':
-        // Calculate rotation based on mouse movement around entity center
         const center = new THREE.Vector3(...transform.startPos)
         const angle = Math.atan2(
           intersection.x - center.x,
@@ -798,7 +804,6 @@ export class ClientControls extends System {
         break
 
       case 'scale':
-        // Scale based on distance from start position
         const startDist = new THREE.Vector3(...transform.startPos).distanceTo(
           new THREE.Vector3(transform.startPointer.x, transform.startPointer.y, 0)
         )
@@ -806,13 +811,13 @@ export class ClientControls extends System {
           new THREE.Vector3(this.pointer.position.x, this.pointer.position.y, 0)
         )
         const scale = currentDist / startDist
-        entity.modify({ scale: [scale, scale, scale] })
+        const newScale = [scale, scale, scale]
+        entity.modify({ scale: newScale })
         break
     }
   }
 
   createTransformPlane(entity) {
-    // Create a plane aligned with the camera view for transforming
     const normal = new THREE.Vector3(0, 1, 0)
     const point = new THREE.Vector3(...entity.data.position)
     return new THREE.Plane(normal, -point.dot(normal))
@@ -849,32 +854,39 @@ export class ClientControls extends System {
   }
 
   update(delta) {
-    // Update hovered entity
-    const hits = this.world.stage.raycastPointer(this.pointer.position)
-    let entity = null
-    for (const hit of hits) {
-        entity = hit.getEntity?.()
-        if (entity && entity.isApp) break
-    }
-    this.buildMode.hoveredEntity = entity
-
-    // Handle moving entities
-    if (this.mmbDown) {
-        const hit = this.world.stage.raycastPointer(this.pointer.position)[0]
-        if (hit) {
-            Object.values(this.world.entities.list).forEach(entity => {
-                if (entity.data.mover === this.world.network.id) {
-                    entity.modify({ 
-                        position: hit.point.toArray() 
-                    })
-                }
-            })
+    // Update hovered entity only in build mode
+    if (this.buildMode.active) {
+        const hits = this.world.stage.raycastPointer(this.pointer.position)
+        let entity = null
+        for (const hit of hits) {
+            entity = hit.getEntity?.()
+            if (entity && entity.isApp) break
         }
-    }
+        this.buildMode.hoveredEntity = entity
 
-    // Handle transform operations if active
-    if (this.buildMode.transformMode && this.buildMode.selectedEntity) {
-        this.updateTransform(delta)
+        // Handle moving entities
+        if (this.mmbDown) {
+            const hit = this.world.stage.raycastPointer(this.pointer.position)[0]
+            if (hit) {
+                Object.values(this.world.entities.list).forEach(entity => {
+                    if (entity.data.mover === this.world.network.id) {
+                        entity.modify({ 
+                            position: hit.point.toArray() 
+                        })
+                    }
+                })
+            }
+        }
+
+        // Handle transform operations if active
+        if (this.buildMode.transformMode && this.buildMode.selectedEntity) {
+            this.updateTransform(delta)
+        }
+    } else {
+        // Clear build mode state when not active
+        this.buildMode.hoveredEntity = null
+        this.buildMode.selectedEntity = null
+        this.buildMode.transformMode = null
     }
   }
 

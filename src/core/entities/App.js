@@ -179,6 +179,10 @@ export class App extends Entity {
       if (this.control.buttons.ShiftLeft) {
         // if shift is down we're raising and lowering the app
         this.root.position.y -= this.world.controls.pointer.delta.y * delta * 0.5
+      } else if (this.control.buttons.ControlLeft) {
+        // if control is down, scale up/down with mouse wheel
+        const scaleFactor = 1 + (this.control.scroll.delta * delta)
+        this.root.scale.multiplyScalar(scaleFactor)
       } else {
         // otherwise move with the cursor
         const position = this.world.controls.pointer.position
@@ -205,6 +209,7 @@ export class App extends Entity {
           id: this.data.id,
           position: this.root.position.toArray(),
           quaternion: this.root.quaternion.toArray(),
+          scale: this.root.scale.toArray(),
         })
         this.lastMoveSendTime = 0
       }

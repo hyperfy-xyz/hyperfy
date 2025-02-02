@@ -9,6 +9,7 @@ const SPEED_ADJUST_FACTOR = 1.2
 const DAMPING = 0.9 // Damping factor (0 = full stop, 1 = no damping)
 const MAX_VELOCITY = 2 // Maximum velocity for any direction
 const ACCELERATION = 8 // How quickly we reach max speed
+const SCALE_ADJUST_FACTOR = 1.1 // Adjust this value to control scaling sensitivity
 
 export class BuildMode extends System {
 	constructor(world) {
@@ -35,6 +36,11 @@ export class BuildMode extends System {
 		this.originalCameraQuaternion = new THREE.Quaternion()
 		this.originalPlayerVelocity = new THREE.Vector3()
 
+		// Add scale tracking for selected object
+		this.selectedObject = null
+		this.transformMode = 'translate' // 'translate', 'rotate', 'scale'
+		this.originalScale = new THREE.Vector3()
+
 		// Bind methods
 		this.onMouseMove = this.onMouseMove.bind(this)
 		this.onMouseDown = this.onMouseDown.bind(this)
@@ -48,6 +54,15 @@ export class BuildMode extends System {
 				if (code === 'KeyB') {
 					this.toggleBuildMode()
 				}
+				if (code === 'KeyR' && this.active) {
+					this.transformMode = 'rotate'
+				}
+				if (code === 'KeyS' && this.active) {
+					this.transformMode = 'scale'
+				}
+				if (code === 'KeyT' && this.active) {
+					this.transformMode = 'translate'
+				}
 				if ((code === 'ShiftLeft' || code === 'ShiftRight') && this.active) {
 					document.body.style.cursor = 'none'
 				}
@@ -60,6 +75,22 @@ export class BuildMode extends System {
 			onScroll: () => {
 				if (!this.active) return false
 				const delta = this.control.scroll.delta
+
+				// Handle object transformation based on mode
+				if (this.selectedObject) {
+					if (this.transformMode === 'scale') {
+						const scaleFactor = delta < 0 ? SCALE_ADJUST_FACTOR : 1 / SCALE_ADJUST_FACTOR
+						this.selectedObject.scale.multiplyScalar(scaleFactor)
+						return true
+					} else if (this.transformMode === 'rotate') {
+						// Handle rotation
+						const rotationAmount = delta < 0 ? Math.PI / 16 : -Math.PI / 16
+						this.selectedObject.rotation.y += rotationAmount
+						return true
+					}
+				}
+
+				// Default camera speed adjustment
 				if (delta < 0) {
 					this.moveSpeed = Math.min(MAX_CAMERA_SPEED, this.moveSpeed * SPEED_ADJUST_FACTOR)
 				} else if (delta > 0) {
@@ -113,6 +144,9 @@ export class BuildMode extends System {
 	toggleBuildMode() {
 		this.active = !this.active
 		const player = this.world.entities.player
+
+		// Update ClientControls build mode state
+		this.world.controls.buildMode.active = this.active
 
 		if (this.active) {
 			// Enter build mode
@@ -189,6 +223,11 @@ export class BuildMode extends System {
 			document.removeEventListener('mouseup', this.onMouseUp)
 			document.body.style.cursor = 'default'
 			this.isMouseDown = false
+
+			// Clear build mode state in ClientControls
+			this.world.controls.buildMode.hoveredEntity = null
+			this.world.controls.buildMode.selectedEntity = null
+			this.world.controls.buildMode.transformMode = null
 
 			// Return control and restore original camera
 			this.control.camera.unclaim()
@@ -300,6 +339,22 @@ export class BuildMode extends System {
 	moveRight(distance) { }
 	moveUp(distance) { }
 	moveDown(distance) { }
+
+	// Add method to select an object
+	selectObject(object) {
+		this.selectedObject = object
+		if (object) {
+			this.originalScale.copy(object.scale)
+			this.transformMode = 'translate'
+		}
+	}
+
+	// Add method to deselect object
+	deselectObject() {
+		this.selectedObject = null
+		this.originalScale.set(1, 1, 1)
+		this.transformMode = 'translate'
+	}
 
 	destroy() {
 		window.removeEventListener('resize', this.onResize)
