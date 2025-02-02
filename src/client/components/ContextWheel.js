@@ -3,6 +3,17 @@ import { useLayoutEffect, useMemo, useRef } from 'react'
 import { cls } from '../utils'
 
 export function ContextWheel({ x, y, actions }) {
+  // Update actions to handle frozen state
+  const updatedActions = actions.map(action => {
+    if (action.type === 'move') {
+      return {
+        ...action,
+        disabled: action.frozen
+      }
+    }
+    return action
+  })
+
   const ref = useRef()
   return (
     <div
@@ -16,7 +27,7 @@ export function ContextWheel({ x, y, actions }) {
         user-select: none;
       `}
     >
-      <ContextRadial innerRadius={50} outerRadius={150} actions={actions} gapAngle={6} />
+      <ContextRadial innerRadius={50} outerRadius={150} actions={updatedActions} gapAngle={6} />
     </div>
   )
 }
@@ -81,7 +92,11 @@ function ContextRadial({ innerRadius, outerRadius, actions, gapAngle }) {
           transition: transform 0.1s ease-out;
           color: white;
           &.disabled {
-            color: #8f8f8f;
+            color: rgba(255, 255, 255, 0.3);
+            pointer-events: none;
+            path {
+              fill: rgba(0, 0, 0, 0.3);
+            }
           }
           &:hover:not(.disabled) {
             cursor: pointer;

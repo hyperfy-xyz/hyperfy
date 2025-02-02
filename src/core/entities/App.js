@@ -30,6 +30,7 @@ export class App extends Entity {
     this.worldListeners = new Map()
     this.listeners = {}
     this.eventQueue = []
+    this.frozen = data.frozen || false
     this.build()
   }
 
@@ -94,6 +95,10 @@ export class App extends Entity {
     this.root = root
     this.root.position.fromArray(this.data.position)
     this.root.quaternion.fromArray(this.data.quaternion)
+    // Set scale if it exists in data
+    if (this.data.scale) {
+      this.root.scale.fromArray(this.data.scale)
+    }
     // activate
     this.root.activate({ world: this.world, entity: this, physics: !this.data.mover })
     // execute script
@@ -176,6 +181,14 @@ export class App extends Entity {
   update(delta) {
     // if we're moving the app, handle that
     if (this.data.mover === this.world.network.id) {
+      // Don't allow movement if frozen
+      if (this.frozen) {
+        this.data.mover = null
+        this.world.network.send('entityModified', { id: this.data.id, mover: null })
+        this.build()
+        return
+      }
+
       if (this.control.buttons.ShiftLeft) {
         // if shift is down we're raising and lowering the app
         this.root.position.y -= this.world.controls.pointer.delta.y * delta * 0.5
@@ -225,7 +238,7 @@ export class App extends Entity {
       }
     }
     // if someone else is moving the app, interpolate updates
-    if (this.data.mover && this.data.mover !== this.world.network.id) {
+    if (this.data.mover && this.data.mover !== this.world.network.id && !this.frozen) {
       this.networkPos.update(delta)
       this.networkQuat.update(delta)
     }
@@ -271,20 +284,47 @@ export class App extends Entity {
       rebuild = true
     }
     if (data.hasOwnProperty('mover')) {
+      // Don't allow moving if frozen
+      if (this.frozen && data.mover) {
+        return
+      }
       this.data.mover = data.mover
       rebuild = true
     }
     if (data.hasOwnProperty('position')) {
-      this.data.position = data.position
-      this.networkPos.pushArray(data.position)
+      // Don't update position if frozen
+      if (!this.frozen) {
+        this.data.position = data.position
+        this.networkPos.pushArray(data.position)
+      }
     }
     if (data.hasOwnProperty('quaternion')) {
-      this.data.quaternion = data.quaternion
-      this.networkQuat.pushArray(data.quaternion)
+      // Don't update rotation if frozen
+      if (!this.frozen) {
+        this.data.quaternion = data.quaternion
+        this.networkQuat.pushArray(data.quaternion)
+      }
+    }
+    if (data.hasOwnProperty('scale')) {
+      // Don't update scale if frozen
+      if (!this.frozen) {
+        this.data.scale = data.scale
+        this.root?.scale.fromArray(data.scale)
+      }
     }
     if (data.hasOwnProperty('state')) {
       this.data.state = data.state
       rebuild = true
+    }
+    if (data.hasOwnProperty('frozen')) {
+      this.frozen = data.frozen
+      this.data.frozen = data.frozen
+
+      // If frozen, make sure we're not being moved
+      if (this.frozen && this.data.mover) {
+        this.data.mover = null
+        rebuild = true
+      }
     }
     if (rebuild) {
       this.build()
@@ -292,6 +332,9 @@ export class App extends Entity {
   }
 
   move() {
+    // Don't allow moving if frozen
+    if (this.frozen) return
+
     this.data.mover = this.world.network.id
     this.build()
     this.world.network.send('entityModified', { id: this.data.id, mover: this.data.mover })
