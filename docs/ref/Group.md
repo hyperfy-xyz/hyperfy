@@ -5,4 +5,3 @@ A regular old node with no other behavior. Useful for grouping things together u
 ### `group.{...Node}`
 
 Inherits all [Node](/docs/ref/Node.md) properties
-

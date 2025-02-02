@@ -14,11 +14,11 @@ Defaults to `flex`.
 
 ### `uiview.width`: Number
 
-The width of the view in pixels. Defaults to `100`.
+The width of the view in pixels. Defaults to `null` (auto).
 
 ### `uiview.height`: Number
 
-The height of the view in pixels. Defaults to `100`.
+The height of the view in pixels. Defaults to `null` (auto).
 
 ### `uiview.backgroundColor`: String
 
@@ -29,6 +29,7 @@ Defaults to `null`.
 ### `uiview.borderRadius`: Number
 
 The radius of the border in pixels.
+Defaults to `0`.
 
 ### `uiview.margin`: Number
 
@@ -60,17 +61,20 @@ Defaults to `stretch`.
 Options: `flex-start`, `flex-end`, `stretch`, `center`, `space-between`, `space-around`, `space-evenly`.
 Defaults to `flex-start`.
 
-### `uiview.flexBasis`: Number
+### `uiview.flexBasis`: Number | null
 
-Defaults to `null`.
+The initial main size of the view.
+Defaults to `null` (auto).
 
 ### `uiview.flexGrow`: Number
 
-Defaults to `null`.
+The grow factor of the view.
+Defaults to `0`.
 
 ### `uiview.flexShrink`: Number
 
-Defaults to `null`.
+The shrink factor of the view.
+Defaults to `1`.
 
 ### `uiview.flexWrap`: String
 
@@ -79,9 +83,18 @@ Defaults to `no-wrap`.
 
 ### `uiview.gap`: Number
 
+The gap between child elements.
 Defaults to `0`.
 
 ### `uiview.{...Node}`
 
 Inherits all [Node](/docs/ref/Node.md) properties
 
+### Notes
+
+- Must be a child of a UI node
+- Uses Yoga for flexbox layout
+- Automatically handles resolution scaling
+- Updates layout on property changes
+- Supports nested views
+- Uses canvas for rendering

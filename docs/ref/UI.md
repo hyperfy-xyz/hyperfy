@@ -79,3 +79,21 @@ Defaults to `flex-start`.
 
 Inherits all [Node](/docs/ref/Node.md) properties
 
+### Additional Properties
+
+### `ui.res`: Number
+
+Resolution multiplier for the UI canvas. Higher values result in sharper text but use more memory. Defaults to `2`.
+
+### `ui.transparent`: Boolean
+
+Whether the UI material should be transparent. Defaults to `true`.
+
+### Notes
+
+- Cannot be nested inside another UI node
+- Uses Yoga for flexbox layout
+- Automatically handles resolution scaling
+- Supports billboarding for camera-facing UI
+- Supports hit detection for interaction
+- Uses canvas for rendering

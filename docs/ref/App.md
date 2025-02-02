@@ -48,7 +48,7 @@ NOTE: Blender GLTF exporter renames objects in some cases, eg by removing spaces
 
 Creates and returns a node of the specified name.
 
-#### `app.control(options)`: Control
+### `app.control(options)`: Control
 
 TODO: provides control to a client to respond to inputs and move the camera etc
 
@@ -56,3 +56,50 @@ TODO: provides control to a client to respond to inputs and move the camera etc
 
 Inherits all [Node](/docs/ref/Node.md) properties
 
+### Additional Properties and Methods
+
+### `app.mode`: String
+
+Current app state:
+```typescript
+{
+  ACTIVE: 'active',     // Normal operation
+  MOVING: 'moving',     // Being moved by user
+  LOADING: 'loading',   // Loading assets
+  CRASHED: 'crashed'    // Script error occurred
+}
+```
+
+### `app.blueprint`: Object
+
+The app's blueprint configuration:
+```typescript
+{
+  id: String,           // Blueprint ID
+  model?: String,       // Optional 3D model URL
+  script?: String,      // Optional script URL
+  config?: Object,      // Custom configuration
+  version: Number      // Blueprint version
+}
+```
+
+### `app.configure(fn)`: void
+
+Sets a configuration handler function that returns configuration options for the app.
+
+### `app.config`: Object
+
+Access to the app's blueprint configuration.
+
+### `app.emit(name, data)`: void
+
+Emits a local event. Cannot emit internal events (fixedUpdate, update, lateUpdate, enter, leave, chat).
+
+### Notes
+
+- Supports hot reloading through blueprint versions
+- Handles network synchronization
+- Manages asset loading states
+- Provides secure script execution
+- Supports move/edit modes
+- Handles script crashes gracefully

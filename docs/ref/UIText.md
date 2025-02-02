@@ -16,31 +16,31 @@ Defaults to `flex`.
 
 The text to display.
 
-### `uiview.fontSize`: Number
+### `uitext.fontSize`: Number
 
 The font size in pixels.
-Defauls to `16`.
+Defaults to `16`.
 
-### `uiview.color`: Number
+### `uitext.color`: String
 
 The font color.
-Defauls to `#000000`.
+Defaults to `#000000`.
 
-### `uiview.lineHeight`: Number
+### `uitext.lineHeight`: Number
 
 The line height.
 Defaults to `1.2`.
 
-### `uiview.textAlign`: String
+### `uitext.textAlign`: String
 
 Options: `left`, `center`, `right`.
 Defaults to `left`.
 
-### `uiview.fontFamily`: String
+### `uitext.fontFamily`: String
 
 Defaults to `Rubik`.
 
-### `uiview.fontWeight`: Number
+### `uitext.fontWeight`: String | Number
 
 Defaults to `normal`, can also be a number like `100` or string like `bold`.
 
@@ -48,3 +48,11 @@ Defaults to `normal`, can also be a number like `100` or string like `bold`.
 
 Inherits all [Node](/docs/ref/Node.md) properties
 
+### Notes
+
+- Must be a child of a UI node
+- Automatically wraps text to fit width
+- Supports font weight variations
+- Handles text measurement and layout
+- Updates automatically when properties change
+- Uses canvas for text rendering

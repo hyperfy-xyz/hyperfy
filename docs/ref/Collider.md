@@ -32,3 +32,29 @@ A trigger will not collide with anything, and instead will trigger the `onTrigge
 
 Inherits all [Node](/docs/ref/Node.md) properties
 
+### Additional Properties
+
+### `collider.layer`: String
+
+The physics layer for the collider. Defaults to `'environment'`.
+
+### `collider.staticFriction`: Number
+
+The static friction coefficient. Defaults to `0.6`.
+
+### `collider.dynamicFriction`: Number
+
+The dynamic friction coefficient. Defaults to `0.6`.
+
+### `collider.restitution`: Number
+
+The restitution (bounciness) coefficient. Defaults to `0`.
+
+### `collider.setMaterial(staticFriction, dynamicFriction, restitution)`
+
+Sets the physics material properties for the collider.
+
+Parameters:
+- `staticFriction`: Static friction coefficient
+- `dynamicFriction`: Dynamic friction coefficient
+- `restitution`: Restitution coefficient
