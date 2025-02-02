@@ -108,8 +108,8 @@ export function CodePane({ entity, onClose, world }) {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          // WARNING: Do not expose your API key in production code!
-          'Authorization': 'Bearer OPENAPIKEY' // Replace with your actual API key.
+          // WARNING: Do not expose your API key in production! For testing only!
+          'Authorization': 'Bearer sk-OPENAPIKEY' // IMPORTANT!!! REPLACE OPENAPIKEY WITH YOUR KEY!!! IDK HOW TO MAKE THIS AN ENV VARIABLE!!!
         },
         body: JSON.stringify({
           model: 'gpt-4o', // or your designated model, e.g., "gpt-4-mini" if applicable
