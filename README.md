@@ -2,9 +2,7 @@
 
 ## Overview
 
-<div align="center">
-  <img src="overview.png" alt="Hyperfy Ecosystem" width="100%" />
-</div>
+Cru's Janky AIGC test! 
 
 ## 🧬 Features
 
@@ -15,6 +13,7 @@
 - Realtime coding in-world (for devs)
 - Fully interactive and interoperable app format
 - Highly extensible
+- Moar AI
 
 ## 🦹‍♀️ Use Cases
 
