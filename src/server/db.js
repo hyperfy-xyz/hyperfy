@@ -128,4 +128,18 @@ const migrations = [
       }
     }
   },
+  // blueprint.config -> blueprint.props
+  async db => {
+    const blueprints = await db('blueprints')
+    for (const blueprint of blueprints) {
+      const data = JSON.parse(blueprint.data)
+      data.props = data.config
+      delete data.config
+      await db('blueprints')
+        .where('id', blueprint.id)
+        .update({
+          data: JSON.stringify(data),
+        })
+    }
+  },
 ]

@@ -3,6 +3,7 @@ import { useEffect, useRef, useState, useCallback } from 'react'
 import {
   BoxIcon,
   CircleCheckIcon,
+  DownloadIcon,
   EyeIcon,
   FileCode2Icon,
   FileIcon,
@@ -21,6 +22,8 @@ import { hashFile } from '../../core/utils-client'
 import { usePane } from './usePane'
 import { useUpdate } from './useUpdate'
 import { cls } from './cls'
+import { exportApp, isDevBuild } from '../../core/extras/appTools'
+import { downloadFile } from '../../core/extras/downloadFile'
 
 // Add a global store for copied values
 const copiedValues = {
@@ -104,6 +107,14 @@ export function AppPane({ world, app }) {
     })
     setFrozen(newValue)
   }
+  const download = async () => {
+    try {
+      const file = await exportApp(app.blueprint, world.loader.loadFile)
+      downloadFile(file)
+    } catch (err) {
+      console.error(err)
+    }
+  }
   return (
     <div
       ref={paneRef}
@@ -125,19 +136,22 @@ export function AppPane({ world, app }) {
           border-bottom: 1px solid rgba(255, 255, 255, 0.05);
           display: flex;
           align-items: center;
-          padding: 0 0 0 10px;
+          padding: 0 5px 0 10px;
           &-title {
             padding-left: 7px;
             font-weight: 500;
             flex: 1;
           }
-          &-close {
-            width: 40px;
+          &-btn {
+            width: 30px;
             height: 40px;
             display: flex;
             align-items: center;
             justify-content: center;
             cursor: pointer;
+            &.download {
+              color: ${isDevBuild() ? '#ff6161' : 'white'};
+            }
           }
         }
         .apane-content {
@@ -308,7 +322,10 @@ export function AppPane({ world, app }) {
       <div className='apane-head' ref={headRef}>
         <EyeIcon size={20} />
         <div className='apane-head-title'>Inspect</div>
-        <div className='apane-head-close' onClick={() => world.emit('inspect', null)}>
+        <div className='apane-head-btn download' onClick={download}>
+          <DownloadIcon size={18} />
+        </div>
+        <div className='apane-head-btn' onClick={() => world.emit('inspect', null)}>
           <XIcon size={20} />
         </div>
       </div>
@@ -414,12 +431,12 @@ function PlayerPane({ world, player }) {
 
 function Fields({ app, blueprint }) {
   const world = app.world
-  const [fields, setFields] = useState(app.getConfig?.() || [])
+  const [fields, setFields] = useState(app.fields)
   const [position, setPosition] = useState(app.root?.position || new THREE.Vector3())
   const [rotation, setRotation] = useState(app.root?.rotation || new THREE.Euler())
   const [scale, setScale] = useState(app.root?.scale || new THREE.Vector3(1, 1, 1))
   const [frozen, setFrozen] = useState(app.frozen || false)
-  const config = blueprint.config || {}
+  const props = blueprint.props || {}
 
   // Update state when app changes
   useEffect(() => {
@@ -469,14 +486,14 @@ function Fields({ app, blueprint }) {
   ]
 
   useEffect(() => {
-    app.onConfigure = fn => setFields(fn?.() || [])
+    app.onFields = setFields
     return () => {
-      app.onConfigure = null
+      app.onFields = null
     }
   }, [])
 
   const modify = (key, value) => {
-    if (config[key] === value) return
+    if (props[key] === value) return
 
     // Don't allow transform changes if frozen
     if ((key === 'position' || key === 'rotation' || key === 'scale') && app.frozen) return
@@ -541,15 +558,15 @@ function Fields({ app, blueprint }) {
 
     // Handle TOD switch
     if (key === 'tod') {
-      config[key] = value
+      props[key] = value
 
       // update blueprint locally (also rebuilds apps)
       const id = blueprint.id
       const version = blueprint.version + 1
-      world.blueprints.modify({ id, version, config })
+      world.blueprints.modify({ id, version, props })
 
       // broadcast blueprint change to server + other clients
-      world.network.send('blueprintModified', { id, version, config })
+      world.network.send('blueprintModified', { id, version, props })
       return
     }
 
@@ -566,7 +583,7 @@ function Fields({ app, blueprint }) {
   }
 
   return transformFields.map(field => (
-    <Field key={field.key} world={world} config={config} field={field} value={config[field.key] ?? field.value} modify={modify} />
+    <Field key={field.key} world={world} props={props} field={field} value={props[field.key] ?? field.value} modify={modify} />
   ))
 }
 
@@ -578,18 +595,18 @@ const fieldTypes = {
   switch: FieldSwitch,
   vector3: FieldVector3,
   euler: FieldEuler,
-  empty: () => null,
 }
 
-function Field({ world, config, field, value, modify }) {
+function Field({ world, props, field, value, modify }) {
   if (field.when) {
     for (const rule of field.when) {
-      if (rule.op === 'eq' && config[rule.key] !== rule.value) {
+      if (rule.op === 'eq' && props[rule.key] !== rule.value) {
         return null
       }
     }
   }
-  const FieldControl = fieldTypes[field.type] || fieldTypes.empty
+  const FieldControl = fieldTypes[field.type]
+  if (!FieldControl) return null
   return <FieldControl world={world} field={field} value={value} modify={modify} />
 }
 
@@ -849,6 +866,7 @@ function FieldText({ world, field, value, modify }) {
         <input
           type='text'
           value={localValue || ''}
+          placeholder={field.placeholder}
           onChange={e => setLocalValue(e.target.value)}
           onKeyDown={e => {
             if (e.code === 'Enter') {
@@ -1003,7 +1021,7 @@ function FieldFile({ world, field, value, modify }) {
           overflow: hidden;
           display: flex;
           align-items: center;
-          height: 36px;
+          height: 34px;
           background-color: #252630;
           border-radius: 10px;
           padding: 0 0 0 8px;
@@ -1029,7 +1047,7 @@ function FieldFile({ world, field, value, modify }) {
           }
           .field-file-x {
             width: 30px;
-            height: 36px;
+            height: 34px;
             display: flex;
             align-items: center;
             justify-content: center;
@@ -1037,7 +1055,7 @@ function FieldFile({ world, field, value, modify }) {
           }
           .field-file-loading {
             width: 30px;
-            height: 36px;
+            height: 34px;
             display: flex;
             align-items: center;
             justify-content: center;

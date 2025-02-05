@@ -7,81 +7,83 @@ const view = app.create('uiview')
 view.backgroundColor = 'rgba(0, 0, 0, 0.5)'
 ```
 
-### `uiview.display`: String
+## Properties
+
+### `.display`: String
 
 Either `none` or `flex`. 
 Defaults to `flex`.
 
-### `uiview.width`: Number
+### `.width`: Number
 
 The width of the view in pixels. Defaults to `100`.
 
-### `uiview.height`: Number
+### `.height`: Number
 
 The height of the view in pixels. Defaults to `100`.
 
-### `uiview.backgroundColor`: String
+### `.backgroundColor`: String
 
 The background color of the view. 
 Can be hex (eg `#000000`) or rgba (eg `rgba(0, 0, 0, 0.5)`).
 Defaults to `null`.
 
-### `uiview.borderRadius`: Number
+### `.borderRadius`: Number
 
 The radius of the border in pixels.
 
-### `uiview.margin`: Number
+### `.margin`: Number
 
 The outer margin of the view in pixels.
 Defaults to `0`.
 
-### `uiview.padding`: Number
+### `.padding`: Number
 
 The inner padding of the view in pixels.
 Defaults to `0`.
 
-### `uiview.flexDirection`: String
+### `.flexDirection`: String
 
 The flex direction. `column`, `column-reverse`, `row` or `row-reverse`.
 Defaults to `column`.
 
-### `uiview.justifyContent`: String
+### `.justifyContent`: String
 
 Options: `flex-start`, `flex-end`, `center`.
 Defaults to `flex-start`.
 
-### `uiview.alignItems`: String
+### `.alignItems`: String
 
 Options: `stretch`, `flex-start`, `flex-end`, `center`, `baseline`.
 Defaults to `stretch`.
 
-### `uiview.alignContent`: String
+### `.alignContent`: String
 
 Options: `flex-start`, `flex-end`, `stretch`, `center`, `space-between`, `space-around`, `space-evenly`.
 Defaults to `flex-start`.
 
-### `uiview.flexBasis`: Number
+### `.flexBasis`: Number
 
 Defaults to `null`.
 
-### `uiview.flexGrow`: Number
+### `.flexGrow`: Number
 
 Defaults to `null`.
 
-### `uiview.flexShrink`: Number
+### `.flexShrink`: Number
 
 Defaults to `null`.
 
-### `uiview.flexWrap`: String
+### `.flexWrap`: String
 
 Options: `no-wrap`, `wrap`.
 Defaults to `no-wrap`.
 
-### `uiview.gap`: Number
+### `.gap`: Number
 
 Defaults to `0`.
 
-### `uiview.{...Node}`
+### `.{...Node}`
 
 Inherits all [Node](/docs/ref/Node.md) properties
 

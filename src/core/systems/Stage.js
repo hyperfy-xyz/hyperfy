@@ -178,6 +178,16 @@ export class Stage extends System {
         }
         raw.needsUpdate = true
       },
+      get emissiveIntensity() {
+        return raw.emissiveIntensity
+      },
+      set emissiveIntensity(value) {
+        if (!isNumber(value)) {
+          throw new Error('[material] emissiveIntensity not a number')
+        }
+        raw.emissiveIntensity = value
+        raw.needsUpdate = true
+      },
       // TODO: not yet
       // clone() {
       //   return self.createMaterial(options).proxy

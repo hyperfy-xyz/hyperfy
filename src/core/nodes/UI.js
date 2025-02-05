@@ -1,9 +1,20 @@
 import * as THREE from '../extras/three'
-import { isBoolean, isNumber } from 'lodash-es'
+import { isBoolean, isNumber, isString } from 'lodash-es'
 
 import { Node } from './Node'
 import { fillRoundRect } from '../extras/fillRoundRect'
-import { AlignContent, AlignItems, FlexDirection, JustifyContent } from '../extras/yoga'
+import {
+  AlignContent,
+  AlignItems,
+  FlexDirection,
+  FlexWrap,
+  isAlignContent,
+  isAlignItem,
+  isFlexDirection,
+  isFlexWrap,
+  isJustifyContent,
+  JustifyContent,
+} from '../extras/yoga'
 import CustomShaderMaterial from '../libs/three-custom-shader-material'
 
 const v1 = new THREE.Vector3()
@@ -16,6 +27,19 @@ const m1 = new THREE.Matrix4()
 const iQuaternion = new THREE.Quaternion(0, 0, 0, 1)
 const iScale = new THREE.Vector3(1, 1, 1)
 
+const billboards = ['none', 'full', 'y']
+const pivots = [
+  'top-left',
+  'top-center',
+  'top-right',
+  'center-left',
+  'center',
+  'center-right',
+  'bottom-left',
+  'bottom-center',
+  'bottom-right',
+]
+
 const defaults = {
   width: 100,
   height: 100,
@@ -24,7 +48,7 @@ const defaults = {
 
   lit: false,
   doubleside: true,
-  billboard: null,
+  billboard: 'none',
   pivot: 'center',
 
   transparent: true,
@@ -35,6 +59,8 @@ const defaults = {
   justifyContent: 'flex-start',
   alignItems: 'stretch',
   alignContent: 'flex-start',
+  flexWrap: 'no-wrap',
+  gap: 0,
 }
 
 export class UI extends Node {
@@ -42,24 +68,26 @@ export class UI extends Node {
     super(data)
     this.name = 'ui'
 
-    this.width = data.width === undefined ? defaults.width : data.width
-    this.height = data.height === undefined ? defaults.height : data.height
-    this.size = data.size === undefined ? defaults.size : data.size
-    this.res = data.res === undefined ? defaults.res : data.res
+    this.width = data.width
+    this.height = data.height
+    this.size = data.size
+    this.res = data.res
 
-    this.lit = data.lit === undefined ? defaults.lit : data.lit
-    this.doubleside = data.doubleside === undefined ? defaults.doubleside : data.doubleside
-    this.billboard = data.billboard === undefined ? defaults.billboard : data.billboard
-    this.pivot = data.pivot === undefined ? defaults.pivot : data.pivot
+    this.lit = data.lit
+    this.doubleside = data.doubleside
+    this.billboard = data.billboard
+    this.pivot = data.pivot
 
-    this.transparent = data.transparent === undefined ? defaults.transparent : data.transparent
-    this.backgroundColor = data.backgroundColor === undefined ? defaults.backgroundColor : data.backgroundColor
-    this.borderRadius = data.borderRadius === undefined ? defaults.borderRadius : data.borderRadius
-    this.padding = data.padding === undefined ? defaults.padding : data.padding
-    this.flexDirection = data.flexDirection === undefined ? defaults.flexDirection : data.flexDirection
-    this.justifyContent = data.justifyContent === undefined ? defaults.justifyContent : data.justifyContent
-    this.alignItems = data.alignItems === undefined ? defaults.alignItems : data.alignItems
-    this.alignContent = data.alignContent === undefined ? defaults.alignContent : data.alignContent
+    this.transparent = data.transparent
+    this.backgroundColor = data.backgroundColor
+    this.borderRadius = data.borderRadius
+    this.padding = data.padding
+    this.flexDirection = data.flexDirection
+    this.justifyContent = data.justifyContent
+    this.alignItems = data.alignItems
+    this.alignContent = data.alignContent
+    this.flexWrap = data.flexWrap
+    this.gap = data.gap
 
     this.ui = this
   }
@@ -82,7 +110,7 @@ export class UI extends Node {
     this.mesh = new THREE.Mesh(this.geometry, this.material)
     this.mesh.matrixAutoUpdate = false
     this.mesh.matrixWorldAutoUpdate = false
-    if (this._billboard) {
+    if (this._billboard !== 'none') {
       v1.setFromMatrixPosition(this.matrixWorld)
       this.mesh.matrixWorld.compose(v1, iQuaternion, iScale)
     } else {
@@ -145,6 +173,8 @@ export class UI extends Node {
     this.yogaNode.setJustifyContent(JustifyContent[this._justifyContent])
     this.yogaNode.setAlignItems(AlignItems[this._alignItems])
     this.yogaNode.setAlignContent(AlignContent[this._alignContent])
+    this.yogaNode.setFlexWrap(FlexWrap[this._flexWrap])
+    this.yogaNode.setGap(Yoga.GUTTER_ALL, this._gap)
     this.build()
     this.needsRedraw = true
     this.setDirty()
@@ -161,7 +191,7 @@ export class UI extends Node {
       this.draw()
     }
     if (didMove) {
-      if (this._billboard) {
+      if (this._billboard !== 'none') {
         v1.setFromMatrixPosition(this.matrixWorld)
         this.mesh.matrixWorld.compose(v1, iQuaternion, iScale)
       } else {
@@ -205,6 +235,8 @@ export class UI extends Node {
     this._justifyContent = source._justifyContent
     this._alignItems = source._alignItems
     this._alignContent = source._alignContent
+    this._flexWrap = source._flexWrap
+    this._gap = source._gap
     return this
   }
 
@@ -246,7 +278,7 @@ export class UI extends Node {
   }
 
   createMaterial(lit, texture, billboard, transparent, doubleside) {
-    if (!billboard) {
+    if (billboard === 'none') {
       const material = lit
         ? new THREE.MeshStandardMaterial({ roughness: 1, metalness: 0 })
         : new THREE.MeshBasicMaterial({})
@@ -311,10 +343,13 @@ export class UI extends Node {
     return this._width
   }
 
-  set width(value) {
-    this._width = isNumber(value) ? value : defaults.width
+  set width(value = defaults.width) {
+    if (!isNumber(value)) {
+      throw new Error('[ui] width not a number')
+    }
+    if (this._width === value) return
+    this._width = value
     this.yogaNode?.setWidth(this._width * this._res)
-    // this.yogaNode?.markDirty()
     this.rebuild()
   }
 
@@ -322,10 +357,13 @@ export class UI extends Node {
     return this._height
   }
 
-  set height(value) {
-    this._height = isNumber(value) ? value : defaults.height
+  set height(value = defaults.height) {
+    if (!isNumber(value)) {
+      throw new Error('[ui] height not a number')
+    }
+    if (this._height === value) return
+    this._height = value
     this.yogaNode?.setHeight(this._height * this._res)
-    // this.yogaNode?.markDirty()
     this.rebuild()
   }
 
@@ -333,8 +371,12 @@ export class UI extends Node {
     return this._size
   }
 
-  set size(value) {
-    this._size = isNumber(value) ? value : defaults.size
+  set size(value = defaults.size) {
+    if (!isNumber(value)) {
+      throw new Error('[ui] size not a number')
+    }
+    if (this._size === value) return
+    this._size = value
     this.rebuild()
   }
 
@@ -342,8 +384,12 @@ export class UI extends Node {
     return this._res
   }
 
-  set res(value) {
-    this._res = isNumber(value) ? value : defaults.size
+  set res(value = defaults.res) {
+    if (!isNumber(value)) {
+      throw new Error('[ui] res not a number')
+    }
+    if (this._res === value) return
+    this._res = value
     this.rebuild()
   }
 
@@ -351,8 +397,12 @@ export class UI extends Node {
     return this._lit
   }
 
-  set lit(value) {
-    this._lit = isBoolean(value) ? value : defaults.lit
+  set lit(value = defaults.lit) {
+    if (!isBoolean(value)) {
+      throw new Error('[ui] lit not a boolean')
+    }
+    if (this._lit === value) return
+    this._lit = value
     this.rebuild()
   }
 
@@ -360,8 +410,12 @@ export class UI extends Node {
     return this._doubleside
   }
 
-  set doubleside(value) {
-    this._doubleside = isBoolean(value) ? value : defaults.doubleside
+  set doubleside(value = defaults.doubleside) {
+    if (!isBoolean(value)) {
+      throw new Error('[ui] doubleside not a boolean')
+    }
+    if (this._doubleside === value) return
+    this._doubleside = value
     this.rebuild()
   }
 
@@ -369,8 +423,12 @@ export class UI extends Node {
     return this._billboard
   }
 
-  set billboard(value) {
-    this._billboard = value || defaults.billboard
+  set billboard(value = defaults.billboard) {
+    if (!isBillboard(value)) {
+      throw new Error(`[ui] billboard invalid: ${value}`)
+    }
+    if (this._billboard === value) return
+    this._billboard = value
     this.rebuild()
   }
 
@@ -378,8 +436,12 @@ export class UI extends Node {
     return this._pivot
   }
 
-  set pivot(value) {
-    this._pivot = value || defaults.pivot
+  set pivot(value = defaults.pivot) {
+    if (!isPivot(value)) {
+      throw new Error(`[ui] pivot invalid: ${value}`)
+    }
+    if (this._pivot === value) return
+    this._pivot = value
     this.rebuild()
   }
 
@@ -387,8 +449,12 @@ export class UI extends Node {
     return this._transparent
   }
 
-  set transparent(value) {
-    this._transparent = value || defaults.transparent
+  set transparent(value = defaults.transparent) {
+    if (!isBoolean(value)) {
+      throw new Error('[ui] transparent not a boolean')
+    }
+    if (this._transparent === value) return
+    this._transparent = value
     this.redraw()
   }
 
@@ -396,8 +462,12 @@ export class UI extends Node {
     return this._backgroundColor
   }
 
-  set backgroundColor(value) {
-    this._backgroundColor = value || defaults.backgroundColor
+  set backgroundColor(value = defaults.backgroundColor) {
+    if (value !== null && !isString(value)) {
+      throw new Error('[ui] backgroundColor not a string')
+    }
+    if (this._backgroundColor === value) return
+    this._backgroundColor = value
     this.redraw()
   }
 
@@ -405,8 +475,12 @@ export class UI extends Node {
     return this._borderRadius
   }
 
-  set borderRadius(value) {
-    this._borderRadius = isNumber(value) ? value : defaults.borderRadius
+  set borderRadius(value = defaults.borderRadius) {
+    if (!isNumber(value)) {
+      throw new Error('[ui] borderRadius not a number')
+    }
+    if (this._borderRadius === value) return
+    this._borderRadius = value
     this.redraw()
   }
 
@@ -414,10 +488,13 @@ export class UI extends Node {
     return this._padding
   }
 
-  set padding(value) {
-    this._padding = isNumber(value) ? value : defaults.padding
+  set padding(value = defaults.padding) {
+    if (!isNumber(value)) {
+      throw new Error('[ui] padding not a number')
+    }
+    if (this._padding === value) return
+    this._padding = value
     this.yogaNode?.setPadding(Yoga.EDGE_ALL, this._padding * this._res)
-    // this.yogaNode?.markDirty()
     this.redraw()
   }
 
@@ -425,10 +502,13 @@ export class UI extends Node {
     return this._flexDirection
   }
 
-  set flexDirection(value) {
-    this._flexDirection = value || defaults.flexDirection
+  set flexDirection(value = defaults.flexDirection) {
+    if (!isFlexDirection(value)) {
+      throw new Error(`[ui] flexDirection invalid: ${value}`)
+    }
+    if (this._flexDirection === value) return
+    this._flexDirection = value
     this.yogaNode?.setFlexDirection(FlexDirection[this._flexDirection])
-    // this.yogaNode?.markDirty()
     this.redraw()
   }
 
@@ -436,10 +516,13 @@ export class UI extends Node {
     return this._justifyContent
   }
 
-  set justifyContent(value) {
-    this._justifyContent = value || defaults.justifyContent
+  set justifyContent(value = defaults.justifyContent) {
+    if (!isJustifyContent(value)) {
+      throw new Error(`[ui] justifyContent invalid: ${value}`)
+    }
+    if (this._justifyContent === value) return
+    this._justifyContent = value
     this.yogaNode?.setJustifyContent(JustifyContent[this._justifyContent])
-    // this.yogaNode?.markDirty()
     this.redraw()
   }
 
@@ -447,10 +530,13 @@ export class UI extends Node {
     return this._alignItems
   }
 
-  set alignItems(value) {
-    this._alignItems = value || defaults.alignItems
+  set alignItems(value = defaults.alignItems) {
+    if (!isAlignItem(value)) {
+      throw new Error(`[ui] alignItems invalid: ${value}`)
+    }
+    if (this._alignItems === value) return
+    this._alignItems = value
     this.yogaNode?.setAlignItems(AlignItems[this._alignItems])
-    // this.yogaNode?.markDirty()
     this.redraw()
   }
 
@@ -458,10 +544,41 @@ export class UI extends Node {
     return this._alignContent
   }
 
-  set alignContent(value) {
-    this._alignContent = value || defaults.alignContent
+  set alignContent(value = defaults.alignContent) {
+    if (!isAlignContent(value)) {
+      throw new Error(`[ui] alignContent invalid: ${value}`)
+    }
+    if (this._alignContent === value) return
+    this._alignContent = value
     this.yogaNode?.setAlignContent(AlignContent[this._alignContent])
-    // this.yogaNode?.markDirty()
+    this.redraw()
+  }
+
+  get flexWrap() {
+    return this.flexWrap
+  }
+
+  set flexWrap(value = defaults.flexWrap) {
+    if (!isFlexWrap(value)) {
+      throw new Error(`[uiview] flexWrap invalid: ${value}`)
+    }
+    if (this._flexWrap === value) return
+    this._flexWrap = value
+    this.yogaNode?.setFlexWrap(FlexWrap[this._flexWrap])
+    this.redraw()
+  }
+
+  get gap() {
+    return this._gap
+  }
+
+  set gap(value = defaults.gap) {
+    if (!isNumber(value)) {
+      throw new Error(`[uiview] gap not a number`)
+    }
+    if (this._gap === value) return
+    this._gap = value
+    this.yogaNode?.setGap(Yoga.GUTTER_ALL, this._gap)
     this.redraw()
   }
 
@@ -565,6 +682,18 @@ export class UI extends Node {
         set alignContent(value) {
           self.alignContent = value
         },
+        get flexWrap() {
+          return self.flexWrap
+        },
+        set flexWrap(value) {
+          self.flexWrap = value
+        },
+        get gap() {
+          return self.gap
+        },
+        set gap(value) {
+          self.gap = value
+        },
       }
       proxy = Object.defineProperties(proxy, Object.getOwnPropertyDescriptors(super.getProxy())) // inherit Node properties
       this.proxy = proxy
@@ -605,4 +734,12 @@ function applyPivot(pivot, geometry, width, height) {
     default:
       break
   }
+}
+
+function isBillboard(value) {
+  return billboards.includes(value)
+}
+
+function isPivot(value) {
+  return pivots.includes(value)
 }

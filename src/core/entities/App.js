@@ -1,4 +1,4 @@
-import { isString } from 'lodash-es'
+import { isArray, isFunction, isString } from 'lodash-es'
 import * as THREE from '../extras/three'
 import moment from 'moment'
 
@@ -30,11 +30,12 @@ export class App extends Entity {
     this.worldListeners = new Map()
     this.listeners = {}
     this.eventQueue = []
+    this.fields = []
     this.build()
   }
 
-  createNode(name) {
-    const node = createNode({ name })
+  createNode(name, data) {
+    const node = createNode(name, data)
     return node
   }
 
@@ -43,27 +44,18 @@ export class App extends Entity {
     const n = ++this.n
     // fetch blueprint
     const blueprint = this.world.blueprints.get(this.data.blueprint)
-    // fetch script (if any)
-    let script
-    if (blueprint.script) {
-      try {
-        script = this.world.loader.get('script', blueprint.script)
-        if (!script) script = await this.world.loader.load('script', blueprint.script)
-      } catch (err) {
-        console.error(err)
-        crashed = true
-      }
-    }
+
     let root
+    let script
     // if someone else is uploading glb, show a loading indicator
     if (this.data.uploader && this.data.uploader !== this.world.network.id) {
-      root = createNode({ name: 'mesh' })
+      root = createNode('mesh')
       root.type = 'box'
       root.width = 1
       root.height = 1
       root.depth = 1
     }
-    // otherwise we can load the actual glb
+    // otherwise we can load the model and script
     else {
       try {
         const type = blueprint.model.endsWith('vrm') ? 'avatar' : 'model'
@@ -73,6 +65,16 @@ export class App extends Entity {
       } catch (err) {
         console.error(err)
         // no model, will use crash block below
+      }
+      // fetch script (if any)
+      if (blueprint.script) {
+        try {
+          script = this.world.loader.get('script', blueprint.script)
+          if (!script) script = await this.world.loader.load('script', blueprint.script)
+        } catch (err) {
+          console.error(err)
+          crashed = true
+        }
       }
     }
     // if script crashed (or failed to load model), show crash-block
@@ -101,7 +103,7 @@ export class App extends Entity {
       this.abortController = new AbortController()
       this.script = script
       try {
-        this.script.exec(this.getWorldProxy(), this.getAppProxy(), this.fetch, blueprint.config)
+        this.script.exec(this.getWorldProxy(), this.getAppProxy(), this.fetch, blueprint.props)
       } catch (err) {
         console.error('script crashed')
         console.error(err)
@@ -115,6 +117,20 @@ export class App extends Entity {
       this.lastMoveSendTime = 0
       this.control = this.world.controls.bind({
         priority: ControlPriorities.ENTITY,
+        onPress: code => {
+          if (code === 'ShiftLeft') {
+            this.control._lifting = true
+            this.control.pointer.lock()
+            return true
+          }
+        },
+        onRelease: code => {
+          if (code === 'ShiftLeft') {
+            this.control._lifting = false
+            this.control.pointer.unlock()
+            return true
+          }
+        },
         onScroll: () => {
           return true
         },
@@ -147,6 +163,9 @@ export class App extends Entity {
     this.hotEvents = 0
     // release control
     if (this.control) {
+      if (this.control._lifting) {
+        this.control.pointer.unlock()
+      }
       this.control?.release()
       this.control = null
     }
@@ -155,8 +174,8 @@ export class App extends Entity {
     // abort fetch's etc
     this.abortController?.abort()
     this.abortController = null
-    // clear config
-    this.onConfigure?.(null)
+    // clear fields
+    this.onFields?.([])
   }
 
   fixedUpdate(delta) {
@@ -176,7 +195,7 @@ export class App extends Entity {
   update(delta) {
     // if we're moving the app, handle that
     if (this.data.mover === this.world.network.id) {
-      if (this.control.buttons.ShiftLeft) {
+      if (this.control._lifting) {
         // if shift is down we're raising and lowering the app
         this.root.position.y -= this.world.controls.pointer.delta.y * delta * 0.5
       } else if (this.control.buttons.ControlLeft) {
@@ -509,8 +528,8 @@ export class App extends Entity {
         if (!node) return null
         return node.getProxy()
       },
-      create(name) {
-        const node = entity.createNode(name)
+      create(name, data) {
+        const node = entity.createNode(name, data)
         return node.getProxy()
       },
       control(options) {
@@ -523,12 +542,30 @@ export class App extends Entity {
         })
         return entity.control
       },
-      configure(fn) {
-        entity.getConfig = fn
-        entity.onConfigure?.(fn)
+      configure(fnOrArray) {
+        if (isArray(fnOrArray)) {
+          entity.fields = fnOrArray
+        } else if (isFunction(fnOrArray)) {
+          entity.fields = fnOrArray() // deprecated
+        }
+        if (!isArray(entity.fields)) {
+          entity.fields = []
+        }
+        // apply any initial values
+        const props = entity.blueprint.props
+        for (const field of entity.fields) {
+          if (field.initial && props[field.key] === undefined) {
+            props[field.key] = field.initial
+          }
+        }
+        entity.onFields?.(entity.fields)
+      },
+      get props() {
+        return entity.blueprint.props
       },
       get config() {
-        return entity.blueprint.config
+        // deprecated. will be removed
+        return entity.blueprint.props
       },
     }
     proxy = Object.defineProperties(proxy, Object.getOwnPropertyDescriptors(this.root.getProxy())) // inherit root Node properties

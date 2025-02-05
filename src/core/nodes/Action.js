@@ -1,5 +1,5 @@
 import * as THREE from '../extras/three'
-import { isNumber } from 'lodash-es'
+import { isFunction, isNumber, isString } from 'lodash-es'
 
 import { Node } from './Node'
 
@@ -17,12 +17,12 @@ export class Action extends Node {
     super(data)
     this.name = 'action'
 
-    this.label = data.label || defaults.label
-    this.distance = isNumber(data.distance) ? data.distance : defaults.distance
-    this.duration = isNumber(data.duration) ? data.duration : defaults.duration
-    this.onStart = data.onStart || defaults.onStart
-    this.onTrigger = data.onTrigger || defaults.onTrigger
-    this.onCancel = data.onCancel || defaults.onCancel
+    this.label = data.label
+    this.distance = data.distance
+    this.duration = data.duration
+    this.onStart = data.onStart
+    this.onTrigger = data.onTrigger
+    this.onCancel = data.onCancel
 
     this.worldPos = new THREE.Vector3()
     this.progress = 0
@@ -45,13 +45,76 @@ export class Action extends Node {
 
   copy(source, recursive) {
     super.copy(source, recursive)
-    this.label = source.label
-    this.distance = source.distance
-    this.duration = source.duration
-    this.onStart = source.onStart
-    this.onTrigger = source.onTrigger
-    this.onCancel = source.onCancel
+    this._label = source._label
+    this._distance = source._distance
+    this._duration = source._duration
+    this._onStart = source._onStart
+    this._onTrigger = source._onTrigger
+    this._onCancel = source._onCancel
     return this
+  }
+
+  get label() {
+    return this._label
+  }
+
+  set label(value) {
+    this._label = isString(value) ? value : isNumber(value) ? value + '' : defaults.label
+  }
+
+  get distance() {
+    return this._distance
+  }
+
+  set distance(value = defaults.distance) {
+    if (!isNumber(value)) {
+      throw new Error('[action] distance not a number')
+    }
+    this._distance = value
+  }
+
+  get duration() {
+    return this._duration
+  }
+
+  set duration(value = defaults.duration) {
+    if (!isNumber(value)) {
+      throw new Error('[action] duration not a number')
+    }
+    this._duration = value
+  }
+
+  get onStart() {
+    return this._onStart
+  }
+
+  set onStart(value = defaults.onStart) {
+    if (!isFunction(value)) {
+      throw new Error('[action] onStart not a function')
+    }
+    this._onStart = value
+  }
+
+  get onTrigger() {
+    return this._onTrigger
+  }
+
+  set onTrigger(value = defaults.onTrigger) {
+    if (!isFunction(value)) {
+      throw new Error('[action] onTrigger not a function')
+    }
+    this._onTrigger = value
+  }
+
+  get onCancel() {
+    return this._onCancel
+  }
+
+  set onCancel(value = defaults.onCancel) {
+    if (!isFunction(value)) {
+      throw new Error('[action] onCancel not a function')
+    }
+    this._onCancel = value
   }
 
   getProxy() {

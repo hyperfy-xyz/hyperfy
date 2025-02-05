@@ -56,7 +56,7 @@ export class ClientActions extends System {
     // clear current action if its no longer in distance
     if (this.current.node) {
       const distance = this.current.node.worldPos.distanceTo(cameraPos)
-      if (distance > this.current.node.distance) {
+      if (distance > this.current.node._distance) {
         this.current.node = null
         this.current.distance = Infinity
         this.action.stop()
@@ -74,7 +74,7 @@ export class ClientActions extends System {
       if (node.finished) continue
       if (this.current.node === node) continue
       const distance = node.worldPos.distanceTo(cameraPos)
-      if (distance <= node.distance && distance < this.current.distance) {
+      if (distance <= node._distance && distance < this.current.distance) {
         this.current.node = node
         this.current.distance = distance
         didChange = true
@@ -132,7 +132,7 @@ function createAction(world) {
       node = _node
       world.actions.btnDown = false
       node.progress = 0
-      draw(node.label, node.progress / node.duration)
+      draw(node._label, node.progress / node._duration)
       world.stage.scene.add(mesh)
     },
     update(delta) {
@@ -144,18 +144,18 @@ function createAction(world) {
         if (node.progress === 0) {
           cancelled = false
           try {
-            node.onStart()
+            node._onStart()
           } catch (err) {
             console.error('action.onStart:', err)
           }
         }
         node.progress += delta
-        if (node.progress > node.duration) node.progress = node.duration
-        draw(node.label, node.progress / node.duration)
-        if (node.progress === node.duration) {
+        if (node.progress > node._duration) node.progress = node._duration
+        draw(node._label, node.progress / node._duration)
+        if (node.progress === node._duration) {
           node.progress = 0
           try {
-            node.onTrigger()
+            node._onTrigger()
           } catch (err) {
             console.error('action.onTrigger:', err)
           }
@@ -163,7 +163,7 @@ function createAction(world) {
       } else if (node.progress > 0) {
         if (!cancelled) {
           try {
-            node.onCancel()
+            node._onCancel()
           } catch (err) {
             console.error('action.onCancel:', err)
           }
@@ -171,7 +171,7 @@ function createAction(world) {
         }
         node.progress -= delta
         if (node.progress < 0) node.progress = 0
-        draw(node.label, node.progress / node.duration)
+        draw(node._label, node.progress / node._duration)
       }
     },
     stop() {

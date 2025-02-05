@@ -18,6 +18,8 @@ Just as websites run inside a DOM-based environment that provides browser APIs v
 
 - [app](/docs/ref/App.md)
 - [world](/docs/ref/World.md)
+- [props](/docs/ref/Props.md)
+- [fetch](https://developer.mozilla.org/en-US/docs/Web/API/Fetch_API)
 - [Vector3](https://threejs.org/docs/#api/en/math/Vector3)
 - [Quaternion](https://threejs.org/docs/#api/en/math/Quaternion)
 - [Euler](https://threejs.org/docs/#api/en/math/Euler)

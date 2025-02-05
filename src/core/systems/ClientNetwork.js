@@ -1,4 +1,5 @@
 import { readPacket, writePacket } from '../packets'
+import { hashFile } from '../utils-client'
 import { System } from './System'
 
 /**
@@ -39,6 +40,17 @@ export class ClientNetwork extends System {
   }
 
   async upload(file) {
+    {
+      // first check if we even need to upload it
+      const hash = await hashFile(file)
+      const ext = file.name.split('.').pop().toLowerCase()
+      const filename = `${hash}.${ext}`
+      const url = `${this.apiUrl}/upload-check?filename=${filename}`
+      const resp = await fetch(url)
+      const data = await resp.json()
+      if (data.exists) return // console.log('already uploaded:', filename)
+    }
+    // then upload it
     const form = new FormData()
     form.append('file', file)
     const url = `${this.apiUrl}/upload`

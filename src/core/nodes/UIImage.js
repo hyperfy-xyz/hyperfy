@@ -1,13 +1,15 @@
-import { isNumber } from 'lodash-es'
+import { isNumber, isString } from 'lodash-es'
 import { Node } from './Node'
-import { Display } from '../extras/yoga'
+import { Display, isDisplay } from '../extras/yoga'
+
+const objectFits = ['contain', 'cover', 'fill']
 
 const defaults = {
   display: 'flex',
   src: null,
   width: null,
   height: null,
-  objectFit: 'contain', // contain, cover, fill
+  objectFit: 'contain',
   backgroundColor: null,
 }
 
@@ -16,12 +18,12 @@ export class UIImage extends Node {
     super(data)
     this.name = 'uiimage'
 
-    this.display = data.display === undefined ? defaults.display : data.display
-    this.src = data.src === undefined ? defaults.src : data.src
-    this.width = data.width === undefined ? defaults.width : data.width
-    this.height = data.height === undefined ? defaults.height : data.height
-    this.objectFit = data.objectFit === undefined ? defaults.objectFit : data.objectFit
-    this.backgroundColor = data.backgroundColor === undefined ? defaults.backgroundColor : data.backgroundColor
+    this.display = data.display
+    this.src = data.src
+    this.width = data.width
+    this.height = data.height
+    this.objectFit = data.objectFit
+    this.backgroundColor = data.backgroundColor
 
     this.img = null
   }
@@ -125,6 +127,17 @@ export class UIImage extends Node {
     }
   }
 
+  copy(source, recursive) {
+    super.copy(source, recursive)
+    this._display = source._display
+    this._src = source._src
+    this._width = source._width
+    this._height = source._height
+    this._objectFit = source._objectFit
+    this._backgroundColor = source._backgroundColor
+    return this
+  }
+
   loadImage(src) {
     return new Promise(async (resolve, reject) => {
       const img = new Image()
@@ -207,7 +220,10 @@ export class UIImage extends Node {
     return this._display
   }
 
-  set display(value) {
+  set display(value = defaults.display) {
+    if (!isDisplay(value)) {
+      throw new Error(`[uiimage] display invalid: ${value}`)
+    }
     if (this._display === value) return
     this._display = value
     this.yogaNode?.setDisplay(Display[this._display])
@@ -218,9 +234,12 @@ export class UIImage extends Node {
     return this._src
   }
 
-  set src(value) {
+  set src(value = defaults.src) {
+    if (value !== null && !isString(value)) {
+      throw new Error(`[uiimage] src not a string`)
+    }
     if (this._src === value) return
-    this._src = value || defaults.src
+    this._src = value
     if (this._src) {
       this.loadImage(this._src)
     } else {
@@ -233,9 +252,12 @@ export class UIImage extends Node {
     return this._width
   }
 
-  set width(value) {
+  set width(value = defaults.width) {
+    if (value !== null && !isNumber(value)) {
+      throw new Error(`[uiimage] width not a number`)
+    }
     if (this._width === value) return
-    this._width = isNumber(value) ? value : defaults.width
+    this._width = value
     this.yogaNode?.markDirty()
     this.ui?.redraw()
   }
@@ -244,9 +266,12 @@ export class UIImage extends Node {
     return this._height
   }
 
-  set height(value) {
+  set height(value = defaults.height) {
+    if (value !== null && !isNumber(value)) {
+      throw new Error(`[uiimage] height not a number`)
+    }
     if (this._height === value) return
-    this._height = isNumber(value) ? value : defaults.height
+    this._height = value
     this.yogaNode?.markDirty()
     this.ui?.redraw()
   }
@@ -255,9 +280,12 @@ export class UIImage extends Node {
     return this._objectFit
   }
 
-  set objectFit(value) {
+  set objectFit(value = defaults.objectFit) {
+    if (!isObjectFit(value)) {
+      throw new Error(`[uiimage] objectFit invalid: ${value}`)
+    }
     if (this._objectFit === value) return
-    this._objectFit = value || defaults.objectFit
+    this._objectFit = value
     this.ui?.redraw()
   }
 
@@ -265,9 +293,12 @@ export class UIImage extends Node {
     return this._backgroundColor
   }
 
-  set backgroundColor(value) {
+  set backgroundColor(value = defaults.backgroundColor) {
+    if (value !== null && !isString(value)) {
+      throw new Error(`[uiimage] backgroundColor not a string`)
+    }
     if (this._backgroundColor === value) return
-    this._backgroundColor = value || defaults.backgroundColor
+    this._backgroundColor = value
     this.ui?.redraw()
   }
 
@@ -317,4 +348,8 @@ export class UIImage extends Node {
     }
     return this.proxy
   }
+}
+
+function isObjectFit(value) {
+  return objectFits.includes(value)
 }

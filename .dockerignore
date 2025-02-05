@@ -4,6 +4,7 @@ world
 .git
 .gitignore
 .env.*
+!.env.example
 *.md
 .eslintrc
 .prettierrc

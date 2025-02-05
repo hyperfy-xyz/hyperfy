@@ -1,17 +1,24 @@
-import { isNumber } from 'lodash-es'
+import { isNumber, isString } from 'lodash-es'
 import { Node } from './Node'
 import * as THREE from '../extras/three'
 
-// note: defaults can be found in ClientEnvironment.js
+// NOTE: actual defaults bubble up to ClientEnvironment.js
+const defaults = {
+  bg: null,
+  hdr: null,
+  sunDirection: null,
+  sunIntensity: null,
+}
 
 export class Sky extends Node {
   constructor(data = {}) {
     super(data)
     this.name = 'sky'
-    this.bg = data.bg === undefined ? null : data.bg
-    this.hdr = data.hdr === undefined ? null : data.hdr
-    this.sunDirection = data.sunDirection === undefined ? null : data.sunDirection
-    this.sunIntensity = data.sunIntensity === undefined ? null : data.sunIntensity
+
+    this.bg = data.bg
+    this.hdr = data.hdr
+    this.sunDirection = data.sunDirection
+    this.sunIntensity = data.sunIntensity
   }
 
   mount() {
@@ -24,9 +31,6 @@ export class Sky extends Node {
       this.handle = this.ctx.world.environment?.addSky(this)
       this.needsRebuild = false
     }
-    if (didMove) {
-      // this.worldPos.setFromMatrixPosition(this.matrixWorld)
-    }
   }
 
   unmount() {
@@ -35,7 +39,10 @@ export class Sky extends Node {
 
   copy(source, recursive) {
     super.copy(source, recursive)
-    this._url = source._url
+    this._bg = source._bg
+    this._hdr = source._hdr
+    this._sunDirection = source._sunDirection
+    this._sunIntensity = source._sunIntensity
     return this
   }
 
@@ -43,7 +50,10 @@ export class Sky extends Node {
     return this._bg
   }
 
-  set bg(value) {
+  set bg(value = defaults.bg) {
+    if (value !== null && !isString(value)) {
+      throw new Error('[sky] bg not a string')
+    }
     if (this._bg === value) return
     this._bg = value
     this.needsRebuild = true
@@ -54,7 +64,10 @@ export class Sky extends Node {
     return this._hdr
   }
 
-  set hdr(value) {
+  set hdr(value = defaults.hdr) {
+    if (value !== null && !isString(value)) {
+      throw new Error('[sky] hdr not a string')
+    }
     if (this._hdr === value) return
     this._hdr = value
     this.needsRebuild = true
@@ -65,9 +78,12 @@ export class Sky extends Node {
     return this._sunDirection
   }
 
-  set sunDirection(value) {
+  set sunDirection(value = defaults.sunDirection) {
+    if (value !== null && !value?.isVector3) {
+      throw new Error('[sky] sunDirection not a Vector3')
+    }
     if (this._sunDirection === value) return
-    this._sunDirection = value?.isVector3 ? value : null
+    this._sunDirection = value
     this.needsRebuild = true
     this.setDirty()
   }
@@ -76,9 +92,12 @@ export class Sky extends Node {
     return this._sunIntensity
   }
 
-  set sunIntensity(value) {
+  set sunIntensity(value = defaults.sunIntensity) {
+    if (value !== null && !isNumber(value)) {
+      throw new Error('[sky] sunIntensity not a number')
+    }
     if (this._sunIntensity === value) return
-    this._sunIntensity = isNumber(value) ? value : null
+    this._sunIntensity = value
     this.needsRebuild = true
     this.setDirty()
   }

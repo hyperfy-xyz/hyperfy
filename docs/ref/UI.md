@@ -7,75 +7,86 @@ const ui = app.create('ui')
 ui.backgroundColor = 'rgba(0, 0, 0, 0.5)'
 ```
 
-### `ui.width`: Number
+## Properties
+
+### `.width`: Number
 
 The width of the UI canvas in pixels. Defaults to `100`.
 
-### `ui.height`: Number
+### `.height`: Number
 
 The height of the UI canvas in pixels. Defaults to `100`.
 
-### `ui.size`: Number
+### `.size`: Number
 
 This value converts pixels to meters. 
 For example if you set `width = 100` and `size = 0.01` your UI will have a width of one meter.
 This allows you to build UI while thinking in pixels instead of meters, and makes it easier to resize things later.
 Defaults to `0.01`.
 
-### `ui.lit`: Boolean
+### `.lit`: Boolean
 
 Whether the canvas is affected by lighting. Defaults to `false`.
 
-### `ui.doubleside`: Boolean
+### `.doubleside`: Boolean
 
 Whether the canvas is doublesided. Defaults to `false`.
 
-### `ui.billboard`: String
+### `.billboard`: String
 
 Makes the UI face the camera. Can be `null`, `full` or `y-axis`. Default to `null`.
 
-### `ui.pivot`: String
+### `.pivot`: String
 
 Determines where the "center" of the UI is.
 Options are: `top-left`, `top-center`, `top-right`, `center-left`, `center`, `center-right`, `bottom-left`, `bottom-center`, `bottom-right`.
 Defaults to `center`.
 
-### `ui.backgroundColor`: String
+### `.backgroundColor`: String
 
 The background color of the UI. 
 Can be hex (eg `#000000`) or rgba (eg `rgba(0, 0, 0, 0.5)`).
 Defaults to `null`.
 
-### `ui.borderRadius`: Number
+### `.borderRadius`: Number
 
 The radius of the border in pixels.
 
-### `ui.padding`: Number
+### `.padding`: Number
 
 The inner padding of the UI in pixels.
 Defaults to `0`.
 
-### `ui.flexDirection`: String
+### `.flexDirection`: String
 
 The flex direction. `column`, `column-reverse`, `row` or `row-reverse`.
 Defaults to `column`.
 
-### `ui.justifyContent`: String
+### `.justifyContent`: String
 
 Options: `flex-start`, `flex-end`, `center`.
 Defaults to `flex-start`.
 
-### `ui.alignItems`: String
+### `.alignItems`: String
 
 Options: `stretch`, `flex-start`, `flex-end`, `center`, `baseline`.
 Defaults to `stretch`.
 
-### `ui.alignContent`: String
+### `.alignContent`: String
 
 Options: `flex-start`, `flex-end`, `stretch`, `center`, `space-between`, `space-around`, `space-evenly`.
 Defaults to `flex-start`.
 
-### `ui.{...Node}`
+### `.flexWrap`: String
+
+Options: `no-wrap`, `wrap`.
+Defaults to `no-wrap`.
+
+### `.gap`: Number
+
+Defaults to `0`.
+
+### `.{...Node}`
 
 Inherits all [Node](/docs/ref/Node.md) properties
 

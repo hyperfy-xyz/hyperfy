@@ -18,6 +18,9 @@ import { createServerWorld } from '../core/createServerWorld'
 import { hashFile } from '../core/utils-server'
 import { getDB } from './db'
 
+const version = await fs.readFile(path.join(__dirname, 'version.txt'), 'utf8')
+process.env.PUBLIC_VERSION = version
+
 const rootDir = path.join(__dirname, '../')
 const worldDir = path.join(rootDir, process.env.WORLD)
 const assetsDir = path.join(worldDir, '/assets')
@@ -83,7 +86,7 @@ fastify.get('/env.js', async (req, reply) => {
 
 fastify.post('/api/upload', async (req, reply) => {
   // console.log('DEBUG: slow uploads')
-  // await new Promise(resolve => setTimeout(resolve, 2000))
+  await new Promise(resolve => setTimeout(resolve, 2000))
 
   const file = await req.file()
   const ext = file.filename.split('.').pop().toLowerCase()
@@ -102,6 +105,13 @@ fastify.post('/api/upload', async (req, reply) => {
   if (!exists) {
     await fs.writeFile(filePath, buffer)
   }
+})
+
+fastify.get('/api/upload-check', async (req, reply) => {
+  const filename = req.query.filename
+  const filePath = path.join(assetsDir, filename)
+  const exists = await fs.exists(filePath)
+  return { exists }
 })
 
 fastify.get('/health', async (request, reply) => {
@@ -128,16 +138,17 @@ fastify.get('/status', async (request, reply) => {
     const status = {
       uptime: Math.round(world.time),
       protected: process.env.ADMIN_CODE !== undefined ? true : false,
-      connectedUsers: []
+      connectedUsers: [],
+      commitHash: process.env.COMMIT_HASH,
     }
-    for (const socket of world.network.sockets.values()) {  
+    for (const socket of world.network.sockets.values()) {
       status.connectedUsers.push({
         id: socket.player.data.user.id,
         position: socket.player.position.current.toArray(),
-        name: socket.player.data.user.name
+        name: socket.player.data.user.name,
       })
     }
-    
+
     return reply.code(200).send(status)
   } catch (error) {
     console.error('Status failed:', error)
@@ -168,3 +179,14 @@ async function worldNetwork(fastify) {
 }
 
 console.log(`running on port ${port}`)
+
+// Graceful shutdown
+process.on('SIGINT', async () => {
+  await fastify.close()
+  process.exit(0)
+})
+
+process.on('SIGTERM', async () => {
+  await fastify.close()
+  process.exit(0)
+})

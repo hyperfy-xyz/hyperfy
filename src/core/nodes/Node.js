@@ -8,8 +8,6 @@ const _m1 = new THREE.Matrix4()
 const _m2 = new THREE.Matrix4()
 const _m3 = new THREE.Matrix4()
 
-const defaultScale = new THREE.Vector3(1, 1, 1)
-
 const defaults = {
   active: true,
   position: [0, 0, 0],
@@ -63,6 +61,7 @@ export class Node {
     this._onPointerLeave = data.onPointerLeave
     this._onPointerDown = data.onPointerDown
     this._onPointerUp = data.onPointerUp
+    this._cursor = data.cursor
     this._active = isBoolean(data.active) ? data.active : defaults.active
     // this.scale._onChange?
     this.isDirty = false
@@ -262,22 +261,6 @@ export class Node {
     }
     return null
   }
-
-  // onPhysicsMovement = (position, quaternion) => {
-  //   if (this.parent) {
-  //     _m1.compose(position, quaternion, defaultScale)
-  //     _m2.copy(this.parent.matrixWorld).invert()
-  //     _m3.multiplyMatrices(_m2, _m1)
-  //     _m3.decompose(this.position, this.quaternion, _v1)
-  //     // this.matrix.copy(_m3)
-  //     // this.matrixWorld.copy(_m1)
-  //   } else {
-  //     this.position.copy(position)
-  //     this.quaternion.copy(quaternion)
-  //     // this.matrix.compose(this.position, this.quaternion, this.scale)
-  //     // this.matrixWorld.copy(this.matrix)
-  //   }
-  // }
 
   // todo: getWorldQuaternion etc
   getWorldPosition(vec3 = _v1) {

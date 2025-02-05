@@ -9,7 +9,7 @@ export class LOD extends Node {
   constructor(data = {}) {
     super(data)
     this.name = 'lod'
-    this.isLod = true
+
     this.lods = [] // [...{ node, maxDistance }]
   }
 
@@ -35,12 +35,12 @@ export class LOD extends Node {
     if (this.lod === lod) return
     if (this.lod) {
       // console.log('remove lod', this.lod)
-      this.lod.node.setVisible(false)
+      this.lod.node.visible = false
     }
     this.lod = lod
     if (this.lod) {
       // console.log('add lod', this.lod)
-      this.lod.node.setVisible(true)
+      this.lod.node.visible = true
     }
   }
 

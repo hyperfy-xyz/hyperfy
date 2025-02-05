@@ -26,37 +26,38 @@ const _v2 = new THREE.Vector3()
 const _q1 = new THREE.Quaternion()
 
 const types = ['box', 'sphere', 'geometry']
+const layers = ['environment', 'prop', 'player']
 
 export class Collider extends Node {
   constructor(data = {}) {
     super(data)
     this.name = 'collider'
 
-    this.type = data.type || defaults.type
-    this.width = isNumber(data.width) ? data.width : defaults.width
-    this.height = isNumber(data.height) ? data.height : defaults.height
-    this.depth = isNumber(data.depth) ? data.depth : defaults.depth
-    this.radius = isNumber(data.radius) ? data.radius : defaults.radius
-    this.geometry = data.geometry || defaults.geometry
-    this.convex = isBoolean(data.convex) ? data.convex : defaults.convex
-    this.trigger = isBoolean(data.trigger) ? data.trigger : defaults.trigger
-    this.layer = data.layer || defaults.layer
-    this.staticFriction = isNumber(data.staticFriction) ? data.staticFriction : defaults.staticFriction
-    this.dynamicFriction = isNumber(data.dynamicFriction) ? data.dynamicFriction : defaults.dynamicFriction
-    this.restitution = isNumber(data.restitution) ? data.restitution : defaults.restitution
+    this.type = data.type
+    this.width = data.width
+    this.height = data.height
+    this.depth = data.depth
+    this.radius = data.radius
+    this.geometry = data.geometry
+    this.convex = data.convex
+    this.trigger = data.trigger
+    this.layer = data.layer
+    this.staticFriction = data.staticFriction
+    this.dynamicFriction = data.dynamicFriction
+    this.restitution = data.restitution
   }
 
   mount() {
     let geometry
     let pmesh
-    if (this.type === 'box') {
-      geometry = new PHYSX.PxBoxGeometry(this.width / 2, this.height / 2, this.depth / 2)
-    } else if (this.type === 'sphere') {
-      geometry = new PHYSX.PxSphereGeometry(this.radius)
-    } else if (this.type === 'geometry') {
+    if (this._type === 'box') {
+      geometry = new PHYSX.PxBoxGeometry(this._width / 2, this._height / 2, this._depth / 2)
+    } else if (this._type === 'sphere') {
+      geometry = new PHYSX.PxSphereGeometry(this._radius)
+    } else if (this._type === 'geometry') {
       // note: triggers MUST be convex according to PhysX/Unity
-      const isConvex = this.trigger || this.convex
-      pmesh = geometryToPxMesh(this.ctx.world, this.geometry, isConvex)
+      const isConvex = this._trigger || this._convex
+      pmesh = geometryToPxMesh(this.ctx.world, this._geometry, isConvex)
       if (!pmesh) return console.error('failed to generate collider pmesh')
       this.matrixWorld.decompose(_v1, _q1, _v2)
       const scale = new PHYSX.PxMeshScale(new PHYSX.PxVec3(_v2.x, _v2.y, _v2.z), new PHYSX.PxQuat(0, 0, 0, 1))
@@ -69,16 +70,20 @@ export class Collider extends Node {
       }
       PHYSX.destroy(scale)
     }
-    const material = this.ctx.world.physics.physics.createMaterial(this.staticFriction, this.dynamicFriction, this.restitution) // prettier-ignore
+    const material = this.ctx.world.physics.physics.createMaterial(
+      this._staticFriction,
+      this._dynamicFriction,
+      this._restitution
+    )
     const flags = new PHYSX.PxShapeFlags()
-    if (this.trigger) {
+    if (this._trigger) {
       flags.raise(PHYSX.PxShapeFlagEnum.eTRIGGER_SHAPE)
     } else {
       flags.raise(PHYSX.PxShapeFlagEnum.eSCENE_QUERY_SHAPE | PHYSX.PxShapeFlagEnum.eSIMULATION_SHAPE)
     }
-    const layer = Layers[this.layer]
+    const layer = Layers[this._layer]
     let pairFlags = PHYSX.PxPairFlagEnum.eNOTIFY_TOUCH_FOUND | PHYSX.PxPairFlagEnum.eNOTIFY_TOUCH_LOST
-    if (!this.trigger) {
+    if (!this._trigger) {
       pairFlags |= PHYSX.PxPairFlagEnum.eNOTIFY_CONTACT_POINTS
     }
     this.pmesh = pmesh
@@ -124,19 +129,206 @@ export class Collider extends Node {
 
   copy(source, recursive) {
     super.copy(source, recursive)
-    this.type = source.type
-    this.width = source.width
-    this.height = source.height
-    this.depth = source.depth
-    this.radius = source.radius
-    this.geometry = source.geometry
-    this.convex = source.convex
-    this.trigger = source.trigger
-    this.layer = source.layer
-    this.staticFriction = source.staticFriction
-    this.dynamicFriction = source.dynamicFriction
-    this.restitution = source.restitution
+    this._type = source._type
+    this._width = source._width
+    this._height = source._height
+    this._depth = source._depth
+    this._radius = source._radius
+    this._geometry = source._geometry
+    this._convex = source._convex
+    this._trigger = source._trigger
+    this._layer = source._layer
+    this._staticFriction = source._staticFriction
+    this._dynamicFriction = source._dynamicFriction
+    this._restitution = source._restitution
     return this
+  }
+
+  get type() {
+    return this._type
+  }
+
+  set type(value = defaults.type) {
+    if (!isType(value)) {
+      throw new Error(`[collider] invalid type:`, value)
+    }
+    this._type = value
+    this.needsRebuild = true
+    this.setDirty()
+  }
+
+  get width() {
+    return this._width
+  }
+
+  set width(value = defaults.width) {
+    if (!isNumber(value)) {
+      throw new Error('[collider] width not a number')
+    }
+    this._width = value
+    if (this.shape && this._type === 'box') {
+      this.needsRebuild = true
+      this.setDirty()
+    }
+  }
+
+  get height() {
+    return this._height
+  }
+
+  set height(value = defaults.height) {
+    if (!isNumber(value)) {
+      throw new Error('[collider] height not a number')
+    }
+    this._height = value
+    if (this.shape && this._type === 'box') {
+      this.needsRebuild = true
+      this.setDirty()
+    }
+  }
+
+  get depth() {
+    return this._depth
+  }
+
+  set depth(value = defaults.depth) {
+    if (!isNumber(value)) {
+      throw new Error('[collider] depth not a number')
+    }
+    this._depth = value
+    if (this.shape && this._type === 'box') {
+      this.needsRebuild = true
+      this.setDirty()
+    }
+  }
+
+  setSize(width, height, depth) {
+    this.width = width
+    this.height = height
+    this.depth = depth
+  }
+
+  get radius() {
+    return this._radius
+  }
+
+  set radius(value = defaults.radius) {
+    if (!isNumber(value)) {
+      throw new Error('[collider] radius not a number')
+    }
+    this._radius = value
+    if (this.shape && this._type === 'sphere') {
+      this.needsRebuild = true
+      this.setDirty()
+    }
+  }
+
+  get geometry() {
+    return this._geometry
+  }
+
+  set geometry(value) {
+    this._geometry = value // TODO: validate THREE.BufferGeometry?
+  }
+
+  get convex() {
+    return this._convex
+  }
+
+  set convex(value = defaults.convex) {
+    if (!isBoolean(value)) {
+      throw new Error('[collider] convex not a boolean')
+    }
+    this._convex = value
+    if (this.shape) {
+      this.needsRebuild = true
+      this.setDirty()
+    }
+  }
+
+  get trigger() {
+    return this._trigger
+  }
+
+  set trigger(value = defaults.trigger) {
+    if (!isBoolean(value)) {
+      throw new Error('[collider] trigger not a boolean')
+    }
+    this._trigger = value
+    if (this.shape) {
+      this.needsRebuild = true
+      this.setDirty()
+    }
+  }
+
+  get layer() {
+    return this._layer
+  }
+
+  set layer(value = defaults.layer) {
+    if (!isLayer(value)) {
+      throw new Error(`[collider] invalid layer: ${value}`)
+    }
+    this._layer = value
+    if (this.shape) {
+      // TODO: we could just update the PxFilterData tbh
+      this.needsRebuild = true
+      this.setDirty()
+    }
+  }
+
+  get staticFriction() {
+    return this._staticFriction
+  }
+
+  set staticFriction(value = defaults.staticFriction) {
+    if (!isNumber(value)) {
+      throw new Error('[collider] staticFriction not a number')
+    }
+    this._staticFriction = value
+    if (this.shape) {
+      // todo: we could probably just update the PxMaterial tbh
+      this.needsRebuild = true
+      this.setDirty()
+    }
+  }
+
+  get dynamicFriction() {
+    return this._dynamicFriction
+  }
+
+  set dynamicFriction(value = defaults.dynamicFriction) {
+    if (!isNumber(value)) {
+      throw new Error('[collider] dynamicFriction not a number')
+    }
+    this._dynamicFriction = value
+    if (this.shape) {
+      // todo: we could probably just update the PxMaterial tbh
+      this.needsRebuild = true
+      this.setDirty()
+    }
+  }
+
+  get restitution() {
+    return this._restitution
+  }
+
+  set restitution(value = defaults.restitution) {
+    if (!isNumber(value)) {
+      throw new Error('[collider] restitution not a number')
+    }
+    this._restitution = value
+    if (this.shape) {
+      // todo: we could probably just update the PxMaterial tbh
+      this.needsRebuild = true
+      this.setDirty()
+    }
+  }
+
+  setMaterial(staticFriction, dynamicFriction, restitution) {
+    this.staticFriction = staticFriction
+    this.dynamicFriction = dynamicFriction
+    this.restitution = restitution
   }
 
   getProxy() {
@@ -147,59 +339,34 @@ export class Collider extends Node {
           return self.type
         },
         set type(value) {
-          if (!types.includes(value)) throw new Error(`[collider] invalid type: ${value}`)
           self.type = value
-          self.needsRebuild = true
-          self.setDirty()
         },
         get width() {
           return self.width
         },
         set width(value) {
           self.width = value
-          if (self.shape && self.type === 'box') {
-            self.needsRebuild = true
-            self.setDirty()
-          }
         },
         get height() {
           return self.height
         },
         set height(value) {
           self.height = value
-          if (self.shape && self.type === 'box') {
-            self.needsRebuild = true
-            self.setDirty()
-          }
         },
         get depth() {
           return self.depth
         },
         set depth(value) {
           self.depth = value
-          if (self.shape && self.type === 'box') {
-            self.needsRebuild = true
-            self.setDirty()
-          }
         },
         setSize(width, height, depth) {
-          self.width = width
-          self.height = height
-          self.depth = depth
-          if (self.shape && self.type === 'box') {
-            self.needsRebuild = true
-            self.setDirty()
-          }
+          self.setSize(width, height, depth)
         },
         get radius() {
           return self.radius
         },
         set radius(value) {
           self.radius = value
-          if (self.shape && self.type === 'sphere') {
-            self.needsRebuild = true
-            self.setDirty()
-          }
         },
         // get geometry() {
         //   return null // TODO: handle?
@@ -211,77 +378,43 @@ export class Collider extends Node {
           return self.convex
         },
         set convex(value) {
-          if (self.convex === value) return
           self.convex = value
-          if (self.shape) {
-            self.needsRebuild = true
-            self.setDirty()
-          }
         },
         get trigger() {
           return self.trigger
         },
         set trigger(value) {
-          if (self.trigger === value) return
           self.trigger = value
-          if (self.shape) {
-            self.needsRebuild = true
-            self.setDirty()
-          }
         },
         get layer() {
           return self.layer
         },
         set layer(value) {
-          self.layer = value
-          if (self.shape) {
-            // todo: we could just update the PxFilterData tbh
-            self.needsRebuild = true
-            self.setDirty()
+          if (value === 'player') {
+            throw new Error('[collider] layer invalid: player')
           }
+          self.layer = value
         },
         get staticFriction() {
           return self.staticFriction
         },
         set staticFriction(value) {
           self.staticFriction = value
-          if (self.shape) {
-            // todo: we could probably just update the PxMaterial tbh
-            self.needsRebuild = true
-            self.setDirty()
-          }
         },
         get dynamicFriction() {
           return self.dynamicFriction
         },
         set dynamicFriction(value) {
           self.dynamicFriction = value
-          if (self.shape) {
-            // todo: we could probably just update the PxMaterial tbh
-            self.needsRebuild = true
-            self.setDirty()
-          }
         },
         get restitution() {
           return self.restitution
         },
         set restitution(value) {
           self.restitution = value
-          if (self.shape) {
-            // todo: we could probably just update the PxMaterial tbh
-            self.needsRebuild = true
-            self.setDirty()
-          }
         },
         setMaterial(staticFriction, dynamicFriction, restitution) {
-          self.staticFriction = staticFriction
-          self.dynamicFriction = dynamicFriction
-          self.restitution = restitution
-          if (self.shape) {
-            // todo: we could probably just update the PxMaterial tbh
-            self.needsRebuild = true
-            self.setDirty()
-          }
+          self.setMaterial(staticFriction, dynamicFriction, restitution)
         },
       }
       proxy = Object.defineProperties(proxy, Object.getOwnPropertyDescriptors(super.getProxy())) // inherit Node properties
@@ -289,4 +422,12 @@ export class Collider extends Node {
     }
     return this.proxy
   }
+}
+
+function isType(value) {
+  return types.includes(value)
+}
+
+function isLayer(value) {
+  return layers.includes(value)
 }

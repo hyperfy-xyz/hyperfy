@@ -1,10 +1,17 @@
 import { isNumber, isString } from 'lodash-es'
 
 import { Node } from './Node'
-import { Display } from '../extras/yoga'
+import { Display, isDisplay } from '../extras/yoga'
+import { fillRoundRect } from '../extras/fillRoundRect'
+
+const textAligns = ['left', 'center', 'right']
 
 const defaults = {
   display: 'flex',
+  backgroundColor: null,
+  borderRadius: 0,
+  margin: 0,
+  padding: 0,
   value: '',
   fontSize: 16,
   color: '#000000',
@@ -28,14 +35,18 @@ export class UIText extends Node {
     super(data)
     this.name = 'uitext'
 
-    this.display = data.display === undefined ? defaults.display : data.display
-    this.value = data.value === undefined ? defaults.value : data.value
-    this.fontSize = data.fontSize === undefined ? defaults.fontSize : data.fontSize
-    this.color = data.color === undefined ? defaults.color : data.color
-    this.lineHeight = data.lineHeight === undefined ? defaults.lineHeight : data.lineHeight
-    this.textAlign = data.textAlign === undefined ? defaults.textAlign : data.textAlign
-    this.fontFamily = data.fontFamily === undefined ? defaults.fontFamily : data.fontFamily
-    this.fontWeight = data.fontWeight === undefined ? defaults.fontWeight : data.fontWeight
+    this.display = data.display
+    this.backgroundColor = data.backgroundColor
+    this.borderRadius = data.borderRadius
+    this.margin = data.margin
+    this.padding = data.padding
+    this.value = data.value
+    this.fontSize = data.fontSize
+    this.color = data.color
+    this.lineHeight = data.lineHeight
+    this.textAlign = data.textAlign
+    this.fontFamily = data.fontFamily
+    this.fontWeight = data.fontWeight
   }
 
   draw(ctx, offsetLeft, offsetTop) {
@@ -44,6 +55,14 @@ export class UIText extends Node {
     const top = offsetTop + this.yogaNode.getComputedTop()
     const width = this.yogaNode.getComputedWidth()
     const height = this.yogaNode.getComputedHeight()
+    if (this._backgroundColor) {
+      ctx.fillStyle = this._backgroundColor
+      if (this.borderRadius) {
+        fillRoundRect(ctx, left, top, width, height, this._borderRadius * this.ui._res)
+      } else {
+        ctx.fillRect(left, top, width, height)
+      }
+    }
     ctx.font = `${this._fontWeight} ${this._fontSize * this.ui._res}px ${this._fontFamily}`
     ctx.textBaseline = 'alphabetic'
     ctx.textAlign = this._textAlign
@@ -83,6 +102,8 @@ export class UIText extends Node {
     this.yogaNode = Yoga.Node.create()
     this.yogaNode.setMeasureFunc(this.measureTextFunc())
     this.yogaNode.setDisplay(Display[this._display])
+    this.yogaNode.setMargin(Yoga.EDGE_ALL, this._margin * this.ui._res)
+    this.yogaNode.setPadding(Yoga.EDGE_ALL, this._padding * this.ui._res)
     this.parent.yogaNode.insertChild(this.yogaNode, this.parent.yogaNode.getChildCount())
   }
 
@@ -103,10 +124,17 @@ export class UIText extends Node {
   copy(source, recursive) {
     super.copy(source, recursive)
     this._display = source._display
+    this._backgroundColor = source._backgroundColor
+    this._borderRadius = source._borderRadius
+    this._margin = source._margin
+    this._padding = source._padding
     this._value = source._value
     this._fontSize = source._fontSize
     this._color = source._color
     this._lineHeight = source._lineHeight
+    this._textAlign = source._textAlign
+    this._fontFamily = source._fontFamily
+    this._fontWeight = source._fontWeight
     return this
   }
 
@@ -151,11 +179,68 @@ export class UIText extends Node {
     return this._display
   }
 
-  set display(value) {
+  set display(value = defaults.display) {
+    if (!isDisplay(value)) {
+      throw new Error(`[uitext] display invalid: ${value}`)
+    }
     if (this._display === value) return
-    this._display = value || defaults.display
+    this._display = value
     this.yogaNode?.setDisplay(Display[this._display])
     this.yogaNode?.markDirty()
+    this.ui?.redraw()
+  }
+
+  get backgroundColor() {
+    return this._backgroundColor
+  }
+
+  set backgroundColor(value = defaults.backgroundColor) {
+    if (value !== null && !isString(value)) {
+      throw new Error(`[uiview] backgroundColor not a string`)
+    }
+    if (this._backgroundColor === value) return
+    this._backgroundColor = value
+    this.ui?.redraw()
+  }
+
+  get borderRadius() {
+    return this._borderRadius
+  }
+
+  set borderRadius(value = defaults.borderRadius) {
+    if (!isNumber(value)) {
+      throw new Error(`[uiview] borderRadius not a number`)
+    }
+    if (this._borderRadius === value) return
+    this._borderRadius = value
+    this.ui?.redraw()
+  }
+
+  get margin() {
+    return this._margin
+  }
+
+  set margin(value = defaults.margin) {
+    if (!isNumber(value)) {
+      throw new Error(`[uiview] margin not a number`)
+    }
+    if (this._margin === value) return
+    this._margin = value
+    this.yogaNode?.setMargin(Yoga.EDGE_ALL, this._margin * this.ui._res)
+    this.ui?.redraw()
+  }
+
+  get padding() {
+    return this._padding
+  }
+
+  set padding(value = defaults.padding) {
+    if (!isNumber(value)) {
+      throw new Error(`[uiview] padding not a number`)
+    }
+    if (this._padding === value) rturn
+    this._padding = value
+    this.yogaNode?.setPadding(Yoga.EDGE_ALL, this._padding * this.ui._res)
     this.ui?.redraw()
   }
 
@@ -163,9 +248,15 @@ export class UIText extends Node {
     return this._value
   }
 
-  set value(val) {
+  set value(val = defaults.value) {
+    if (isNumber(val)) {
+      val = val + ''
+    }
+    if (!isString(val)) {
+      throw new Error(`[uitext] value not a string`)
+    }
     if (this._value === val) return
-    this._value = isString(val) ? val : defaults.value
+    this._value = val
     this.yogaNode?.markDirty()
     this.ui?.redraw()
   }
@@ -174,9 +265,12 @@ export class UIText extends Node {
     return this._fontSize
   }
 
-  set fontSize(value) {
+  set fontSize(value = defaults.fontSize) {
+    if (!isNumber(value)) {
+      throw new Error(`[uitext] fontSize not a number`)
+    }
     if (this._fontSize === value) return
-    this._fontSize = isNumber(value) ? value : defaults.fontSize
+    this._fontSize = value
     this.yogaNode?.markDirty()
     this.ui?.redraw()
   }
@@ -185,9 +279,12 @@ export class UIText extends Node {
     return this._color
   }
 
-  set color(value) {
+  set color(value = defaults.color) {
+    if (!isString(value)) {
+      throw new Error(`[uitext] color not a string`)
+    }
     if (this._color === value) return
-    this._color = value || defaults.color
+    this._color = value
     this.ui?.redraw()
   }
 
@@ -195,9 +292,12 @@ export class UIText extends Node {
     return this._lineHeight
   }
 
-  set lineHeight(value) {
+  set lineHeight(value = defaults.lineHeight) {
+    if (!isNumber(value)) {
+      throw new Error(`[uitext] lineHeight not a number`)
+    }
     if (this._lineHeight === value) return
-    this._lineHeight = isNumber(value) ? value : defaults.lineHeight
+    this._lineHeight = value
     this.yogaNode?.markDirty()
     this.ui?.redraw()
   }
@@ -206,9 +306,12 @@ export class UIText extends Node {
     return this._textAlign
   }
 
-  set textAlign(value) {
+  set textAlign(value = defaults.textAlign) {
+    if (!isTextAlign(value)) {
+      throw new Error(`[uitext] textAlign invalid: ${value}`)
+    }
     if (this._textAlign === value) return
-    this._textAlign = value || defaults.textAlign
+    this._textAlign = value
     this.yogaNode?.markDirty()
     this.ui?.redraw()
   }
@@ -217,9 +320,12 @@ export class UIText extends Node {
     return this._fontFamily
   }
 
-  set fontFamily(value) {
+  set fontFamily(value = defaults.fontFamily) {
+    if (!isString(value)) {
+      throw new Error(`[uitext] fontFamily not a string`)
+    }
     if (this._fontFamily === value) return
-    this._fontFamily = value || defaults.fontFamily
+    this._fontFamily = value
     this.yogaNode?.markDirty()
     this.ui?.redraw()
   }
@@ -228,9 +334,12 @@ export class UIText extends Node {
     return this._fontWeight
   }
 
-  set fontWeight(value) {
+  set fontWeight(value = defaults.fontWeight) {
+    if (!isString(value) && !isNumber(value)) {
+      throw new Error(`[uitext] fontWeight invalid`)
+    }
     if (this._fontWeight === value) return
-    this._fontWeight = value || defaults.fontWeight
+    this._fontWeight = value
     this.yogaNode?.markDirty()
     this.ui?.redraw()
   }
@@ -244,6 +353,30 @@ export class UIText extends Node {
         },
         set display(value) {
           self.display = value
+        },
+        get backgroundColor() {
+          return self.backgroundColor
+        },
+        set backgroundColor(value) {
+          self.backgroundColor = value
+        },
+        get borderRadius() {
+          return self.borderRadius
+        },
+        set borderRadius(value) {
+          self.borderRadius = value
+        },
+        get margin() {
+          return self.margin
+        },
+        set margin(value) {
+          self.margin = value
+        },
+        get padding() {
+          return self.padding
+        },
+        set padding(value) {
+          self.padding = value
         },
         get value() {
           return self.value
@@ -313,4 +446,8 @@ function wrapText(ctx, text, maxWidth) {
   lines.push(currentLine)
 
   return lines
+}
+
+function isTextAlign(value) {
+  return textAligns.includes(value)
 }

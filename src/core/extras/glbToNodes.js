@@ -3,8 +3,8 @@ import { createNode } from './createNode'
 const groupTypes = ['Scene', 'Group', 'Object3D']
 
 export function glbToNodes(glb, world) {
-  function registerNode(data) {
-    const node = createNode(data)
+  function registerNode(name, data) {
+    const node = createNode(name, data)
     return node
   }
   function parse(object3ds, parentNode) {
@@ -12,9 +12,8 @@ export function glbToNodes(glb, world) {
       const props = object3d.userData || {}
       // LOD (custom node)
       if (props.node === 'lod') {
-        const node = registerNode({
+        const node = registerNode('lod', {
           id: object3d.name,
-          name: 'lod',
           position: object3d.position.toArray(),
           quaternion: object3d.quaternion.toArray(),
           scale: object3d.scale.toArray(),
@@ -24,9 +23,8 @@ export function glbToNodes(glb, world) {
       }
       // RigidBody (custom node)
       else if (props.node === 'rigidbody') {
-        const node = registerNode({
+        const node = registerNode('rigidbody', {
           id: object3d.name,
-          name: 'rigidbody',
           type: props.type,
           mass: props.mass,
           position: object3d.position.toArray(),
@@ -42,9 +40,8 @@ export function glbToNodes(glb, world) {
         // but since the Group is the one that has the collider custom property, it won't work as expected. we could hack to fix this, but i think it adds a layer of indirection.
         // colliders should not have materials on them.
         // console.error('TODO: glbToNodes collider for box/sphere in blender?')
-        const node = registerNode({
+        const node = registerNode('collider', {
           id: object3d.name,
-          name: 'collider',
           type: 'geometry',
           geometry: object3d.geometry,
           convex: props.convex,
@@ -63,9 +60,8 @@ export function glbToNodes(glb, world) {
           addWind(object3d, world)
         }
         const hasMorphTargets = object3d.morphTargetDictionary || object3d.morphTargetInfluences?.length > 0
-        const node = registerNode({
+        const node = registerNode('mesh', {
           id: object3d.name,
-          name: 'mesh',
           type: 'geometry',
           geometry: object3d.geometry,
           material: object3d.material,
@@ -88,9 +84,8 @@ export function glbToNodes(glb, world) {
       }
       // Object3D / Group / Scene
       else if (groupTypes.includes(object3d.type)) {
-        const node = registerNode({
+        const node = registerNode('group', {
           id: object3d.name,
-          name: 'group',
           position: object3d.position.toArray(),
           quaternion: object3d.quaternion.toArray(),
           scale: object3d.scale.toArray(),
@@ -100,9 +95,8 @@ export function glbToNodes(glb, world) {
       }
     }
   }
-  const root = registerNode({
+  const root = registerNode('group', {
     id: '$root',
-    name: 'group',
   })
   parse(glb.scene.children, root)
   // console.log('$root', root)

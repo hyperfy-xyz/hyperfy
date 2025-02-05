@@ -32,3 +32,39 @@ export const initYoga = () => {
   FlexWrap['wrap'] = Yoga.WRAP_WRAP
   FlexWrap['wrap-reverse'] = Yoga.WRAP_WRAP_REVERSE
 }
+
+const displays = ['flex', 'none']
+
+export function isDisplay(value) {
+  return displays.includes(value)
+}
+
+const flexDirections = ['column', 'column-reverse', 'row', 'row-reverse', 'flex-start', 'flex-end', 'center']
+
+export function isFlexDirection(value) {
+  return flexDirections.includes(value)
+}
+
+const justifyContents = ['flex-start', 'flex-end', 'center']
+
+export function isJustifyContent(value) {
+  return justifyContents.includes(value)
+}
+
+const alignItems = ['stretch', 'flex-start', 'flex-end', 'center', 'baseline']
+
+export function isAlignItem(value) {
+  return alignItems.includes(value)
+}
+
+const alignContents = ['flex-start', 'flex-end', 'stretch', 'center', 'space-between', 'space-around', 'space-evenly']
+
+export function isAlignContent(value) {
+  return alignContents.includes(value)
+}
+
+const flexWraps = ['no-wrap', 'wrap', 'wrap-reverse']
+
+export function isFlexWrap(value) {
+  return flexWraps.includes(value)
+}

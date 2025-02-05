@@ -112,10 +112,10 @@ export class ClientEnvironment extends System {
     }
 
     const node = this.skys[this.skys.length - 1]?.node
-    const bgUrl = node?.bg || defaults.bg
-    const hdrUrl = node?.hdr || defaults.hdr
-    const sunDirection = node?.sunDirection?.isVector3 ? node.sunDirection : defaults.sunDirection
-    const sunIntensity = isNumber(node?.sunIntensity) ? node.sunIntensity : defaults.sunIntensity
+    const bgUrl = node?._bg || defaults.bg
+    const hdrUrl = node?._hdr || defaults.hdr
+    const sunDirection = node?._sunDirection || defaults.sunDirection
+    const sunIntensity = isNumber(node?._sunIntensity) ? node._sunIntensity : defaults.sunIntensity
 
     const n = ++this.skyN
     const bgTexture = await this.world.loader.load('texture', bgUrl)
