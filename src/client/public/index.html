@@ -1,7 +1,7 @@
 <!doctype html>
 <html lang="en">
   <head>
-    <title>Tatted Alien Club</title>
+    <title>World</title>
     <meta charset="utf-8" />
     <meta
       name="viewport"
@@ -9,14 +9,8 @@
     />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="mobile-web-app-capable" content="yes" />
-    <meta name="theme-color" content="#000000" />
-    <meta name="description" content="A virtual world platform" />
     <!-- <link rel='icon' href='/favicon.ico' /> -->
     <link rel="stylesheet" type="text/css" href="/index.css?v={buildId}" />
-    <link rel="manifest" href="/manifest.json" />
-    <link rel="icon" type="image/png" sizes="192x192" href="/icon-192.png" />
-    <link rel="icon" type="image/png" sizes="512x512" href="/icon-512.png" />
-    <link rel="apple-touch-icon" href="/icon-192.png" />
     <script src="https://cdn.jsdelivr.net/npm/ses@1.10.0/dist/ses.umd.min.js"></script>
     <script type="module">
       import Yoga from 'https://cdn.jsdelivr.net/npm/yoga-layout@3.2.1/+esm'
@@ -27,20 +21,6 @@
     <div id="root"></div>
     <script src="/physx-js-webidl.js"></script>
     <script src="/env.js?v={buildId}"></script>
-    <script>
-      // Register service worker
-      if ('serviceWorker' in navigator) {
-        window.addEventListener('load', () => {
-          navigator.serviceWorker.register('/service-worker.js')
-            .then(registration => {
-              console.log('ServiceWorker registration successful')
-            })
-            .catch(err => {
-              console.log('ServiceWorker registration failed: ', err)
-            })
-        })
-      }
-    </script>
-    <script type="module" src="{jsFile}"></script>
+    <script src="{jsFile}"></script>
   </body>
 </html>

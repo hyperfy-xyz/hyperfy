@@ -51,30 +51,15 @@ const clientHtmlDest = path.join(rootDir, 'build/public/index.html')
           build.onEnd(async result => {
             // copy over public files
             await fs.copy(clientPublicDir, clientBuildDir)
-            
             // find js output file
             const metafile = result.metafile
             const outputFiles = Object.keys(metafile.outputs)
             const jsFile = outputFiles.find(file => file.endsWith('.js')).split('build/public')[1]
-            
             // inject into html and copy over
             let htmlContent = await fs.readFile(clientHtmlSrc, 'utf-8')
             htmlContent = htmlContent.replace('{jsFile}', jsFile)
             htmlContent = htmlContent.replaceAll('{buildId}', Date.now())
             await fs.writeFile(clientHtmlDest, htmlContent)
-
-            // Copy PWA assets if they exist
-            const iconSrc = path.join(rootDir, 'src/client/public/icon-192.png')
-            const iconDest = path.join(rootDir, 'build/public/icon-192.png')
-            if (await fs.pathExists(iconSrc)) {
-              await fs.copy(iconSrc, iconDest)
-            }
-
-            const icon512Src = path.join(rootDir, 'src/client/public/icon-512.png') 
-            const icon512Dest = path.join(rootDir, 'build/public/icon-512.png')
-            if (await fs.pathExists(icon512Src)) {
-              await fs.copy(icon512Src, icon512Dest)
-            }
           })
         },
       },
