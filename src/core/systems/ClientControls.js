@@ -312,7 +312,7 @@ export class ClientControls extends System {
   onScroll = e => {
     e.preventDefault()
     let delta = e.shiftKey ? e.deltaX : e.deltaY
-    if (!this.isMac) delta = -delta
+    if (this.isMac) delta = -delta
     this.scroll.delta += delta
   }
 
