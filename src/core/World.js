@@ -23,7 +23,9 @@ export class World extends EventEmitter {
     this.hot = new Set()
 
     this.rig = new THREE.Object3D()
-    this.camera = new THREE.PerspectiveCamera(70, 0, 0.01, 2000)
+    // NOTE: camera near is slightly smaller than spherecast. far is slightly more than skybox.
+    // this gives us minimal z-fighting without needing logarithmic depth buffers
+    this.camera = new THREE.PerspectiveCamera(70, 0, 0.2, 1200)
     this.rig.add(this.camera)
 
     this.register('events', Events)
