@@ -1,5 +1,5 @@
 import { Entity } from './Entity'
-import { clamp } from '../utils'
+import { clamp, hasRole } from '../utils'
 import * as THREE from '../extras/three'
 import { Layers } from '../extras/Layers'
 import { DEG2RAD, RAD2DEG } from '../extras/general'
@@ -76,6 +76,12 @@ export class PlayerLocal extends Entity {
     this.moveDir = new THREE.Vector3()
     this.moving = false
 
+    this.lastJumpAt = 0
+    this.flying = false
+    this.flyForce = 50
+    this.flyDrag = 300
+    this.flyDir = new THREE.Vector3()
+
     this.platform = {
       actor: null,
       prevTransform: new THREE.Matrix4(),
@@ -115,7 +121,7 @@ export class PlayerLocal extends Entity {
     this.bubbleBox.add(this.bubbleText)
     this.base.add(this.bubble)
 
-    this.base.activate({ world: this.world, physics: true, entity: this.entity })
+    this.base.activate({ world: this.world, entity: this })
 
     this.camHeight = DEFAULT_CAM_HEIGHT
 
@@ -152,7 +158,7 @@ export class PlayerLocal extends Entity {
         //   this.nametag.active = true
         // }
         this.avatarUrl = avatarUrl
-        this.camHeight = this.avatar.height * 0.7
+        this.camHeight = this.avatar.height * 0.9
       })
       .catch(err => {
         console.error(err)
@@ -272,234 +278,285 @@ export class PlayerLocal extends Entity {
     this.control.camera.zoom = this.cam.zoom
   }
 
+  toggleFlying() {
+    const canFly = hasRole(this.data.user.roles, 'admin', 'builder')
+    if (!canFly) return
+    this.flying = !this.flying
+    if (this.flying) {
+      // zero out vertical velocity when entering fly mode
+      const velocity = this.capsule.getLinearVelocity()
+      velocity.y = 0
+      this.capsule.setLinearVelocity(velocity)
+    } else {
+      // ...
+    }
+    this.lastJumpAt = -999
+  }
+
   fixedUpdate(delta) {
-    // if grounded last update, check for moving platforms and move with them
-    if (this.grounded) {
-      // find any potentially moving platform
-      const pose = this.capsule.getGlobalPose()
-      const origin = v1.copy(pose.p)
-      origin.y += 0.2
-      const hitMask = Layers.environment.group | Layers.prop.group | Layers.tool.group
-      const hit = this.world.physics.raycast(origin, DOWN, 2, hitMask)
-      let actor = hit?.actor || null
-      if (actor) {
-        actor = this.world.physics.handles.get(actor.ptr)?.actor || null
-      }
-      // if we found a new platform, set it up for tracking
-      if (this.platform.actor !== actor) {
-        this.platform.actor = actor
+    if (!this.flying) {
+      /**
+       *
+       * STANDARD MODE
+       *
+       */
+
+      // if grounded last update, check for moving platforms and move with them
+      if (this.grounded) {
+        // find any potentially moving platform
+        const pose = this.capsule.getGlobalPose()
+        const origin = v1.copy(pose.p)
+        origin.y += 0.2
+        const hitMask = Layers.environment.group | Layers.prop.group | Layers.tool.group
+        const hit = this.world.physics.raycast(origin, DOWN, 2, hitMask)
+        let actor = hit?.actor || null
         if (actor) {
+          actor = this.world.physics.handles.get(actor.ptr)?.actor || null
+        }
+        // if we found a new platform, set it up for tracking
+        if (this.platform.actor !== actor) {
+          this.platform.actor = actor
+          if (actor) {
+            const platformPose = this.platform.actor.getGlobalPose()
+            v1.copy(platformPose.p)
+            q1.copy(platformPose.q)
+            this.platform.prevTransform.compose(v1, q1, SCALE_IDENTITY)
+          }
+        }
+        // move with platform
+        if (this.platform.actor) {
+          // get current platform transform
+          const currTransform = m1
           const platformPose = this.platform.actor.getGlobalPose()
           v1.copy(platformPose.p)
           q1.copy(platformPose.q)
-          this.platform.prevTransform.compose(v1, q1, SCALE_IDENTITY)
+          currTransform.compose(v1, q1, SCALE_IDENTITY)
+          // get delta transform
+          const deltaTransform = m2.multiplyMatrices(currTransform, this.platform.prevTransform.clone().invert())
+          // extract delta position and quaternion
+          const deltaPosition = v2
+          const deltaQuaternion = q2
+          const deltaScale = v3
+          deltaTransform.decompose(deltaPosition, deltaQuaternion, deltaScale)
+          // apply delta to player
+          const playerPose = this.capsule.getGlobalPose()
+          v4.copy(playerPose.p)
+          q3.copy(playerPose.q)
+          const playerTransform = m3
+          playerTransform.compose(v4, q3, SCALE_IDENTITY)
+          playerTransform.premultiply(deltaTransform)
+          const newPosition = v5
+          const newQuaternion = q4
+          playerTransform.decompose(newPosition, newQuaternion, v6)
+          const newPose = this.capsule.getGlobalPose()
+          newPosition.toPxTransform(newPose)
+          // newQuaternion.toPxTransform(newPose) // capsule doesn't rotate
+          this.capsule.setGlobalPose(newPose)
+          // rotate ghost by Y only
+          e1.setFromQuaternion(deltaQuaternion).reorder('YXZ')
+          e1.x = 0
+          e1.z = 0
+          q1.setFromEuler(e1)
+          this.base.quaternion.multiply(q1)
+          this.base.updateTransform()
+          // store current transform for next frame
+          this.platform.prevTransform.copy(currTransform)
+        }
+      } else {
+        this.platform.actor = null
+      }
+
+      // sweep down to see if we hit ground
+      let sweepHit
+      {
+        const geometry = this.groundSweepGeometry
+        const pose = this.capsule.getGlobalPose()
+        const origin = v1.copy(pose.p /*this.ghost.position*/)
+        origin.y += this.groundSweepRadius + 0.12 // move up inside player + a bit
+        const direction = DOWN
+        const maxDistance = 0.12 + 0.1 // outside player + a bit more
+        const hitMask = Layers.environment.group | Layers.prop.group | Layers.tool.group
+        sweepHit = this.world.physics.sweep(geometry, origin, direction, maxDistance, hitMask)
+      }
+
+      // update grounded info
+      if (sweepHit) {
+        this.justLeftGround = false
+        this.grounded = true
+        this.groundNormal.copy(sweepHit.normal)
+        this.groundAngle = UP.angleTo(this.groundNormal) * RAD2DEG
+      } else {
+        this.justLeftGround = !!this.grounded
+        this.grounded = false
+        this.groundNormal.copy(UP)
+        this.groundAngle = 0
+      }
+
+      // if on a steep slope, unground and track slipping
+      if (this.grounded && this.groundAngle > 60) {
+        this.justLeftGround = false
+        this.grounded = false
+        this.groundNormal.copy(UP)
+        this.groundAngle = 0
+        this.slipping = true
+      } else {
+        this.slipping = false
+      }
+
+      // our capsule material has 0 friction
+      // we use eMIN when in the air so that we don't stick to walls etc (zero friction)
+      // and eMAX on the ground so that we don't constantly slip off physics objects we're pushing (absorb objects friction)
+      if (this.grounded) {
+        if (this.materialMax !== true) {
+          this.material.setFrictionCombineMode(PHYSX.PxCombineModeEnum.eMAX)
+          this.material.setRestitutionCombineMode(PHYSX.PxCombineModeEnum.eMAX)
+          this.materialMax = true
+        }
+      } else {
+        if (this.materialMax !== false) {
+          this.material.setFrictionCombineMode(PHYSX.PxCombineModeEnum.eMIN)
+          this.material.setRestitutionCombineMode(PHYSX.PxCombineModeEnum.eMIN)
+          this.materialMax = false
         }
       }
-      // move with platform
-      if (this.platform.actor) {
-        // get current platform transform
-        const currTransform = m1
-        const platformPose = this.platform.actor.getGlobalPose()
-        v1.copy(platformPose.p)
-        q1.copy(platformPose.q)
-        currTransform.compose(v1, q1, SCALE_IDENTITY)
-        // get delta transform
-        const deltaTransform = m2.multiplyMatrices(currTransform, this.platform.prevTransform.clone().invert())
-        // extract delta position and quaternion
-        const deltaPosition = v2
-        const deltaQuaternion = q2
-        const deltaScale = v3
-        deltaTransform.decompose(deltaPosition, deltaQuaternion, deltaScale)
-        // apply delta to player
-        const playerPose = this.capsule.getGlobalPose()
-        v4.copy(playerPose.p)
-        q3.copy(playerPose.q)
-        const playerTransform = m3
-        playerTransform.compose(v4, q3, SCALE_IDENTITY)
-        playerTransform.premultiply(deltaTransform)
-        const newPosition = v5
-        const newQuaternion = q4
-        playerTransform.decompose(newPosition, newQuaternion, v6)
-        const newPose = this.capsule.getGlobalPose()
-        newPosition.toPxTransform(newPose)
-        // newQuaternion.toPxTransform(newPose) // capsule doesn't rotate
-        this.capsule.setGlobalPose(newPose)
-        // rotate ghost by Y only
-        e1.setFromQuaternion(deltaQuaternion).reorder('YXZ')
-        e1.x = 0
-        e1.z = 0
-        q1.setFromEuler(e1)
-        this.base.quaternion.multiply(q1)
-        this.base.updateTransform()
-        // store current transform for next frame
-        this.platform.prevTransform.copy(currTransform)
+
+      // if we jumped and have now left the ground, progress to jumping
+      if (this.jumped && !this.grounded) {
+        this.jumped = false
+        this.jumping = true
       }
-    } else {
-      this.platform.actor = null
-    }
 
-    // sweep down to see if we hit ground
-    let sweepHit
-    {
-      const geometry = this.groundSweepGeometry
-      const pose = this.capsule.getGlobalPose()
-      const origin = v1.copy(pose.p /*this.ghost.position*/)
-      origin.y += this.groundSweepRadius + 0.12 // move up inside player + a bit
-      const direction = DOWN
-      const maxDistance = 0.12 + 0.1 // outside player + a bit more
-      const hitMask = Layers.environment.group | Layers.prop.group | Layers.tool.group
-      sweepHit = this.world.physics.sweep(geometry, origin, direction, maxDistance, hitMask)
-    }
-
-    // update grounded info
-    if (sweepHit) {
-      this.justLeftGround = false
-      this.grounded = true
-      this.groundNormal.copy(sweepHit.normal)
-      this.groundAngle = UP.angleTo(this.groundNormal) * RAD2DEG
-    } else {
-      this.justLeftGround = !!this.grounded
-      this.grounded = false
-      this.groundNormal.copy(UP)
-      this.groundAngle = 0
-    }
-
-    // if on a steep slope, unground and track slipping
-    if (this.grounded && this.groundAngle > 60) {
-      this.justLeftGround = false
-      this.grounded = false
-      this.groundNormal.copy(UP)
-      this.groundAngle = 0
-      this.slipping = true
-    } else {
-      this.slipping = false
-    }
-
-    // our capsule material has 0 friction
-    // we use eMIN when in the air so that we don't stick to walls etc (zero friction)
-    // and eMAX on the ground so that we don't constantly slip off physics objects we're pushing (absorb objects friction)
-    if (this.grounded) {
-      if (this.materialMax !== true) {
-        this.material.setFrictionCombineMode(PHYSX.PxCombineModeEnum.eMAX)
-        this.material.setRestitutionCombineMode(PHYSX.PxCombineModeEnum.eMAX)
-        this.materialMax = true
+      // if not grounded and our velocity is downward, start timing our falling
+      if (!this.grounded && this.capsule.getLinearVelocity().y < 0) {
+        this.fallTimer += delta
+      } else {
+        this.fallTimer = 0
       }
-    } else {
-      if (this.materialMax !== false) {
-        this.material.setFrictionCombineMode(PHYSX.PxCombineModeEnum.eMIN)
-        this.material.setRestitutionCombineMode(PHYSX.PxCombineModeEnum.eMIN)
-        this.materialMax = false
+      // if we've been falling for a bit then progress to actual falling
+      // this is to prevent animation jitter when only falling for a very small amount of time
+      if (this.fallTimer > 0.1) {
+        this.jumping = false
+        this.falling = true
       }
-    }
 
-    // if we jumped and have now left the ground, progress to jumping
-    if (this.jumped && !this.grounded) {
-      this.jumped = false
-      this.jumping = true
-    }
+      // if falling and we're now on the ground, clear it
+      if (this.falling && this.grounded) {
+        this.falling = false
+      }
 
-    // if not grounded and our velocity is downward, start timing our falling
-    if (!this.grounded && this.capsule.getLinearVelocity().y < 0) {
-      this.fallTimer += delta
-    } else {
-      this.fallTimer = 0
-    }
-    // if we've been falling for a bit then progress to actual falling
-    // this is to prevent animation jitter when only falling for a very small amount of time
-    if (this.fallTimer > 0.1) {
-      this.jumping = false
-      this.falling = true
-    }
+      // if jumping and we're now on the ground, clear it
+      if (this.jumping && this.grounded) {
+        this.jumping = false
+      }
 
-    // if falling and we're now on the ground, clear it
-    if (this.falling && this.grounded) {
-      this.falling = false
-    }
-
-    // if jumping and we're now on the ground, clear it
-    if (this.jumping && this.grounded) {
-      this.jumping = false
-    }
-
-    // if we're grounded we don't need gravity.
-    // more importantly we disable it so that we don't slowly slide down ramps while standing still.
-    // even more importantly, if the platform we are on is dynamic we apply a force to it to compensate for our gravity being off.
-    // this allows things like see-saws to move down when we stand on them etc.
-    if (this.grounded) {
-      // gravity is disabled but we need to check our platform
-      if (this.platform.actor) {
-        const isStatic = this.platform.actor instanceof PHYSX.PxRigidStatic
-        const isKinematic = this.platform.actor.getRigidBodyFlags?.().isSet(PHYSX.PxRigidBodyFlagEnum.eKINEMATIC)
-        // if its dynamic apply downward force!
-        if (!isKinematic && !isStatic) {
-          // this feels like the right amount of force but no idea why 0.2
-          const amount = -9.81 * 0.2
-          const force = v1.set(0, amount, 0)
-          PHYSX.PxRigidBodyExt.prototype.addForceAtPos(
-            this.platform.actor,
-            force.toPxVec3(),
-            this.capsule.getGlobalPose().p,
-            PHYSX.PxForceModeEnum.eFORCE,
-            true
-          )
+      // if we're grounded we don't need gravity.
+      // more importantly we disable it so that we don't slowly slide down ramps while standing still.
+      // even more importantly, if the platform we are on is dynamic we apply a force to it to compensate for our gravity being off.
+      // this allows things like see-saws to move down when we stand on them etc.
+      if (this.grounded) {
+        // gravity is disabled but we need to check our platform
+        if (this.platform.actor) {
+          const isStatic = this.platform.actor instanceof PHYSX.PxRigidStatic
+          const isKinematic = this.platform.actor.getRigidBodyFlags?.().isSet(PHYSX.PxRigidBodyFlagEnum.eKINEMATIC)
+          // if its dynamic apply downward force!
+          if (!isKinematic && !isStatic) {
+            // this feels like the right amount of force but no idea why 0.2
+            const amount = -9.81 * 0.2
+            const force = v1.set(0, amount, 0)
+            PHYSX.PxRigidBodyExt.prototype.addForceAtPos(
+              this.platform.actor,
+              force.toPxVec3(),
+              this.capsule.getGlobalPose().p,
+              PHYSX.PxForceModeEnum.eFORCE,
+              true
+            )
+          }
         }
+      } else {
+        const force = v1.set(0, -this.effectiveGravity, 0)
+        this.capsule.addForce(force.toPxVec3(), PHYSX.PxForceModeEnum.eFORCE, true)
       }
-    } else {
-      const force = v1.set(0, -this.effectiveGravity, 0)
-      this.capsule.addForce(force.toPxVec3(), PHYSX.PxForceModeEnum.eFORCE, true)
-    }
 
-    // update velocity
-    const velocity = v1.copy(this.capsule.getLinearVelocity())
-    // apply drag, orientated to ground normal
-    // this prevents ice-skating & yeeting us upward when going up ramps
-    const dragCoeff = 10 * delta
-    let perpComponent = v2.copy(this.groundNormal).multiplyScalar(velocity.dot(this.groundNormal))
-    let parallelComponent = v3.copy(velocity).sub(perpComponent)
-    parallelComponent.multiplyScalar(1 - dragCoeff)
-    velocity.copy(parallelComponent.add(perpComponent))
-    // cancel out velocity in ground normal direction (up oriented to ground normal)
-    // this helps us stick to elevators
-    if (this.grounded && !this.jumping) {
-      const projectedLength = velocity.dot(this.groundNormal)
-      const projectedVector = v2.copy(this.groundNormal).multiplyScalar(projectedLength)
-      velocity.sub(projectedVector)
-    }
-    // when walking off an edge or over the top of a ramp, attempt to snap down to a surface
-    if (this.justLeftGround && !this.jumping) {
-      velocity.y = -5
-    }
-    // if slipping ensure we can't gain upward velocity
-    if (this.slipping) {
-      // increase downward velocity to prevent sliding upward when walking at a slope
-      velocity.y -= 0.5
-    }
-    this.capsule.setLinearVelocity(velocity.toPxVec3())
-
-    // apply move force, projected onto ground normal
-    if (this.moving) {
-      let moveSpeed = (this.running ? 8 : 4) * this.mass // run
-      const slopeRotation = q1.setFromUnitVectors(UP, this.groundNormal)
-      const moveForce = v1.copy(this.moveDir).multiplyScalar(moveSpeed * 10).applyQuaternion(slopeRotation) // prettier-ignore
-      this.capsule.addForce(moveForce.toPxVec3(), PHYSX.PxForceModeEnum.eFORCE, true)
-      // alternative (slightly different projection)
-      // let moveSpeed = 10
-      // const slopeMoveDir = v1.copy(this.moveDir).projectOnPlane(this.groundNormal).normalize()
-      // const moveForce = v2.copy(slopeMoveDir).multiplyScalar(moveSpeed * 10)
-      // this.capsule.addForce(moveForce.toPxVec3(), PHYSX.PxForceModeEnum.eFORCE, true)
-    }
-
-    // apply jump
-    if (this.grounded && !this.jumping && this.control.buttons.Space) {
-      // calc velocity needed to reach jump height
-      let jumpVelocity = Math.sqrt(2 * this.effectiveGravity * this.jumpHeight)
-      jumpVelocity = jumpVelocity * (1 / Math.sqrt(this.mass))
       // update velocity
-      const velocity = this.capsule.getLinearVelocity()
-      velocity.y = jumpVelocity
-      this.capsule.setLinearVelocity(velocity)
-      // set jumped (we haven't left the ground yet)
-      this.jumped = true
+      const velocity = v1.copy(this.capsule.getLinearVelocity())
+      // apply drag, orientated to ground normal
+      // this prevents ice-skating & yeeting us upward when going up ramps
+      const dragCoeff = 10 * delta
+      let perpComponent = v2.copy(this.groundNormal).multiplyScalar(velocity.dot(this.groundNormal))
+      let parallelComponent = v3.copy(velocity).sub(perpComponent)
+      parallelComponent.multiplyScalar(1 - dragCoeff)
+      velocity.copy(parallelComponent.add(perpComponent))
+      // cancel out velocity in ground normal direction (up oriented to ground normal)
+      // this helps us stick to elevators
+      if (this.grounded && !this.jumping) {
+        const projectedLength = velocity.dot(this.groundNormal)
+        const projectedVector = v2.copy(this.groundNormal).multiplyScalar(projectedLength)
+        velocity.sub(projectedVector)
+      }
+      // when walking off an edge or over the top of a ramp, attempt to snap down to a surface
+      if (this.justLeftGround && !this.jumping) {
+        velocity.y = -5
+      }
+      // if slipping ensure we can't gain upward velocity
+      if (this.slipping) {
+        // increase downward velocity to prevent sliding upward when walking at a slope
+        velocity.y -= 0.5
+      }
+      this.capsule.setLinearVelocity(velocity.toPxVec3())
+
+      // apply move force, projected onto ground normal
+      if (this.moving) {
+        let moveSpeed = (this.running ? 8 : 4) * this.mass // run
+        const slopeRotation = q1.setFromUnitVectors(UP, this.groundNormal)
+        const moveForce = v1.copy(this.moveDir).multiplyScalar(moveSpeed * 10).applyQuaternion(slopeRotation) // prettier-ignore
+        this.capsule.addForce(moveForce.toPxVec3(), PHYSX.PxForceModeEnum.eFORCE, true)
+        // alternative (slightly different projection)
+        // let moveSpeed = 10
+        // const slopeMoveDir = v1.copy(this.moveDir).projectOnPlane(this.groundNormal).normalize()
+        // const moveForce = v2.copy(slopeMoveDir).multiplyScalar(moveSpeed * 10)
+        // this.capsule.addForce(moveForce.toPxVec3(), PHYSX.PxForceModeEnum.eFORCE, true)
+      }
+
+      // apply jump
+      if (this.grounded && !this.jumping && this.control.buttons.Space) {
+        // calc velocity needed to reach jump height
+        let jumpVelocity = Math.sqrt(2 * this.effectiveGravity * this.jumpHeight)
+        jumpVelocity = jumpVelocity * (1 / Math.sqrt(this.mass))
+        // update velocity
+        const velocity = this.capsule.getLinearVelocity()
+        velocity.y = jumpVelocity
+        this.capsule.setLinearVelocity(velocity)
+        // set jumped (we haven't left the ground yet)
+        this.jumped = true
+      }
+    } else {
+      /**
+       *
+       * FLYING MODE
+       *
+       */
+
+      // apply force in the direction we want to go
+      if (this.moving || this.control.buttons.Space || this.control.buttons.KeyC) {
+        const flySpeed = this.flyForce * (this.control.buttons.ShiftLeft || this.control.buttons.ShiftRight ? 2 : 1)
+        const force = v1.copy(this.flyDir).multiplyScalar(flySpeed)
+        // handle vertical movement
+        if (this.control.buttons.Space) {
+          force.y = flySpeed
+        } else if (this.control.buttons.KeyC) {
+          force.y = -flySpeed
+        }
+        this.capsule.addForce(force.toPxVec3(), PHYSX.PxForceModeEnum.eFORCE, true)
+      }
+
+      // add drag to prevent excessive speeds
+      const velocity = v2.copy(this.capsule.getLinearVelocity())
+      const dragForce = v3.copy(velocity).multiplyScalar(-this.flyDrag * delta)
+      this.capsule.addForce(dragForce.toPxVec3(), PHYSX.PxForceModeEnum.eFORCE, true)
+
+      // zero out any rotational velocity
+      const zeroAngular = v4.set(0, 0, 0)
+      this.capsule.setAngularVelocity(zeroAngular.toPxVec3())
     }
   }
 
@@ -562,6 +619,11 @@ export class PlayerLocal extends Entity {
     // normalize direction (also prevents surfing)
     this.moveDir.normalize()
 
+    // flying direction
+    // this.flyDir.copy(FORWARD).applyQuaternion(this.cam.quaternion).multiply(this.moveDir)
+    this.flyDir.copy(this.moveDir)
+    this.flyDir.applyQuaternion(this.cam.quaternion)
+
     // rotate direction to face camera Y direction
     const yQuaternion = q1.setFromAxisAngle(UP, this.cam.rotation.y)
     this.moveDir.applyQuaternion(yQuaternion)
@@ -577,44 +639,24 @@ export class PlayerLocal extends Entity {
     // and vertically at our vrm model height
     this.cam.position.copy(this.base.position)
     this.cam.position.y += this.camHeight
+    // and slightly to the right over the avatars shoulder
+    const forward = v1.copy(FORWARD).applyQuaternion(this.cam.quaternion)
+    const right = v2.crossVectors(forward, UP).normalize()
+    this.cam.position.add(right.multiplyScalar(0.3))
 
-    // Update emote with debug logging
-    const isMoving = this.moving && this.moveDir.lengthSq() > 0.01; // Use lengthSq for better precision
-    
-    if (this.world.controls.hyperFoneActive) {
-      if (isMoving) {
-        this.emote = Emotes.PHONE_WALK;
-        console.log('Should be phone walking', {
-          moving: this.moving,
-          moveDir: this.moveDir.toArray(),
-          emote: this.emote,
-          emoteFile: emotes[this.emote]
-        });
-      } else {
-        this.emote = Emotes.PHONE;
-        console.log('Should be phone standing', {
-          moving: this.moving,
-          moveDir: this.moveDir.toArray(),
-          emote: this.emote,
-          emoteFile: emotes[this.emote]
-        });
-      }
+    // emote
+    if (this.flying) {
+      this.emote = Emotes.FLOAT
     } else if (this.jumping) {
-      this.emote = Emotes.FLOAT;
+      this.emote = Emotes.FLOAT
     } else if (this.falling) {
-      this.emote = Emotes.FLOAT;
-    } else if (isMoving) {
-      this.emote = this.running ? Emotes.RUN : Emotes.WALK;
+      this.emote = Emotes.FLOAT
+    } else if (this.moving) {
+      this.emote = this.running ? Emotes.RUN : Emotes.WALK
     } else {
-      this.emote = Emotes.IDLE;
+      this.emote = Emotes.IDLE
     }
-
-    // Apply the emote animation with force update
-    if (this.avatar) {
-      // Force update even if same emote to ensure animation plays
-      this.avatar.setEmote(emotes[this.emote]);
-      this.lastEmote = this.emote;
-    }
+    this.avatar?.setEmote(emotes[this.emote])
 
     // send network updates
     this.lastSendAt += delta
@@ -635,6 +677,14 @@ export class PlayerLocal extends Entity {
     const hit = this.control.pointer.locked ? null : this.world.stage.raycastPointer(this.control.pointer.position)[0]
     this.pointerState.update(hit, this.control.pressed.MouseLeft, this.control.released.MouseLeft)
     // console.timeEnd('pointer')
+
+    // watch double jump to toggle flying
+    if (this.control.pressed.Space) {
+      if (this.world.time - this.lastJumpAt < 0.4) {
+        this.toggleFlying()
+      }
+      this.lastJumpAt = this.world.time
+    }
   }
 
   lateUpdate(delta) {
@@ -690,14 +740,6 @@ export class PlayerLocal extends Entity {
       this.proxy = createPlayerProxy(this)
     }
     return this.proxy
-  }
-
-  destroy(local) {
-    // Cleanup tablet and HyperFone
-    this.world.controls.cleanup()
-    
-    // ... rest of existing destroy code ...
-    super.destroy(local)
   }
 }
 

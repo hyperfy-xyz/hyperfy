@@ -2,7 +2,7 @@ import * as THREE from '../extras/three'
 
 import { System } from './System'
 
-const UP = new THREE.Vector3(0, 1, 0)
+const up = new THREE.Vector3(0, 1, 0)
 const v1 = new THREE.Vector3()
 
 export class ClientAudio extends System {
@@ -30,6 +30,7 @@ export class ClientAudio extends System {
     this.listener.upX.value = 0
     this.listener.upY.value = 1
     this.listener.upZ.value = 0
+    this.lastDelta = 0
 
     this.gestured = false
     this.gestureQueue = []
@@ -53,18 +54,25 @@ export class ClientAudio extends System {
 
   lateUpdate(delta) {
     const target = this.world.rig
-    // position
-    this.listener.positionX.value = target.position.x
-    this.listener.positionY.value = target.position.y
-    this.listener.positionZ.value = target.position.z
-    // direction
     const dir = v1.set(0, 0, -1).applyQuaternion(target.quaternion)
-    this.listener.forwardX.value = dir.x
-    this.listener.forwardY.value = dir.y
-    this.listener.forwardZ.value = dir.z
-    this.listener.upX.value = UP.x
-    this.listener.upY.value = UP.y
-    this.listener.upZ.value = UP.z
+    if (this.listener.positionX) {
+      // https://github.com/mrdoob/three.js/blob/master/src/audio/AudioListener.js
+      // code path for Chrome (see three#14393)
+      const endTime = this.ctx.currentTime + delta
+      this.listener.positionX.linearRampToValueAtTime(target.position.x, endTime)
+      this.listener.positionY.linearRampToValueAtTime(target.position.y, endTime)
+      this.listener.positionZ.linearRampToValueAtTime(target.position.z, endTime)
+      this.listener.forwardX.linearRampToValueAtTime(dir.x, endTime)
+      this.listener.forwardY.linearRampToValueAtTime(dir.y, endTime)
+      this.listener.forwardZ.linearRampToValueAtTime(dir.z, endTime)
+      this.listener.upX.linearRampToValueAtTime(up.x, endTime)
+      this.listener.upY.linearRampToValueAtTime(up.y, endTime)
+      this.listener.upZ.linearRampToValueAtTime(up.z, endTime)
+    } else {
+      this.listener.setPosition(target.position.x, target.position.y, target.position.z)
+      this.listener.setOrientation(dir.x, dir.y, dir.z, up.x, up.y, up.z)
+    }
+    this.lastDelta = delta
   }
 
   requireGesture(fn) {

@@ -18,9 +18,6 @@ import { createServerWorld } from '../core/createServerWorld'
 import { hashFile } from '../core/utils-server'
 import { getDB } from './db'
 
-const version = await fs.readFile(path.join(__dirname, 'version.txt'), 'utf8')
-process.env.PUBLIC_VERSION = version
-
 const rootDir = path.join(__dirname, '../')
 const worldDir = path.join(rootDir, process.env.WORLD)
 const assetsDir = path.join(worldDir, '/assets')

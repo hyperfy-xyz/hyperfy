@@ -10,8 +10,19 @@ export function glbToNodes(glb, world) {
   function parse(object3ds, parentNode) {
     for (const object3d of object3ds) {
       const props = object3d.userData || {}
+      // Snap (custom node)
+      if (props.node === 'snap') {
+        const node = registerNode('snap', {
+          id: object3d.name,
+          position: object3d.position.toArray(),
+          quaternion: object3d.quaternion.toArray(),
+          scale: object3d.scale.toArray(),
+        })
+        parentNode.add(node)
+        parse(object3d.children, node)
+      }
       // LOD (custom node)
-      if (props.node === 'lod') {
+      else if (props.node === 'lod') {
         const node = registerNode('lod', {
           id: object3d.name,
           position: object3d.position.toArray(),
@@ -66,6 +77,8 @@ export function glbToNodes(glb, world) {
           geometry: object3d.geometry,
           material: object3d.material,
           linked: !hasMorphTargets,
+          castShadow: props.castShadow,
+          receiveShadow: props.receiveShadow,
           visible: props.visible,
           position: object3d.position.toArray(),
           quaternion: object3d.quaternion.toArray(),

@@ -56,6 +56,23 @@ A multi-line textarea input
 }
 ```
 
+### Number
+
+A number input. Also supports math entry and up/down stepping.
+
+```jsx
+{
+  type: 'number',
+  key: String,           // the key on `props` to set this value
+  label: String,         // the label for the text input
+  dp: Number,            // the number of decimal places allowed (default = 0)
+  min: Number,           // the minimum value allowed (default = -Infinity)
+  max: Number,           // the maximum value allowed (default = Infinity)
+  step: Number,          // the amount incremented/decrement when pressing up/down arrows (default = 1)
+  initial: Number,       // the initial value to set if not configured (default = 0)
+}
+```
+
 ### Switch
 
 A switch input

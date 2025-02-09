@@ -25,9 +25,9 @@ export class Avatar extends Node {
 
   unmount() {
     if (this.instance) {
+      this.ctx.world?.setHot(this.instance, false)
       this.instance.destroy()
       this.instance = null
-      this.ctx.world?.setHot(this.instance, false)
     }
   }
 

@@ -13,6 +13,43 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+## [0.6.0]
+
+### Added
+- apps: audio node and audio file prop
+- core: camera adjusts to avatar height
+- apps: support mesh.material.emissiveIntensity for bloom control
+- apps: official custom props + configure and docs
+- apps: support Date.now()
+- core: support downloading apps as .hyp files
+- core: support drag and drop .hyp files
+- core: support app metadata (image, name, author, url, desc)
+- apps: new number field
+- apps: support snap points and embedded snap points in glbs
+- core: support drag and drop urls from another website (glbs, hyps etc)
+
+### Changed
+- core: reduce docker image size + provide prebuilt images
+- apps: props are now a global in scripts
+- apps: support app.create(name, props) syntax
+- core: unified node props 
+- core: upgrade to three@0.173.0
+- core: show chat message when dropping a file without permission
+- core: lock pointer when raising/lowering apps while holding shift
+- core: make default grass environment much much larger
+- core: show grab cursor while moving apps
+
+### Fixed
+- core: fix crashes caused by undefined blueprint props
+- apps: fix removing app configure not updating inspect window
+- apps: ui not updated in octree after moving
+- apps: fix crash due to props not being set up
+- core: dont show context wheel when app has no visible actions
+- core: support castShadow/receiveShadow props on imported glbs
+- core: fix avatars not unmounting correctly causing memory leak
+- core: fix big audio memory issue + firefox not working
+- 
+
 ## [0.5.0]
 
 ### Added
@@ -145,7 +182,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Basic project structure
 - Core functionality from original project
 
-[Unreleased]: https://github.com/hyperfy-xyz/hyperfy/compare/v0.3.0...HEAD
+[Unreleased]: https://github.com/hyperfy-xyz/hyperfy/compare/v0.6.0...HEAD
+[0.6.0]: https://github.com/hyperfy-xyz/hyperfy/compare/v0.5.0...v0.6.0
+[0.5.0]: https://github.com/hyperfy-xyz/hyperfy/compare/v0.4.0...v0.5.0
+[0.4.0]: https://github.com/hyperfy-xyz/hyperfy/compare/v0.3.0...v0.4.0
 [0.3.0]: https://github.com/hyperfy-xyz/hyperfy/compare/v0.2.0...v0.3.0
 [0.2.0]: https://github.com/hyperfy-xyz/hyperfy/compare/v0.1.0...v0.2.0
 [0.1.0]: https://github.com/hyperfy-xyz/hyperfy/releases/tag/v0.1.0 

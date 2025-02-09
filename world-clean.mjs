@@ -101,8 +101,8 @@ for (const blueprint of blueprints) {
     blueprintAssets.add(asset)
     // console.log(asset)
   }
-  for (const key in blueprint.config) {
-    const url = blueprint.config[key]?.url
+  for (const key in blueprint.props) {
+    const url = blueprint.props[key]?.url
     if (!url) continue
     const asset = url.replace('asset://', '')
     blueprintAssets.add(asset)

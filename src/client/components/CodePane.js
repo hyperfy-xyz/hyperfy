@@ -122,8 +122,8 @@ export function CodePane({ entity, onClose }) {
       `}
     >
       <div className='acode-head' ref={headRef}>
-        <FileCode2Icon size={20} />
-        <div className='acode-head-title'>Script</div>
+        <FileCode2Icon size={16} />
+        <div className='acode-head-title'>Code</div>
         <div className='acode-head-close' onClick={() => world.emit('code', null)}>
           <XIcon size={20} />
         </div>

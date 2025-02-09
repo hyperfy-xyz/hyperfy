@@ -78,10 +78,22 @@ export class Audio extends Node {
 
   move() {
     if (!this.pannerNode) return
-    this.matrixWorld.decompose(v1, q1, v2)
-    this.pannerNode.setPosition(v1.x, v1.y, v1.z)
-    const forward = v1.set(0, 0, -1).applyQuaternion(q1)
-    this.pannerNode.setOrientation(forward.x, forward.y, forward.z)
+    const audio = this.ctx.world.audio
+    const pos = v1.setFromMatrixPosition(this.matrixWorld)
+    const qua = q1.setFromRotationMatrix(this.matrixWorld)
+    const dir = v2.set(0, 0, -1).applyQuaternion(qua)
+    if (this.pannerNode.positionX) {
+      const endTime = audio.ctx.currentTime + audio.lastDelta
+      this.pannerNode.positionX.linearRampToValueAtTime(pos.x, endTime)
+      this.pannerNode.positionY.linearRampToValueAtTime(pos.y, endTime)
+      this.pannerNode.positionZ.linearRampToValueAtTime(pos.z, endTime)
+      this.pannerNode.orientationX.linearRampToValueAtTime(dir.x, endTime)
+      this.pannerNode.orientationY.linearRampToValueAtTime(dir.y, endTime)
+      this.pannerNode.orientationZ.linearRampToValueAtTime(dir.z, endTime)
+    } else {
+      this.pannerNode.setPosition(pos.x, pos.y, pos.z)
+      this.pannerNode.setOrientation(dir.x, dir.y, dir.z)
+    }
   }
 
   copy(source, recursive) {

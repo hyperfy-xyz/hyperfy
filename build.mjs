@@ -98,8 +98,6 @@ let spawn
         name: 'server-finalize-plugin',
         setup(build) {
           build.onEnd(async result => {
-            // make version file
-            await fs.writeFile(path.join(rootDir, 'build/version.txt'), getVersion())
             // copy over physx wasm
             const physxWasmSrc = path.join(rootDir, 'src/server/physx/physx-js-webidl.wasm')
             const physxWasmDest = path.join(rootDir, 'build/physx-js-webidl.wasm')
@@ -122,28 +120,5 @@ let spawn
     await serverCtx.watch()
   } else {
     await serverCtx.rebuild()
-  }
-}
-
-export function getVersion() {
-  try {
-    // get version from package.json
-    const packageJson = JSON.parse(fs.readFileSync('./package.json', 'utf8'))
-    let version = packageJson.version
-    // check if there are unstaged changes
-    const hasUnstagedChanges = execSync('git status --porcelain').toString().length > 0
-    // check if we're on main branch
-    const currentBranch = execSync('git rev-parse --abbrev-ref HEAD', {
-      encoding: 'utf8',
-    }).trim()
-    const isMainBranch = currentBranch === 'main'
-    // append -dev if either condition is true
-    if (hasUnstagedChanges || !isMainBranch) {
-      version += '-dev'
-    }
-    return version
-  } catch (error) {
-    console.error('error getting version:', error)
-    return null
   }
 }

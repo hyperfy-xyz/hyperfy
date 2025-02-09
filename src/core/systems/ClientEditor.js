@@ -8,7 +8,7 @@ import { ControlPriorities } from '../extras/ControlPriorities'
 import { CopyIcon, EyeIcon, HandIcon, Trash2Icon, UnlinkIcon } from 'lucide-react'
 import { cloneDeep } from 'lodash-es'
 import moment from 'moment'
-import { importApp, isAppCompatible } from '../extras/appTools'
+import { importApp } from '../extras/appTools'
 
 contextBreakers = ['MouseLeft', 'Escape']
 
@@ -99,10 +99,11 @@ export class ClientEditor extends System {
       const roles = this.world.entities.player.data.user.roles
       const isAdmin = hasRole(roles, 'admin')
       const isBuilder = hasRole(roles, 'builder')
+      const isPublic = entity.blueprint.public
       context.actions.push({
         label: 'Inspect',
         icon: EyeIcon,
-        visible: isAdmin || isBuilder,
+        visible: isAdmin || isBuilder || isPublic,
         disabled: false,
         onClick: () => {
           this.setContext(null)
@@ -150,10 +151,18 @@ export class ClientEditor extends System {
           const blueprint = {
             id: uuid(),
             version: 0,
+            name: entity.blueprint.name,
+            image: entity.blueprint.image,
+            author: entity.blueprint.author,
+            url: entity.blueprint.url,
+            desc: entity.blueprint.desc,
             model: entity.blueprint.model,
             script: entity.blueprint.script,
             props: cloneDeep(entity.blueprint.props),
             preload: entity.blueprint.preload,
+            public: entity.blueprint.public,
+            locked: entity.blueprint.locked,
+            frozen: entity.blueprint.frozen,
           }
           this.world.blueprints.add(blueprint, true)
           // assign new blueprint
@@ -199,7 +208,7 @@ export class ClientEditor extends System {
     }
   }
 
-  onDrop = e => {
+  onDrop = async e => {
     e.preventDefault()
     this.dropping = false
     // ensure we have admin/builder role
@@ -222,8 +231,16 @@ export class ClientEditor extends System {
       if (item.kind === 'file') {
         file = item.getAsFile()
       }
-      if (item.type === 'text/uri-list') {
-        // ...
+      // Handle multiple MIME types for URLs
+      if (item.type === 'text/uri-list' || item.type === 'text/plain' || item.type === 'text/html') {
+        const text = await getAsString(item)
+        // Extract URL from the text (especially important for text/html type)
+        const url = text.trim().split('\n')[0] // Take first line in case of multiple
+        if (url.startsWith('http')) { // Basic URL validation
+          const resp = await fetch(url)
+          const blob = await resp.blob()
+          file = new File([blob], new URL(url).pathname.split('/').pop(), { type: resp.headers.get('content-type') })
+        }
       }
     } else if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
       file = e.dataTransfer.files[0]
@@ -255,26 +272,24 @@ export class ClientEditor extends System {
 
   async addApp(file) {
     const info = await importApp(file)
-    if (!isAppCompatible(info.version)) {
-      this.world.chat.add({
-        id: uuid(),
-        from: null,
-        fromId: null,
-        body: `That app is not compatible (${info.version} > ${process.env.PUBLIC_VERSION})`,
-        createdAt: moment().toISOString(),
-      })
-      return
-    }
     for (const asset of info.assets) {
       this.world.loader.insert(asset.type, asset.url, asset.file)
     }
     const blueprint = {
       id: uuid(),
       version: 0,
+      name: info.blueprint.name,
+      image: info.blueprint.image,
+      author: info.blueprint.author,
+      url: info.blueprint.url,
+      desc: info.blueprint.desc,
       model: info.blueprint.model,
       script: info.blueprint.script,
       props: info.blueprint.props,
       preload: info.blueprint.preload,
+      public: info.blueprint.public,
+      locked: info.blueprint.locked,
+      frozen: info.blueprint.frozen,
     }
     this.world.blueprints.add(blueprint, true)
     const hit = this.world.stage.raycastPointer(this.control.pointer.position)[0]
@@ -316,10 +331,17 @@ export class ClientEditor extends System {
     const blueprint = {
       id: uuid(),
       version: 0,
+      name: null,
+      image: null,
+      author: null,
+      url: null,
+      desc: null,
       model: url,
       script: null,
       props: {},
       preload: false,
+      public: false,
+      locked: false,
     }
     // register blueprint
     this.world.blueprints.add(blueprint, true)
@@ -366,10 +388,17 @@ export class ClientEditor extends System {
         const blueprint = {
           id: uuid(),
           version: 0,
+          name: null,
+          image: null,
+          author: null,
+          url: null,
+          desc: null,
           model: url,
           script: null,
           props: {},
           preload: false,
+          public: false,
+          locked: false,
         }
         // register blueprint
         this.world.blueprints.add(blueprint, true)
@@ -422,4 +451,10 @@ export class ClientEditor extends System {
       },
     })
   }
+}
+
+function getAsString(item) {
+  return new Promise(resolve => {
+    item.getAsString(resolve)
+  })
 }

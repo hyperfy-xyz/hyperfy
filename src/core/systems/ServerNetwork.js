@@ -353,6 +353,7 @@ export class ServerNetwork extends System {
   onEntityModified = async (socket, data) => {
     // TODO: check client permission
     const entity = this.world.entities.get(data.id)
+    if (!entity) return console.error('onEntityModified: no entity found', data)
     entity.modify(data)
     this.send('entityModified', data, socket.id)
     if (entity.isApp) {

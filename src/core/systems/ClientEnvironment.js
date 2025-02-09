@@ -78,7 +78,7 @@ export class ClientEnvironment extends System {
     // ground
     const glb = await this.world.loader.load('model', '/base-environment.glb')
     const root = glb.toNodes()
-    root.activate({ world: this.world, physics: true, label: 'base-environment' })
+    root.activate({ world: this.world, label: 'base-environment' })
   }
 
   addSky(node) {

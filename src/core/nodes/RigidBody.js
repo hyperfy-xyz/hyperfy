@@ -46,7 +46,7 @@ export class RigidBody extends Node {
 
   mount() {
     this.needsRebuild = false
-    if (!this.ctx.physics) return // physics ignored when moving apps around
+    if (this.ctx.moving) return // physics ignored when moving apps around
     this.matrixWorld.decompose(_v1, _q1, _v2)
     this.transform = new PHYSX.PxTransform(PHYSX.PxIDENTITYEnum.PxIdentity)
     _v1.toPxTransform(this.transform)

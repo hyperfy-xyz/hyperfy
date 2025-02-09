@@ -1,4 +1,8 @@
+import { cloneDeep } from 'lodash-es'
+
 export async function exportApp(blueprint, resolveFile) {
+  blueprint = cloneDeep(blueprint)
+
   // get all asset urls
   const assets = []
   if (blueprint.model) {
@@ -26,9 +30,14 @@ export async function exportApp(blueprint, resolveFile) {
     }
   }
 
+  if (blueprint.locked) {
+    blueprint.frozen = true
+  }
+
+  const filename = `${blueprint.name || 'app'}.hyp`
+
   // create header
   const header = {
-    version: process.env.PUBLIC_VERSION,
     blueprint,
     assets: assets.map(asset => {
       return {
@@ -51,7 +60,7 @@ export async function exportApp(blueprint, resolveFile) {
   const fileBlobs = await Promise.all(assets.map(asset => asset.file.arrayBuffer()))
 
   // create final blob with header size + header + files
-  const file = new File([headerSize, headerBytes, ...fileBlobs], `app.hyp`, {
+  const file = new File([headerSize, headerBytes, ...fileBlobs], filename, {
     type: 'application/octet-stream',
   })
 
@@ -88,7 +97,6 @@ export async function importApp(file) {
   }
 
   return {
-    version: header.version,
     blueprint: header.blueprint,
     assets,
   }
@@ -106,25 +114,4 @@ function str2ab(str) {
 function ab2str(buf) {
   // convert Uint8Array to string
   return String.fromCharCode.apply(null, buf)
-}
-
-export function isAppCompatible(appVersion) {
-  let currentVersion = process.env.PUBLIC_VERSION
-  // strip any -dev suffix
-  currentVersion = currentVersion.replace('-dev', '')
-  appVersion = appVersion.replace('-dev', '')
-  // split versions into numeric parts
-  const current = currentVersion.split('.').map(Number)
-  const required = appVersion.split('.').map(Number)
-  // compare each part
-  for (let i = 0; i < 3; i++) {
-    if (current[i] > required[i]) return true
-    if (current[i] < required[i]) return false
-  }
-  // if we get here, versions are equal
-  return true
-}
-
-export function isDevBuild() {
-  return process.env.PUBLIC_VERSION.endsWith('-dev')
 }

@@ -72,7 +72,7 @@ export class PlayerRemote extends Entity {
     this.bubbleBox.add(this.bubbleText)
     this.base.add(this.bubble)
 
-    this.base.activate({ world: this.world, entity: this, physics: true })
+    this.base.activate({ world: this.world, entity: this })
 
     this.applyAvatar()
 

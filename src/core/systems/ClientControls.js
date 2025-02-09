@@ -26,6 +26,7 @@ export class ClientControls extends System {
     super(world)
     this.controls = []
     this.isUserGesture = false
+    this.isMac = /Mac/.test(navigator.platform)
     this.pointer = {
       locked: false,
       shouldLock: false,
@@ -529,7 +530,8 @@ export class ClientControls extends System {
 
   onScroll = e => {
     e.preventDefault()
-    const delta = e.shiftKey ? e.deltaX : e.deltaY
+    let delta = e.shiftKey ? e.deltaX : e.deltaY
+    if (!this.isMac) delta = -delta
     this.scroll.delta += delta
   }
 
