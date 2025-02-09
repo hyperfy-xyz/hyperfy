@@ -1,4 +1,4 @@
-FROM node:22-alpine
+FROM node:22 AS build
 
 # Set the working directory
 WORKDIR /app

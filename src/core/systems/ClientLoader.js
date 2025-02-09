@@ -139,7 +139,7 @@ export class ClientLoader extends System {
         const buffer = await file.arrayBuffer()
         const glb = await this.gltfLoader.parseAsync(buffer)
         const factory = createVRMFactory(glb, this.world.setupMaterial)
-        const node = createNode('group')
+        const node = createNode('group', { id: '$root' })
         const node2 = createNode('avatar', { id: 'avatar', factory, hooks: this.vrmHooks })
         node.add(node2)
         const avatar = {
