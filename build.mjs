@@ -23,7 +23,7 @@ const clientHtmlDest = path.join(rootDir, 'build/public/index.html')
 
 {
   const clientCtx = await esbuild.context({
-    entryPoints: ['src/client/index.js'],
+    entryPoints: ['src/client/index.ts'],
     entryNames: '/[name]-[hash]',
     outdir: clientBuildDir,
     platform: 'browser',
@@ -40,6 +40,8 @@ const clientHtmlDest = path.join(rootDir, 'build/public/index.html')
     },
     loader: {
       '.js': 'jsx',
+      '.ts': 'tsx',
+      '.tsx': 'tsx'
     },
     alias: {
       react: 'react', // always use our own local react (jsx)
@@ -80,7 +82,7 @@ let spawn
 
 {
   const serverCtx = await esbuild.context({
-    entryPoints: ['src/server/index.js'],
+    entryPoints: ['src/server/index.ts'],
     outfile: 'build/index.js',
     platform: 'node',
     format: 'esm',
@@ -92,6 +94,10 @@ let spawn
     define: {
       'process.env.CLIENT': 'false',
       'process.env.SERVER': 'true',
+    },
+    loader: {
+      '.ts': 'tsx',
+      '.tsx': 'tsx'
     },
     plugins: [
       {
@@ -114,7 +120,6 @@ let spawn
         },
       },
     ],
-    loader: {},
   })
   if (dev) {
     await serverCtx.watch()
