@@ -7,6 +7,7 @@ import { LerpVector3 } from '../extras/LerpVector3'
 import { LerpQuaternion } from '../extras/LerpQuaternion'
 import { ControlPriorities } from '../extras/ControlPriorities'
 import { getRef } from '../nodes/Node'
+import { uuid } from '../utils'
 
 const hotEventNames = ['fixedUpdate', 'update', 'lateUpdate']
 const internalEvents = ['fixedUpdate', 'updated', 'lateUpdate', 'enter', 'leave', 'chat']
@@ -460,6 +461,12 @@ export class App extends Entity {
       create(name, data) {
         const node = entity.createNode(name, data)
         return node.getProxy()
+      },
+      createClone() {
+        const data = entity.data;
+        data.id = uuid();
+
+        entity.world.entities.add(data, true);
       },
       control(options) {
         // TODO: only allow on user interaction
