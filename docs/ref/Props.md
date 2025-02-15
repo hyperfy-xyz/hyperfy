@@ -92,6 +92,25 @@ A switch input
 }
 ```
 
+### Dropdown
+
+A dropdown menu
+
+```jsx
+{
+  type: 'dropdown',
+  key: String,           // the key on `props` to set this value
+  label: String,         // the label for the text input
+  options: [
+    {
+      label: String,     // the label to show on this item
+      value: String,     // the value to set on the props when selected
+    }
+  ],
+  initial: String,       // the initial value to set if not configured
+}
+```
+
 ### File
 
 A file field for selecting and uploading additional assets that can be used by your app.

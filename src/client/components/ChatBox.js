@@ -4,15 +4,24 @@ import { MessageCircleMoreIcon, SendHorizonalIcon } from 'lucide-react'
 import moment from 'moment'
 import { uuid } from '../../core/utils'
 import { cls } from '../utils'
+import { ControlPriorities } from '../../core/extras/ControlPriorities'
 
 const CHAT_TIME_REFRESH_RATE = 30 // every x seconds
 
 export function ChatBox({ className, world, active, onClose, ...props }) {
   const initRef = useRef()
   const contentRef = useRef()
+  const inputRef = useRef()
   const [body, setBody] = useState('')
   const [now, setNow] = useState(() => moment())
   const [msgs, setMsgs] = useState([])
+  useEffect(() => {
+    const control = world.controls.bind({ priority: ControlPriorities.GUI })
+    control.enter.onPress = () => {
+      inputRef.current.focus()
+    }
+    return () => control.release()
+  }, [])
   useEffect(() => {
     return world.chat.subscribe(setMsgs)
   }, [])
@@ -34,6 +43,9 @@ export function ChatBox({ className, world, active, onClose, ...props }) {
     initRef.current = true
   }, [msgs])
   const send = async () => {
+    if (world.controls.pointer.locked) {
+      setTimeout(() => inputRef.current.blur(), 10)
+    }
     if (!body) return
     setBody('')
     // check for client commands
@@ -128,6 +140,7 @@ export function ChatBox({ className, world, active, onClose, ...props }) {
           <MessageCircleMoreIcon size={20} />
         </div>
         <input
+          ref={inputRef}
           className='chat-entry-input'
           type='text'
           value={body}

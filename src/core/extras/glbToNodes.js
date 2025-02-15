@@ -79,7 +79,8 @@ export function glbToNodes(glb, world) {
           linked: !hasMorphTargets,
           castShadow: props.castShadow,
           receiveShadow: props.receiveShadow,
-          visible: props.visible,
+          visible: props.visible, // DEPRECATED: use Node.active
+          active: props.active,
           position: object3d.position.toArray(),
           quaternion: object3d.quaternion.toArray(),
           scale: object3d.scale.toArray(),

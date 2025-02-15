@@ -165,4 +165,23 @@ const migrations = [
       }
     }
   },
+  // add blueprint.unique field
+  async db => {
+    const blueprints = await db('blueprints')
+    for (const blueprint of blueprints) {
+      const data = JSON.parse(blueprint.data)
+      let changed
+      if (data.unique === undefined) {
+        data.unique = false
+        changed = true
+      }
+      if (changed) {
+        await db('blueprints')
+          .where('id', blueprint.id)
+          .update({
+            data: JSON.stringify(data),
+          })
+      }
+    }
+  },
 ]

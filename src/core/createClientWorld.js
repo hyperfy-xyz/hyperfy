@@ -8,10 +8,13 @@ import { ClientGraphics } from './systems/ClientGraphics'
 import { ClientEnvironment } from './systems/ClientEnvironment'
 import { ClientAudio } from './systems/ClientAudio'
 import { ClientStats } from './systems/ClientStats'
-import { ClientEditor } from './systems/ClientEditor'
+import { ClientBuilder } from './systems/ClientBuilder'
 import { ClientActions } from './systems/ClientActions'
+import { ClientTarget } from './systems/ClientTarget'
+import { LODs } from './systems/LODs'
 import { Nametags } from './systems/Nametags'
 import { Snaps } from './systems/Snaps'
+import { XR } from './systems/XR'
 
 export function createClientWorld() {
   const world = new World()
@@ -23,9 +26,12 @@ export function createClientWorld() {
   world.register('environment', ClientEnvironment)
   world.register('audio', ClientAudio)
   world.register('stats', ClientStats)
-  world.register('editor', ClientEditor)
+  world.register('builder', ClientBuilder)
   world.register('actions', ClientActions)
+  world.register('target', ClientTarget)
+  world.register('lods', LODs)
   world.register('nametags', Nametags)
   world.register('snaps', Snaps)
+  world.register('xr', XR)
   return world
 }

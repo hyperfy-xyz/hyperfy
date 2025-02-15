@@ -101,6 +101,11 @@ for (const blueprint of blueprints) {
     blueprintAssets.add(asset)
     // console.log(asset)
   }
+  if (blueprint.image?.url && blueprint.image.url.startsWith('asset://')) {
+    const asset = blueprint.image.url.replace('asset://', '')
+    blueprintAssets.add(asset)
+    // console.log(asset)
+  }
   for (const key in blueprint.props) {
     const url = blueprint.props[key]?.url
     if (!url) continue

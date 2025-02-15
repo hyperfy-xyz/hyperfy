@@ -4,14 +4,15 @@
  * preventing lower priority from seeing/responding to them.
  *
  * - Players are given base priority
- * - Editor requires taking over some of the player controls (eg mouse wheel) so this has a higher priority
+ * - Builder requires taking over some of the player controls (eg mouse wheel) so this has a higher priority
  * - Apps are extensions of players and thus are the highest priority, allowing all manner of things such as vehicles etc.
  *
  */
 export const ControlPriorities = {
   PLAYER: 0,
-  EDITOR: 1,
+  BUILDER: 1,
   ENTITY: 2,
   APP: 3,
   ACTION: 4,
+  GUI: 5,
 }

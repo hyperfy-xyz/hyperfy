@@ -19,6 +19,13 @@ export async function exportApp(blueprint, resolveFile) {
       file: await resolveFile(blueprint.script),
     })
   }
+  if (blueprint.image) {
+    assets.push({
+      type: 'texture',
+      url: blueprint.image.url,
+      file: await resolveFile(blueprint.image.url),
+    })
+  }
   for (const key in blueprint.props) {
     const value = blueprint.props[key]
     if (value?.url) {

@@ -20,19 +20,7 @@ export class ClientActions extends System {
   start() {
     this.action = createAction(this.world)
     this.btnDown = false
-    this.control = this.world.controls.bind({
-      priority: ControlPriorities.ACTION,
-      onPress: code => {
-        if (code === 'KeyE') {
-          this.btnDown = true
-        }
-      },
-      onRelease: code => {
-        if (code === 'KeyE') {
-          this.btnDown = false
-        }
-      },
-    })
+    this.control = this.world.controls.bind({ priority: ControlPriorities.ACTION })
   }
 
   register(node) {
@@ -52,6 +40,8 @@ export class ClientActions extends System {
 
   update(delta) {
     const cameraPos = this.world.rig.position
+
+    this.btnDown = this.control.keyE.down
 
     // clear current action if its no longer in distance
     if (this.current.node) {

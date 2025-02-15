@@ -15,10 +15,6 @@ Whether this mesh should cast a shadow. Defaults to `true`.
 
 Whether this mesh should receive a shadow. Defaults to `true`.
 
-### `.visible`: Boolean
-
-Whether the mesh is visible and rendered. Defaults to `true`.
-
 ### `.{...Node}`
 
 Inherits all [Node](/docs/ref/Node.md) properties

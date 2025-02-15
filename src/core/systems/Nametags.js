@@ -50,7 +50,6 @@ export class Nametags extends System {
       transparent: true,
       depthWrite: false,
       depthTest: false,
-
       uniforms: {
         uAtlas: { value: this.texture },
         uOrientation: { value: this.world.rig.quaternion },
@@ -229,5 +228,10 @@ export class Nametags extends System {
     this.ctx.clearRect(x, y, NAMETAG_WIDTH, NAMETAG_HEIGHT)
     // update texture
     this.texture.needsUpdate = true
+  }
+
+  setOrientation(quaternion) {
+    this.material.uniforms.uOrientation.value = quaternion
+    this.material.uniformsNeedUpdate = true
   }
 }

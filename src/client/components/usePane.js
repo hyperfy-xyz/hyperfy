@@ -23,6 +23,13 @@ let layer = 0
 export function usePane(id, paneRef, headRef, resizable = false) {
   useEffect(() => {
     let config = info.configs[id]
+
+    // hack: for some reason width and height can end up zero
+    // so if they are, we just clear it and rebuild
+    if (config && (config.width === 0 || config.height === 0)) {
+      config = null
+    }
+
     if (!config) {
       const count = ++info.count
       config = {

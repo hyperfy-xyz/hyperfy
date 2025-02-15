@@ -12,7 +12,7 @@ export class Avatar extends Node {
 
   mount() {
     if (this.factory) {
-      this.instance = this.factory(this.matrixWorld, this.hooks, this)
+      this.instance = this.factory.create(this.matrixWorld, this.hooks, this)
       this.ctx.world?.setHot(this.instance, true)
     }
   }
@@ -31,30 +31,9 @@ export class Avatar extends Node {
     }
   }
 
-  // setMode(mode) {
-  //   // TODO: toggle physics off when moving
-  //   //
-  //   // if (mode === 'moving') {
-  //   //   this.layer = Layers.MOVING
-  //   // } else {
-  //   //   this.layer = Layers.DEFAULT
-  //   // }
-  // }
-
-  // getStats() {
-  //   let triangles = 0
-  //   if (this.src) {
-  //     const geometry = this.src.lods[0].mesh.geometry
-  //     if (geometry.index !== null) {
-  //       triangles += geometry.index.count / 3
-  //     } else {
-  //       triangles += geometry.attributes.position.count / 3
-  //     }
-  //   }
-  //   return {
-  //     triangles,
-  //   }
-  // }
+  applyStats(stats) {
+    this.factory?.applyStats(stats)
+  }
 
   get height() {
     return this.instance?.height || null

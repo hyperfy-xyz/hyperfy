@@ -214,6 +214,19 @@ export class Stage extends System {
     this.octree.raycast(this.raycaster, this.raycastHits)
     return this.raycastHits
   }
+
+  raycastReticle(layers = this.maskNone, min = 0, max = Infinity) {
+    if (!this.viewport) throw new Error('no viewport')
+    vec2.x = 0
+    vec2.y = 0
+    this.raycaster.setFromCamera(vec2, this.world.camera)
+    this.raycaster.layers = layers
+    this.raycaster.near = min
+    this.raycaster.far = max
+    this.raycastHits.length = 0
+    this.octree.raycast(this.raycaster, this.raycastHits)
+    return this.raycastHits
+  }
 }
 
 class Model {

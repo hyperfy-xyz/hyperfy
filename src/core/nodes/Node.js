@@ -3,10 +3,14 @@ import * as THREE from '../extras/three'
 
 const _v1 = new THREE.Vector3()
 const _v2 = new THREE.Vector3()
+const _v3 = new THREE.Vector3()
 const _q1 = new THREE.Quaternion()
 const _m1 = new THREE.Matrix4()
 const _m2 = new THREE.Matrix4()
 const _m3 = new THREE.Matrix4()
+const _box3 = new THREE.Box3()
+const _sphere = new THREE.Sphere()
+const _points = []
 
 const defaults = {
   active: true,
@@ -170,7 +174,7 @@ export class Node {
     if (!this._active && this.mounted) {
       this.deactivate()
     } else if (this._active && this.parent?.mounted) {
-      this.activate(this.ctx)
+      this.activate(this.parent.ctx)
     }
   }
 
@@ -242,6 +246,7 @@ export class Node {
     this._onPointerDown = source._onPointerDown
     this._onPointerUp = source._onPointerUp
     this._cursor = source._cursor
+    this._active = source._active
     if (recursive) {
       for (let i = 0; i < source.children.length; i++) {
         const child = source.children[i]
@@ -268,8 +273,25 @@ export class Node {
     return vec3
   }
 
-  getStats() {
-    return null
+  getStats(recursive, stats) {
+    if (!stats) {
+      stats = {
+        geometries: new Set(),
+        triangles: 0,
+        textureBytes: 0,
+      }
+    }
+    this.applyStats(stats)
+    if (recursive) {
+      for (const child of this.children) {
+        child.getStats(recursive, stats)
+      }
+    }
+    return stats
+  }
+
+  applyStats(stats) {
+    // nodes should override this and add their stats
   }
 
   get onPointerEnter() {

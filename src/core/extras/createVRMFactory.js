@@ -2,6 +2,8 @@ import * as SkeletonUtils from 'three/examples/jsm/utils/SkeletonUtils.js'
 
 import * as THREE from './three'
 import { DEG2RAD } from './general'
+import { getTrianglesFromGeometry } from './getTrianglesFromGeometry'
+import { getTextureBytesFromMaterial } from './getTextureBytesFromMaterial'
 
 const v1 = new THREE.Vector3()
 const v2 = new THREE.Vector3()
@@ -95,7 +97,22 @@ export function createVRMFactory(glb, setupMaterial) {
     // ...
   }
 
-  return (matrix, hooks, node) => {
+  return {
+    create,
+    applyStats(stats) {
+      glb.scene.traverse(obj => {
+        if (obj.geometry && !stats.geometries.has(obj.geometry)) {
+          stats.geometries.add(obj.geometry.uuid)
+          stats.triangles += getTrianglesFromGeometry(obj.geometry)
+        }
+        if (obj.material) {
+          stats.textureBytes += getTextureBytesFromMaterial(obj.material)
+        }
+      })
+    },
+  }
+
+  function create(matrix, hooks, node) {
     const vrm = cloneGLB(glb)
     const tvrm = vrm.userData.vrm
     const skinnedMeshes = getSkinnedMeshes(vrm.scene)
@@ -231,11 +248,20 @@ export function createVRMFactory(glb, setupMaterial) {
       matrix.multiplyMatrices(vrm.scene.matrixWorld, bone.matrixWorld)
     }
 
+    let firstPersonActive = false
+    const setFirstPerson = active => {
+      if (firstPersonActive === active) return
+      const head = findBone('neck')
+      head.scale.setScalar(active ? 0 : 1)
+      firstPersonActive = active
+    }
+
     return {
       raw: vrm,
       height,
       applyBoneMatrixWorld,
       setEmote,
+      setFirstPerson,
       update,
       move(_matrix) {
         matrix.copy(_matrix)

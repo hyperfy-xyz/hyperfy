@@ -3,7 +3,7 @@ import * as THREE from '../extras/three'
 import { System } from './System'
 
 import { CSM } from '../libs/csm/CSM'
-import { isNumber } from 'lodash-es'
+import { isNumber, isString } from 'lodash-es'
 
 const csmLevels = {
   none: {
@@ -45,6 +45,7 @@ const defaults = {
   hdr: '/day2.hdr',
   sunDirection: new THREE.Vector3(-1, -2, -2).normalize(),
   sunIntensity: 1,
+  sunColor: 0xffffff,
 }
 
 /**
@@ -116,6 +117,7 @@ export class ClientEnvironment extends System {
     const hdrUrl = node?._hdr || defaults.hdr
     const sunDirection = node?._sunDirection || defaults.sunDirection
     const sunIntensity = isNumber(node?._sunIntensity) ? node._sunIntensity : defaults.sunIntensity
+    const sunColor = isString(node?._sunColor) ? node._sunColor : defaults.sunColor
 
     const n = ++this.skyN
     const bgTexture = await this.world.loader.load('texture', bgUrl)
@@ -139,6 +141,7 @@ export class ClientEnvironment extends System {
 
     for (const light of this.csm.lights) {
       light.intensity = sunIntensity
+      light.color.set(sunColor)
     }
 
     this.sky.visible = true

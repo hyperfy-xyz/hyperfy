@@ -1,23 +1,15 @@
 import { isArray, isFunction, isString } from 'lodash-es'
-import * as THREE from '../extras/three'
 import moment from 'moment'
 
 import { Entity } from './Entity'
-import { glbToNodes } from '../extras/glbToNodes'
 import { createNode } from '../extras/createNode'
 import { LerpVector3 } from '../extras/LerpVector3'
 import { LerpQuaternion } from '../extras/LerpQuaternion'
 import { ControlPriorities } from '../extras/ControlPriorities'
 import { getRef } from '../nodes/Node'
-import { DEG2RAD } from '../extras/general'
 
 const hotEventNames = ['fixedUpdate', 'update', 'lateUpdate']
 const internalEvents = ['fixedUpdate', 'updated', 'lateUpdate', 'enter', 'leave', 'chat']
-
-const v1 = new THREE.Vector3()
-
-const SNAP_DISTANCE = 0.5
-const SNAP_DEGREES = 5
 
 const Modes = {
   ACTIVE: 'active',
@@ -37,6 +29,8 @@ export class App extends Entity {
     this.listeners = {}
     this.eventQueue = []
     this.fields = []
+    this.target = null
+    this.projectLimit = Infinity
     this.build()
   }
 
@@ -127,30 +121,6 @@ export class App extends Entity {
         }
       })
     }
-    // if we're the mover lets bind controls
-    if (this.data.mover === this.world.network.id) {
-      this.lastMoveSendTime = 0
-      this.control = this.world.controls.bind({
-        priority: ControlPriorities.ENTITY,
-        onPress: code => {
-          if (code === 'ShiftLeft') {
-            this.control._lifting = true
-            this.control.pointer.lock()
-            return true
-          }
-        },
-        onRelease: code => {
-          if (code === 'ShiftLeft') {
-            this.control._lifting = false
-            this.control.pointer.unlock()
-            return true
-          }
-        },
-        onScroll: () => {
-          return true
-        },
-      })
-    }
     // if remote is moving, set up to receive network updates
     this.networkPos = new LerpVector3(root.position, this.world.networkRate)
     this.networkQuat = new LerpQuaternion(root.quaternion, this.world.networkRate)
@@ -176,14 +146,6 @@ export class App extends Entity {
     // clear script event listeners
     this.clearEventListeners()
     this.hotEvents = 0
-    // release control
-    if (this.control) {
-      if (this.control._lifting) {
-        this.control.pointer.unlock()
-      }
-      this.control?.release()
-      this.control = null
-    }
     // cancel update tracking
     this.world.setHot(this, false)
     // abort fetch's etc
@@ -208,88 +170,6 @@ export class App extends Entity {
   }
 
   update(delta) {
-    // if we're moving the app, handle that
-    if (this.data.mover === this.world.network.id) {
-      // we cant just update the root directly and must track where it
-      // should be theoretically, and then apply snap points on top of that.
-      if (!this.target) {
-        this.target = new THREE.Object3D()
-        this.target.position.copy(this.root.position)
-        this.target.quaternion.copy(this.root.quaternion)
-        this.target.rotation.reorder('YXZ')
-        document.body.style.cursor = 'grabbing'
-      }
-      if (this.control._lifting) {
-        // if shift is down we're raising and lowering the app
-        this.target.position.y -= this.world.controls.pointer.delta.y * delta * 0.5
-      } else {
-        // otherwise move with the cursor
-        const position = this.world.controls.pointer.position
-        const hits = this.world.stage.raycastPointer(position)
-        let hit
-        for (const _hit of hits) {
-          const entity = _hit.getEntity?.()
-          // ignore self and players
-          if (entity === this || entity?.isPlayer) continue
-          hit = _hit
-          break
-        }
-        if (hit) {
-          this.target.position.copy(hit.point)
-        }
-        // and rotate with the mouse wheel
-        this.target.rotation.y += this.control.scroll.delta * 0.1 * delta
-      }
-      // apply movement
-      this.root.position.copy(this.target.position)
-      this.root.quaternion.copy(this.target.quaternion)
-      // snap rotation to degrees
-      const newY = this.target.rotation.y
-      const degrees = newY / DEG2RAD
-      const snappedDegrees = Math.round(degrees / SNAP_DEGREES) * SNAP_DEGREES
-      this.root.rotation.y = snappedDegrees * DEG2RAD
-      // update matrix
-      this.root.clean()
-      // and snap to any nearby points
-      if (!this.control.buttons.ControlLeft) {
-        for (const pos of this.snaps) {
-          const result = this.world.snaps.octree.query(pos, SNAP_DISTANCE)[0]
-          if (result) {
-            const offset = v1.copy(result.position).sub(pos)
-            this.root.position.add(offset)
-            break
-          }
-        }
-      }
-
-      // periodically send updates
-      this.lastMoveSendTime += delta
-      if (this.lastMoveSendTime > this.world.networkRate) {
-        this.world.network.send('entityModified', {
-          id: this.data.id,
-          position: this.root.position.toArray(),
-          quaternion: this.root.quaternion.toArray(),
-        })
-        this.lastMoveSendTime = 0
-      }
-      // if we left clicked, we can place the app
-      if (this.control.pressed.MouseLeft) {
-        this.data.mover = null
-        this.data.position = this.root.position.toArray()
-        this.data.quaternion = this.root.quaternion.toArray()
-        this.data.state = {}
-        this.world.network.send('entityModified', {
-          id: this.data.id,
-          mover: null,
-          position: this.data.position,
-          quaternion: this.data.quaternion,
-          state: this.data.state,
-        })
-        this.build()
-        this.target = null
-        document.body.style.cursor = 'default'
-      }
-    }
     // if someone else is moving the app, interpolate updates
     if (this.data.mover && this.data.mover !== this.world.network.id) {
       this.networkPos.update(delta)
@@ -348,6 +228,9 @@ export class App extends Entity {
       this.data.quaternion = data.quaternion
       this.networkQuat.pushArray(data.quaternion)
     }
+    if (data.hasOwnProperty('pinned')) {
+      this.data.pinned = data.pinned
+    }
     if (data.hasOwnProperty('state')) {
       this.data.state = data.state
       rebuild = true
@@ -355,12 +238,6 @@ export class App extends Entity {
     if (rebuild) {
       this.build()
     }
-  }
-
-  move() {
-    this.data.mover = this.world.network.id
-    this.build()
-    this.world.network.send('entityModified', { id: this.data.id, mover: this.data.mover })
   }
 
   crash() {
@@ -455,6 +332,16 @@ export class App extends Entity {
       console.error(err)
       // this.crash()
     }
+  }
+
+  getNodes() {
+    // note: this is currently just used in the nodes tab in the app inspector
+    // to get a clean hierarchy
+    if (!this.blueprint) return
+    const type = this.blueprint.model.endsWith('vrm') ? 'avatar' : 'model'
+    let glb = this.world.loader.get(type, this.blueprint.model)
+    if (!glb) return
+    return glb.toNodes()
   }
 
   getWorldProxy() {

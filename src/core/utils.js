@@ -21,6 +21,7 @@ export function clamp(n, low, high) {
 }
 
 export function hasRole(arr, ...roles) {
+  if (!arr) return false
   // also includes temporary roles (prefixed with `~`)
   return some(roles, role => arr.includes(role) || arr.includes(`~${role}`))
 }

@@ -18,6 +18,16 @@ function App() {
     const apiUrl = process.env.PUBLIC_API_URL
     world.init({ viewport, ui, wsUrl, apiUrl, loadPhysX })
   }, [])
+  useEffect(() => {
+    const ui = uiRef.current
+    const onEvent = e => {
+      e.isGUI = true
+    }
+    ui.addEventListener('click', onEvent)
+    ui.addEventListener('pointerdown', onEvent)
+    ui.addEventListener('pointermove', onEvent)
+    ui.addEventListener('pointerup', onEvent)
+  }, [])
   return (
     <div
       className='App'

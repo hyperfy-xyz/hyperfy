@@ -48,6 +48,7 @@ export class Entities extends System {
     }
     if (data.owner === this.world.network.id) {
       this.player = entity
+      this.world.emit('player', entity)
     }
     return entity
   }
