@@ -1,4 +1,4 @@
-FROM node:22-alpine
+FROM node:22 AS build
 
 # Set the working directory
 WORKDIR /app
@@ -6,7 +6,7 @@ WORKDIR /app
 COPY package.json package-lock.json ./
 
 # Install dependencies
-RUN npm install
+RUN npm install --force
 
 # Copy the rest of the application code
 COPY . .
@@ -19,6 +19,10 @@ ENV COMMIT_HASH=${COMMIT_HASH:-local}
 
 # Expose the port the app runs on
 EXPOSE 3000
+
+# Healthcheck using curl
+HEALTHCHECK --interval=2s --timeout=10s --start-period=5s --retries=5 \
+  CMD curl -f http://localhost:3000/status || exit 1
 
 # Start the application
 CMD [ "npm", "run", "start" ]
