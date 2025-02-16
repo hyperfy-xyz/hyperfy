@@ -33,6 +33,4 @@ services:
 #        target: /app/.env
 #        content: |
 #    labels:
-#      - coolify.managed=true
-#      - coolify.applicationId=1
-#      - coolify.type=application
+#      - 'caddy_0.handle_path.0_reverse_proxy={{upstreams 3000}}'
