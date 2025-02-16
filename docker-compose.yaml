@@ -32,7 +32,7 @@ services:
 #        source: ./.env
 #        target: /app/.env
 #        content: |
-    labels:
-      - coolify.managed=true
-      - coolify.applicationId=1
-      - coolify.type=application
+#    labels:
+#      - coolify.managed=true
+#      - coolify.applicationId=1
+#      - coolify.type=application
