@@ -8,9 +8,6 @@ services:
     container_name: hyperfy
     restart: unless-stopped
     environment:.
-      - SERVICE_FQDN_WS=/ws 
-      - SERVICE_FQDN_API=/api
-      - SERVICE_FQDN_ASSETS=/assets
       - NODE_ENV=production
       - PORT=3000
       - PUBLIC_WS_URL=${SERVICE_FQDN_HYPERFY}/ws
