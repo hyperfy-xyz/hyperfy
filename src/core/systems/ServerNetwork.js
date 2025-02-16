@@ -361,9 +361,9 @@ export class ServerNetwork extends System {
       this.dirtyApps.add(entity.data.id)
     }
     if (entity.isPlayer && data.user) {
-      // update player (only avatar field for now)
-      const { id, avatar } = entity.data.user
-      await this.db('users').where('id', id).update({ avatar })
+      // update player (only name & avatar field for now)
+      const { id, name, avatar } = entity.data.user
+      await this.db('users').where('id', id).update({ name, avatar })
     }
   }
 

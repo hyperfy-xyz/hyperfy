@@ -3,6 +3,7 @@ import { computeBoundsTree, disposeBoundsTree, acceleratedRaycast } from 'three-
 import * as THREE from 'three'
 
 export * from 'three'
+export * from 'three/addons'
 
 // override THREE.Vector3 with ours to support _onChange
 export { Vector3Enhanced as Vector3 } from './Vector3Enhanced'

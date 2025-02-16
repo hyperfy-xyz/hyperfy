@@ -72,6 +72,7 @@ export class RigidBody extends Node {
     const player = this.ctx.entity?.isPlayer ? this.ctx.entity.getProxy() : null
     this.actorHandle = this.ctx.world.physics.addActor(this.actor, {
       onInterpolate: this._type === 'kinematic' || this._type === 'dynamic' ? this.onInterpolate : null,
+      node: this,
       get tag() {
         return self._tag
       },

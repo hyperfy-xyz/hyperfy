@@ -9,6 +9,7 @@ import { createVRMFactory } from '../extras/createVRMFactory'
 import { glbToNodes } from '../extras/glbToNodes'
 import { createEmoteFactory } from '../extras/createEmoteFactory'
 import { TextureLoader } from 'three'
+import { formatBytes } from '../extras/formatBytes'
 
 // THREE.Cache.enabled = true
 
@@ -61,6 +62,11 @@ export class ClientLoader extends System {
 
   setFile(url, file) {
     this.files.set(url, file)
+  }
+
+  getFile(url) {
+    url = this.resolveURL(url)
+    return this.files.get(url)
   }
 
   loadFile = async url => {
@@ -119,6 +125,12 @@ export class ClientLoader extends System {
           toNodes() {
             return node.clone(true)
           },
+          getStats() {
+            const stats = node.getStats(true)
+            // append file size
+            stats.fileBytes = file.size
+            return stats
+          },
         }
         this.results.set(key, model)
         return model
@@ -149,6 +161,12 @@ export class ClientLoader extends System {
               clone.get('avatar').hooks = customHooks
             }
             return clone
+          },
+          getStats() {
+            const stats = node.getStats(true)
+            // append file size
+            stats.fileBytes = file.size
+            return stats
           },
         }
         this.results.set(key, avatar)
@@ -194,6 +212,12 @@ export class ClientLoader extends System {
           toNodes() {
             return node.clone(true)
           },
+          getStats() {
+            const stats = node.getStats(true)
+            // append file size
+            stats.fileBytes = file.size
+            return stats
+          },
         }
         this.results.set(key, model)
         return model
@@ -224,6 +248,12 @@ export class ClientLoader extends System {
               clone.get('avatar').hooks = customHooks
             }
             return clone
+          },
+          getStats() {
+            const stats = node.getStats(true)
+            // append file size
+            stats.fileBytes = file.size
+            return stats
           },
         }
         this.results.set(key, avatar)

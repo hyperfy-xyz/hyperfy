@@ -25,6 +25,7 @@ import {
   SplitIcon,
   LockKeyholeIcon,
   SparkleIcon,
+  ZapIcon,
 } from 'lucide-react'
 
 import { hashFile } from '../../core/utils-client'
@@ -34,6 +35,16 @@ import { cls } from './cls'
 import { exportApp } from '../../core/extras/appTools'
 import { downloadFile } from '../../core/extras/downloadFile'
 import { hasRole } from '../../core/utils'
+import {
+  fileKinds,
+  InputDropdown,
+  InputFile,
+  InputNumber,
+  InputRange,
+  InputSwitch,
+  InputText,
+  InputTextarea,
+} from './Inputs'
 
 export function InspectPane({ world, entity }) {
   if (entity.isApp) {
@@ -97,31 +108,43 @@ export function AppPane({ world, app }) {
         display: flex;
         flex-direction: column;
         .apane-head {
-          height: 40px;
+          height: 50px;
           border-bottom: 1px solid rgba(255, 255, 255, 0.05);
           display: flex;
-          padding: 0 5px 0 16px;
+          align-items: center;
+          padding: 0 10px 0 10px;
+          &-icon {
+            width: 30px;
+            height: 40px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+          }
+          &-tabs {
+            flex: 1;
+            align-self: stretch;
+            display: flex;
+            justify-content: center;
+          }
           &-tab {
+            align-self: stretch;
             display: flex;
             align-items: center;
             justify-content: center;
             margin: 0 16px 0 0;
-            cursor: pointer;
-            span {
-              font-size: 14px;
-              color: #595959;
+            font-size: 14px;
+            color: rgba(255, 255, 255, 0.5);
+            &:hover:not(.active) {
+              cursor: pointer;
+              color: rgba(255, 255, 255, 0.7);
             }
-            &.selected {
+            &.active {
               border-bottom: 1px solid white;
               margin-bottom: -1px;
-              span {
-                color: white;
-              }
+              color: white;
             }
           }
-          &-gap {
-            flex: 1;
-          }
+
           &-close {
             color: #515151;
             width: 30px;
@@ -154,18 +177,22 @@ export function AppPane({ world, app }) {
       `}
     >
       <div className='apane-head' ref={headRef}>
-        <div className={cls('apane-head-tab', { selected: tab === 'main' })} onClick={() => setTab('main')}>
-          <span>Overview</span>
+        <div className='apane-head-icon'>
+          <ZapIcon size={16} />
         </div>
-        {canEdit && (
-          <div className={cls('apane-head-tab', { selected: tab === 'meta' })} onClick={() => setTab('meta')}>
-            <span>Meta</span>
+        <div className='apane-head-tabs'>
+          <div className={cls('apane-head-tab', { active: tab === 'main' })} onClick={() => setTab('main')}>
+            <span>App</span>
           </div>
-        )}
-        <div className={cls('apane-head-tab', { selected: tab === 'nodes' })} onClick={() => setTab('nodes')}>
-          <span>Nodes</span>
+          {canEdit && (
+            <div className={cls('apane-head-tab', { active: tab === 'meta' })} onClick={() => setTab('meta')}>
+              <span>Meta</span>
+            </div>
+          )}
+          <div className={cls('apane-head-tab', { active: tab === 'nodes' })} onClick={() => setTab('nodes')}>
+            <span>Nodes</span>
+          </div>
         </div>
-        <div className='apane-head-gap' />
         <div className='apane-head-close' onClick={() => world.emit('inspect', null)}>
           <XIcon size={20} />
         </div>
@@ -186,6 +213,14 @@ export function AppPane({ world, app }) {
 }
 
 function AppPaneMain({ world, app, blueprint, canEdit }) {
+  const downloadModel = e => {
+    if (e.shiftKey) {
+      e.preventDefault()
+      const file = world.loader.getFile(blueprint.model)
+      if (!file) return
+      downloadFile(file)
+    }
+  }
   const changeModel = async e => {
     const file = e.target.files[0]
     if (!file) return
@@ -360,7 +395,7 @@ function AppPaneMain({ world, app, blueprint, canEdit }) {
         <>
           <div className='amain-line mt mb' />
           <div className='amain-btns'>
-            <label className='amain-btns-btn'>
+            <label className='amain-btns-btn' onClick={downloadModel}>
               <input type='file' accept='.glb,.vrm' onChange={changeModel} />
               <BoxIcon size={16} />
               <span>Model</span>
@@ -722,6 +757,7 @@ const fieldTypes = {
   file: FieldFile,
   switch: FieldSwitch,
   dropdown: FieldDropdown,
+  range: FieldRange,
 }
 
 function Field({ world, props, field, value, modify }) {
@@ -812,47 +848,22 @@ function FieldNumber({ world, field, value, modify }) {
   )
 }
 
-const kinds = {
-  avatar: {
-    type: 'avatar',
-    accept: '.vrm',
-    exts: ['vrm'],
-    placeholder: '.vrm',
-  },
-  emote: {
-    type: 'emote',
-    accept: '.glb',
-    exts: ['glb'],
-    placeholder: '.glb',
-  },
-  model: {
-    type: 'model',
-    accept: '.glb',
-    exts: ['glb'],
-    placeholder: '.glb',
-  },
-  texture: {
-    type: 'texture',
-    accept: '.jpg,.jpeg,.png',
-    exts: ['jpg', 'jpeg', 'png'],
-    placeholder: '.jpg / .png',
-  },
-  hdr: {
-    type: 'hdr',
-    accept: '.hdr',
-    exts: ['hdr'],
-    placeholder: '.hdr',
-  },
-  audio: {
-    type: 'audio',
-    accept: '.mp3',
-    exts: ['mp3'],
-    placeholder: '.mp3',
-  },
+function FieldRange({ world, field, value, modify }) {
+  return (
+    <FieldWithLabel label={field.label}>
+      <InputRange
+        value={value}
+        onChange={value => modify(field.key, value)}
+        min={field.min}
+        max={field.max}
+        step={field.step}
+      />
+    </FieldWithLabel>
+  )
 }
 
 function FieldFile({ world, field, value, modify }) {
-  const kind = kinds[field.kind]
+  const kind = fileKinds[field.kind]
   if (!kind) return null
   return (
     <FieldWithLabel label={field.label}>
@@ -874,398 +885,6 @@ function FieldDropdown({ world, field, value, modify }) {
     <FieldWithLabel label={field.label}>
       <InputDropdown options={field.options} value={value} onChange={value => modify(field.key, value)} />
     </FieldWithLabel>
-  )
-}
-
-function InputText({ value, onChange, placeholder }) {
-  const [localValue, setLocalValue] = useState(value)
-  useEffect(() => {
-    if (localValue !== value) setLocalValue(value)
-  }, [value])
-  return (
-    <label
-      css={css`
-        display: block;
-        background-color: #252630;
-        border-radius: 10px;
-        padding: 0 8px;
-        cursor: text;
-        input {
-          height: 34px;
-          font-size: 14px;
-        }
-      `}
-    >
-      <input
-        type='text'
-        value={localValue || ''}
-        placeholder={placeholder}
-        onChange={e => setLocalValue(e.target.value)}
-        onKeyDown={e => {
-          if (e.code === 'Enter') {
-            e.preventDefault()
-            onChange(localValue)
-            e.target.blur()
-          }
-        }}
-        onBlur={e => {
-          onChange(localValue)
-        }}
-      />
-    </label>
-  )
-}
-
-function InputTextarea({ value, onChange, placeholder }) {
-  const [localValue, setLocalValue] = useState(value)
-  useEffect(() => {
-    if (localValue !== value) setLocalValue(value)
-  }, [value])
-  return (
-    <label
-      css={css`
-        display: block;
-        background-color: #252630;
-        border-radius: 10px;
-        cursor: text;
-        textarea {
-          padding: 6px 8px;
-          line-height: 1.4;
-          font-size: 14px;
-          min-height: 56px;
-          max-width: 100%;
-          min-width: 100%;
-        }
-      `}
-    >
-      <textarea
-        value={localValue || ''}
-        onChange={e => setLocalValue(e.target.value)}
-        onKeyDown={e => {
-          if (e.metaKey && e.code === 'Enter') {
-            e.preventDefault()
-            onChange(localValue)
-            e.target.blur()
-          }
-        }}
-        onBlur={e => {
-          onChange(localValue)
-        }}
-        placeholder={placeholder}
-      />
-    </label>
-  )
-}
-
-function InputNumber({ value, onChange, dp = 0, min = -Infinity, max = Infinity, step = 1 }) {
-  if (value === undefined || value === null) {
-    value = 0
-  }
-  const [local, setLocal] = useState(value.toFixed(dp))
-  const [focused, setFocused] = useState(false)
-  useEffect(() => {
-    if (!focused && local !== value.toFixed(dp)) setLocal(value.toFixed(dp))
-  }, [focused, value])
-  const setTo = str => {
-    // try parse math
-    let num
-    try {
-      num = (0, eval)(str)
-      if (typeof num !== 'number') {
-        throw new Error('input number parse fail')
-      }
-    } catch (err) {
-      console.error(err)
-      num = value // revert back to original
-    }
-    if (num < min || num > max) {
-      num = value
-    }
-    setLocal(num.toFixed(dp))
-    onChange(+num.toFixed(dp))
-  }
-  return (
-    <label
-      css={css`
-        display: block;
-        background-color: #252630;
-        border-radius: 10px;
-        padding: 0 8px;
-        cursor: text;
-        input {
-          height: 34px;
-          font-size: 14px;
-        }
-      `}
-    >
-      <input
-        type='text'
-        value={local}
-        onChange={e => setLocal(e.target.value)}
-        onKeyDown={e => {
-          if (e.code === 'Enter') {
-            e.target.blur()
-          }
-          if (e.code === 'ArrowUp') {
-            setTo(value + step)
-          }
-          if (e.code === 'ArrowDown') {
-            setTo(value - step)
-          }
-        }}
-        onFocus={e => {
-          setFocused(true)
-          e.target.select()
-        }}
-        onBlur={e => {
-          setFocused(false)
-          // if blank, set back to original
-          if (local === '') {
-            setLocal(value.toFixed(dp))
-            return
-          }
-          // otherwise run through pipeline
-          setTo(local)
-        }}
-      />
-    </label>
-  )
-}
-
-function InputSwitch({ options, value, onChange }) {
-  return (
-    <div
-      className='inputswitch'
-      css={css`
-        display: flex;
-        align-items: center;
-        border: 1px solid #252630;
-        border-radius: 10px;
-        padding: 3px;
-        .inputswitch-option {
-          flex: 1;
-          border-radius: 7px;
-          height: 28px;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          cursor: pointer;
-          span {
-            line-height: 1;
-            font-size: 14px;
-          }
-          &.selected {
-            background: #252630;
-          }
-        }
-      `}
-    >
-      {options.map(option => (
-        <div
-          key={option.value}
-          className={cls('inputswitch-option', { selected: value === option.value })}
-          onClick={() => onChange(option.value)}
-        >
-          <span>{option.label}</span>
-        </div>
-      ))}
-    </div>
-  )
-}
-
-function InputDropdown({ options, value, onChange }) {
-  const current = options.find(o => o.value === value)
-  const [open, setOpen] = useState(false)
-  const toggle = () => setOpen(!open)
-  return (
-    <div
-      className='inputdropdown'
-      css={css`
-        position: relative;
-        .inputdropdown-current {
-          display: flex;
-          align-items: center;
-          background: #252630;
-          border-radius: 10px;
-          height: 34px;
-          padding: 0 8px;
-          cursor: pointer;
-          span {
-            font-size: 14px;
-            flex: 1;
-          }
-        }
-        .inputdropdown-menu {
-          z-index: 1;
-          margin: 3px 0 20px;
-          position: absolute;
-          left: 0;
-          right: 0;
-          background: #252630;
-          border-radius: 10px;
-          overflow: hidden;
-          padding: 4px 0;
-        }
-        .inputdropdown-option {
-          font-size: 14px;
-          padding: 8px;
-          &:hover {
-            cursor: pointer;
-            background: rgb(46, 47, 59);
-          }
-        }
-      `}
-    >
-      <div className='inputdropdown-current' onClick={toggle}>
-        <span>{current?.label || ''}</span>
-        <ChevronDown size={12} />
-      </div>
-      {open && (
-        <div className='inputdropdown-menu'>
-          {options.map(option => (
-            <div
-              key={option.value}
-              className={cls('inputdropdown-option', { selected: value === option.value })}
-              onClick={() => {
-                setOpen(false)
-                onChange(option.value)
-              }}
-            >
-              <span>{option.label}</span>
-            </div>
-          ))}
-        </div>
-      )}
-    </div>
-  )
-}
-
-function InputFile({ world, kind: kindName, value, onChange }) {
-  const nRef = useRef(0)
-  const update = useUpdate()
-  const [loading, setLoading] = useState(null)
-  const kind = kinds[kindName]
-  if (!kind) return null
-  const set = async e => {
-    // trigger input rebuild
-    const n = ++nRef.current
-    update()
-    // get file
-    const file = e.target.files[0]
-    if (!file) return
-    // check ext
-    const ext = file.name.split('.')[1]
-    if (!kind.exts.includes(ext)) {
-      return console.error(`attempted invalid file extension for ${kindName}: ${ext}`)
-    }
-    // immutable hash the file
-    const hash = await hashFile(file)
-    // use hash as glb filename
-    const filename = `${hash}.${ext}`
-    // canonical url to this file
-    const url = `asset://${filename}`
-    // show loading
-    const newValue = {
-      type: kind.type,
-      name: file.name,
-      url,
-    }
-    setLoading(newValue)
-    // upload file
-    await world.network.upload(file)
-    // ignore if new value/upload
-    if (nRef.current !== n) return
-    // cache file locally so this client can insta-load it
-    world.loader.insert(kind.type, url, file)
-    // apply!
-    setLoading(null)
-    onChange(newValue)
-  }
-  const remove = e => {
-    e.preventDefault()
-    e.stopPropagation()
-    onChange(null)
-  }
-  const n = nRef.current
-  const label = loading?.name || value?.name
-  return (
-    <label
-      className='inputfile'
-      css={css`
-        position: relative;
-        overflow: hidden;
-        display: flex;
-        align-items: center;
-        height: 34px;
-        background-color: #252630;
-        border-radius: 10px;
-        padding: 0 0 0 8px;
-        input {
-          position: absolute;
-          top: -9999px;
-          left: -9999px;
-          opacity: 0;
-        }
-        svg {
-          line-height: 0;
-        }
-        .inputfile-placeholder {
-          flex: 1;
-          font-size: 14px;
-          padding: 0 5px;
-          color: rgba(255, 255, 255, 0.5);
-        }
-        .inputfile-name {
-          flex: 1;
-          font-size: 14px;
-          padding: 0 5px;
-          white-space: nowrap;
-          text-overflow: ellipsis;
-          overflow: hidden;
-        }
-        .inputfile-x {
-          width: 30px;
-          height: 34px;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          cursor: pointer;
-        }
-        .inputfile-loading {
-          width: 30px;
-          height: 34px;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          @keyframes spin {
-            from {
-              transform: rotate(0deg);
-            }
-            to {
-              transform: rotate(360deg);
-            }
-          }
-          svg {
-            animation: spin 1s linear infinite;
-          }
-        }
-      `}
-    >
-      <FileIcon size={14} />
-      {!value && !loading && <div className='inputfile-placeholder'>{kind.placeholder}</div>}
-      {label && <div className='inputfile-name'>{label}</div>}
-      {value && !loading && (
-        <div className='inputfile-x'>
-          <XIcon size={14} onClick={remove} />
-        </div>
-      )}
-      {loading && (
-        <div className='inputfile-loading'>
-          <LoaderIcon size={14} />
-        </div>
-      )}
-      <input key={n} type='file' onChange={set} accept={kind.accept} />
-    </label>
   )
 }
 

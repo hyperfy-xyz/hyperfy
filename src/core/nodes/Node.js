@@ -273,8 +273,25 @@ export class Node {
     return vec3
   }
 
-  getStats() {
-    return null
+  getStats(recursive, stats) {
+    if (!stats) {
+      stats = {
+        geometries: new Set(),
+        triangles: 0,
+        textureBytes: 0,
+      }
+    }
+    this.applyStats(stats)
+    if (recursive) {
+      for (const child of this.children) {
+        child.getStats(recursive, stats)
+      }
+    }
+    return stats
+  }
+
+  applyStats(stats) {
+    // nodes should override this and add their stats
   }
 
   get onPointerEnter() {

@@ -778,8 +778,10 @@ export class CSM {
     })
     this.shaders.clear()
     for (let i = 0; i < this.lights.length; i++) {
-      this.lights[i].dispose()
-      this.parent.remove(this.lights[i])
+      const light = this.lights[i]
+      this.parent.remove(light)
+      // this.parent.remove(light.target)
+      light.dispose()
     }
   }
 }

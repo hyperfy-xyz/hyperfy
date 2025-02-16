@@ -17,6 +17,9 @@ export class ClientAudio extends System {
       sfx: this.ctx.createGain(),
       voice: this.ctx.createGain(),
     }
+    this.groupGains.music.gain.value = world.prefs.music
+    this.groupGains.sfx.gain.value = world.prefs.sfx
+    this.groupGains.voice.gain.value = world.prefs.voice
     this.groupGains.music.connect(this.masterGain)
     this.groupGains.sfx.connect(this.masterGain)
     this.groupGains.voice.connect(this.masterGain)
@@ -45,7 +48,7 @@ export class ClientAudio extends System {
   }
 
   async init() {
-    // ...
+    this.world.prefs.on('change', this.onPrefsChange)
   }
 
   start() {
@@ -78,5 +81,17 @@ export class ClientAudio extends System {
   requireGesture(fn) {
     if (this.gestured) return fn()
     this.gestureQueue.push(fn)
+  }
+
+  onPrefsChange = changes => {
+    if (changes.music) {
+      this.groupGains.music.gain.value = changes.music.value
+    }
+    if (changes.sfx) {
+      this.groupGains.sfx.gain.value = changes.sfx.value
+    }
+    if (changes.voice) {
+      this.groupGains.voice.gain.value = changes.voice.value
+    }
   }
 }

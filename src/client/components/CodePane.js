@@ -88,11 +88,11 @@ export function CodePane({ entity, onClose }) {
         overflow: auto;
         flex-direction: column;
         .acode-head {
-          height: 40px;
+          height: 50px;
           border-bottom: 1px solid rgba(255, 255, 255, 0.05);
           display: flex;
           align-items: center;
-          padding: 0 0 0 10px;
+          padding: 0 10px 0 20px;
           &-title {
             padding-left: 7px;
             font-weight: 500;
@@ -104,7 +104,11 @@ export function CodePane({ entity, onClose }) {
             display: flex;
             align-items: center;
             justify-content: center;
-            cursor: pointer;
+            color: rgba(255, 255, 255, 0.5);
+            &:hover {
+              cursor: pointer;
+              color: white;
+            }
           }
         }
         .acode-content {

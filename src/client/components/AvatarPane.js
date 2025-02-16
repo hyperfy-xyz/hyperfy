@@ -39,11 +39,11 @@ export function AvatarPane({ world, info }) {
         display: flex;
         flex-direction: column;
         .vpane-head {
-          height: 40px;
+          height: 50px;
           border-bottom: 1px solid rgba(255, 255, 255, 0.05);
           display: flex;
           align-items: center;
-          padding: 0 0 0 10px;
+          padding: 0 7px 0 20px;
           &-title {
             padding-left: 7px;
             font-weight: 500;
@@ -55,7 +55,11 @@ export function AvatarPane({ world, info }) {
             display: flex;
             align-items: center;
             justify-content: center;
-            cursor: pointer;
+            color: rgba(255, 255, 255, 0.5);
+            &:hover {
+              cursor: pointer;
+              color: white;
+            }
           }
         }
         .vpane-content {
@@ -68,7 +72,7 @@ export function AvatarPane({ world, info }) {
           background: #1f1f2a;
           border-radius: 10px;
           overflow: hidden;
-          margin: 0 0 10px;
+          margin: 0 0 20px;
         }
         .vpane-actions {
           display: flex;
@@ -82,12 +86,13 @@ export function AvatarPane({ world, info }) {
           display: flex;
           align-items: center;
           justify-content: center;
+          font-size: 14px;
           cursor: pointer;
         }
       `}
     >
       <div className='vpane-head' ref={headRef}>
-        <UserIcon size={20} />
+        <UserIcon size={16} />
         <div className='vpane-head-title'>Avatar</div>
         <div className='vpane-head-close' onClick={() => world.emit('avatar', null)}>
           <XIcon size={20} />

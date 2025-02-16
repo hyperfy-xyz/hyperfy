@@ -73,6 +73,22 @@ A number input. Also supports math entry and up/down stepping.
 }
 ```
 
+### Range
+
+A range slider input
+
+```jsx
+{
+  type: 'range',
+  key: String,           // the key on `props` to set this value
+  label: String,         // the label for the slider
+  min: Number,           // the minimum value allowed (default = 0)
+  max: Number,           // the maximum value allowed (default = 1)
+  step: Number,          // the step amount when sliding (default= 0.05)
+  initial: Number,       // the initial value to set if not configured (default = 0)
+}
+```
+
 ### Switch
 
 A switch input

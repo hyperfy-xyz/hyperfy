@@ -1,4 +1,5 @@
 import { readPacket, writePacket } from '../packets'
+import { storage } from '../storage'
 import { hashFile } from '../utils-client'
 import { System } from './System'
 
@@ -21,7 +22,7 @@ export class ClientNetwork extends System {
   }
 
   init({ wsUrl, apiUrl }) {
-    const authToken = this.world.client.storage.get('authToken')
+    const authToken = storage.get('authToken')
     this.apiUrl = apiUrl
     this.ws = new WebSocket(`${wsUrl}?authToken=${authToken}`)
     this.ws.binaryType = 'arraybuffer'
@@ -91,7 +92,7 @@ export class ClientNetwork extends System {
     this.world.chat.deserialize(data.chat)
     this.world.blueprints.deserialize(data.blueprints)
     this.world.entities.deserialize(data.entities)
-    this.world.client.storage.set('authToken', data.authToken)
+    storage.set('authToken', data.authToken)
   }
 
   onChatAdded = msg => {

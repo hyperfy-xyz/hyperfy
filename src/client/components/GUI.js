@@ -1,14 +1,17 @@
 import { css } from '@firebolt-dev/css'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import {
+  LayoutGridIcon,
   LoaderIcon,
   MessageCircleMoreIcon,
   MicIcon,
+  SearchIcon,
   SendHorizonalIcon,
   SettingsIcon,
   StoreIcon,
   UnplugIcon,
   WifiOffIcon,
+  ZapIcon,
 } from 'lucide-react'
 import moment from 'moment'
 
@@ -21,8 +24,10 @@ import { MouseRightIcon } from './MouseRightIcon'
 import { MouseWheelIcon } from './MouseWheelIcon'
 import { buttons, propToLabel } from '../../core/extras/buttons'
 import { cls } from '../utils'
-import { uuid } from '../../core/utils'
+import { hasRole, uuid } from '../../core/utils'
 import { ControlPriorities } from '../../core/extras/ControlPriorities'
+import { AppsPane } from './AppsPane'
+import { SettingsPane } from './SettingsPane'
 
 export function GUI({ world }) {
   const [ref, width, height] = useElemSize()
@@ -42,18 +47,23 @@ export function GUI({ world }) {
 function Content({ world, width, height }) {
   const small = width < 600
   const [ready, setReady] = useState(false)
+  const [player, setPlayer] = useState(() => world.entities.player)
   const [inspect, setInspect] = useState(null)
   const [code, setCode] = useState(false)
   const [avatar, setAvatar] = useState(null)
   const [disconnected, setDisconnected] = useState(false)
+  const [settings, setSettings] = useState(false)
+  const [apps, setApps] = useState(false)
   useEffect(() => {
     world.on('ready', setReady)
+    world.on('player', setPlayer)
     world.on('inspect', setInspect)
     world.on('code', setCode)
     world.on('avatar', setAvatar)
     world.on('disconnect', setDisconnected)
     return () => {
       world.off('ready', setReady)
+      world.off('player', setPlayer)
       world.off('inspect', setInspect)
       world.off('code', setCode)
       world.off('avatar', setAvatar)
@@ -72,19 +82,31 @@ function Content({ world, width, height }) {
       {inspect && code && <CodePane key={`code-${inspect.data.id}`} world={world} entity={inspect} />}
       {avatar && <AvatarPane key={avatar.hash} world={world} info={avatar} />}
       {disconnected && <Disconnected />}
-      {!ready && <LoadingOverlay />}
       <Reticle world={world} />
-      {ready && <Side world={world} />}
       {<Toast world={world} />}
+      {ready && (
+        <Side
+          world={world}
+          player={player}
+          toggleSettings={() => setSettings(!settings)}
+          toggleApps={() => setApps(!apps)}
+        />
+      )}
+      {settings && <SettingsPane world={world} player={player} close={() => setSettings(false)} />}
+      {apps && <AppsPane world={world} close={() => setApps(false)} />}
+      {!ready && <LoadingOverlay />}
     </div>
   )
 }
 
-function Side({ world }) {
+function Side({ world, player, toggleSettings, toggleApps }) {
   const touch = useMemo(() => navigator.userAgent.match(/OculusBrowser|iPhone|iPad|iPod|Android/i), [])
   const inputRef = useRef()
   const [msg, setMsg] = useState('')
   const [chat, setChat] = useState(false)
+  const canBuild = useMemo(() => {
+    return player && hasRole(player.data.user.roles, 'admin', 'builder')
+  }, [player])
   useEffect(() => {
     const control = world.controls.bind({ priority: ControlPriorities.GUI })
     control.enter.onPress = () => {
@@ -104,11 +126,14 @@ function Side({ world }) {
       inputRef.current.blur()
     }
   }, [chat])
-  const send = async () => {
+  const send = async e => {
     if (world.controls.pointer.locked) {
       setTimeout(() => setChat(false), 10)
     }
-    if (!msg) return setChat(false)
+    if (!msg) {
+      e.preventDefault()
+      return setChat(false)
+    }
     setMsg('')
     // check for client commands
     if (msg.startsWith('/')) {
@@ -226,7 +251,7 @@ function Side({ world }) {
       <Messages world={world} active={chat} touch={touch} />
       <div className='bar'>
         <div className={cls('bar-btns', { active: !chat })}>
-          <div className={cls('bar-btn', { darken: world.xr.supportsVR })} onClick={() => setChat(true)}>
+          <div className='bar-btn darken' onClick={() => setChat(true)}>
             <MessageCircleMoreIcon size={20} />
           </div>
           {world.xr.supportsVR && (
@@ -236,13 +261,18 @@ function Side({ world }) {
           )}
           {/* <div className='bar-btn' onClick={null}>
             <MicIcon size={20} />
-          </div>
-          <div className='bar-btn' onClick={null}>
-            <StoreIcon size={20} />
-          </div>
-          <div className='bar-btn' onClick={null}>
-            <SettingsIcon size={20} />
           </div> */}
+          {/* <div className='bar-btn' onClick={null}>
+            <StoreIcon size={20} />
+          </div> */}
+          <div className='bar-btn' onClick={toggleSettings}>
+            <SettingsIcon size={20} />
+          </div>
+          {canBuild && (
+            <div className='bar-btn' onClick={toggleApps}>
+              <ZapIcon size={20} />
+            </div>
+          )}
         </div>
         <label className={cls('bar-chat', { active: chat })}>
           <input
@@ -257,7 +287,7 @@ function Side({ world }) {
                 setChat(false)
               }
               if (e.code === 'Enter') {
-                send()
+                send(e)
               }
             }}
             onBlur={() => setChat(false)}
@@ -546,10 +576,13 @@ function Reticle({ world }) {
         align-items: center;
         justify-content: center;
         .reticle-item {
-          width: 8px;
-          height: 8px;
-          border-radius: 4px;
-          border: 1px solid rgba(255, 255, 255, 0.4);
+          width: 10px;
+          height: 10px;
+          border-radius: 5px;
+          /* border: 1.5px solid rgba(255, 255, 255, 0.8); */
+          border: 1.5px solid white;
+          /* box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1); */
+          mix-blend-mode: difference;
         }
       `}
     >

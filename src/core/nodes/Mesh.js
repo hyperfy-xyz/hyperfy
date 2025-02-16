@@ -2,6 +2,8 @@ import * as THREE from '../extras/three'
 import { isBoolean, isNumber } from 'lodash-es'
 
 import { Node } from './Node'
+import { getTrianglesFromGeometry } from '../extras/getTrianglesFromGeometry'
+import { getTextureBytesFromMaterial } from '../extras/getTextureBytesFromMaterial'
 
 const _v1 = new THREE.Vector3()
 const _v2 = new THREE.Vector3()
@@ -111,6 +113,16 @@ export class Mesh extends Node {
     this._receiveShadow = source._receiveShadow
     this._visible = source._visible // DEPRECATED: use Node.active
     return this
+  }
+
+  applyStats(stats) {
+    if (this._geometry && !stats.geometries.has(this._geometry)) {
+      stats.geometries.add(this._geometry.uuid)
+      stats.triangles += getTrianglesFromGeometry(this._geometry)
+    }
+    if (this._material) {
+      stats.textureBytes += getTextureBytesFromMaterial(this._material)
+    }
   }
 
   get type() {

@@ -8,6 +8,7 @@ const defaults = {
   hdr: null,
   sunDirection: null,
   sunIntensity: null,
+  sunColor: null,
 }
 
 export class Sky extends Node {
@@ -19,6 +20,7 @@ export class Sky extends Node {
     this.hdr = data.hdr
     this.sunDirection = data.sunDirection
     this.sunIntensity = data.sunIntensity
+    this.sunColor = data.sunColor
   }
 
   mount() {
@@ -43,6 +45,7 @@ export class Sky extends Node {
     this._hdr = source._hdr
     this._sunDirection = source._sunDirection
     this._sunIntensity = source._sunIntensity
+    this._sunColor = source._sunColor
     return this
   }
 
@@ -102,6 +105,20 @@ export class Sky extends Node {
     this.setDirty()
   }
 
+  get sunColor() {
+    return this._sunColor
+  }
+
+  set sunColor(value = defaults.sunColor) {
+    if (value !== null && !isString(value)) {
+      throw new Error('[sky] sunColor not a string')
+    }
+    if (this._sunColor === value) return
+    this._sunColor = value
+    this.needsRebuild = true
+    this.setDirty()
+  }
+
   getProxy() {
     var self = this
     if (!this.proxy) {
@@ -129,6 +146,12 @@ export class Sky extends Node {
         },
         set sunIntensity(value) {
           self.sunIntensity = value
+        },
+        get sunColor() {
+          return self.sunColor
+        },
+        set sunColor(value) {
+          self.sunColor = value
         },
       }
       proxy = Object.defineProperties(proxy, Object.getOwnPropertyDescriptors(super.getProxy())) // inherit Node properties

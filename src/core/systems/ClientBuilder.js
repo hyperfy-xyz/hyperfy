@@ -8,7 +8,7 @@ import { hashFile } from '../utils-client'
 import { hasRole, uuid } from '../utils'
 import { ControlPriorities } from '../extras/ControlPriorities'
 import { importApp } from '../extras/appTools'
-import { DEG2RAD } from '../extras/general'
+import { DEG2RAD, RAD2DEG } from '../extras/general'
 
 const FORWARD = new THREE.Vector3(0, 0, -1)
 const MAX_UPLOAD_SIZE = parseInt(process.env.PUBLIC_MAX_UPLOAD_SIZE || '100')
@@ -417,7 +417,7 @@ export class ClientBuilder extends System {
     }
     if (!file) return
     // slight delay to ensure we get updated pointer position from window focus
-    await new Promise(resolve => setTimeout(resolve, 20))
+    await new Promise(resolve => setTimeout(resolve, 100))
     // ensure we in build mode
     this.toggle(true)
     // add it!
@@ -634,7 +634,9 @@ export class ClientBuilder extends System {
       e1.copy(this.world.rig.rotation).reorder('YXZ')
       e1.x = 0
       e1.z = 0
-      e1.y += 180 * DEG2RAD
+      const degrees = e1.y * RAD2DEG
+      const snappedDegrees = Math.round(degrees / SNAP_DEGREES) * SNAP_DEGREES
+      e1.y = snappedDegrees * DEG2RAD
       q1.setFromEuler(e1)
       quaternion = q1.toArray()
     } else {
