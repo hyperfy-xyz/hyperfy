@@ -9,7 +9,6 @@ services:
     restart: unless-stopped
     environment:.
       - NODE_ENV=production
-      - SERVICE_FQDN_HYPERFY_3000
       - PORT=3000
       - SERVICE_FQDN_WS=/ws 
       - SERVICE_FQDN_API=/api
