@@ -9,10 +9,10 @@ services:
     restart: unless-stopped
     environment:
       # FQDN configuration with paths
-      - SERVICE_FQDN_HYPERFY=/
-      - SERVICE_FQDN_WS=/ws
-      - SERVICE_FQDN_API=/api
-      - SERVICE_FQDN_ASSETS=/assets
+      - SERVICE_FQDN_HYPERFY_3000
+      - SERVICE_FQDN_WS=${SERVICE_FQDN_HYPERFY_3000}/ws
+      - SERVICE_FQDN_API=${SERVICE_FQDN_HYPERFY_3000}/api
+      - SERVICE_FQDN_ASSETS=${SERVICE_FQDN_HYPERFY_3000}/assets
       
       # Generated secure values
       - JWT_SECRET=${SERVICE_PASSWORD_64_JWT}
