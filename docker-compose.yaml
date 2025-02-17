@@ -1,10 +1,10 @@
 services:
   hyperfy:
-    image: docker.io/library/hyperfy:latest
+    image: howieduhzit/hyperfy:latest
     container_name: hyperfy
     restart: unless-stopped
     environment:
-      - SERVICE_FQDN_HYPERFY_3000=/
+      - SERVICE_FQDN_HYPERFY=/
       - JWT_SECRET=${JWT_SECRET:-hyper}
       - ADMIN_CODE=${ADMIN_CODE:-admin}
       - PORT=3000
