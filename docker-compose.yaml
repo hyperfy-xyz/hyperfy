@@ -8,14 +8,14 @@ services:
     restart: unless-stopped
     environment:
       # FQDN configuration with paths
-      - SERVICE_FQDN_HYPERFY_3000
-      - SERVICE_FQDN_WS=$SERVICE_FQDN_HYPERFY_3000/ws
-      - SERVICE_FQDN_API=$SERVICE_FQDN_HYPERFY_3000/api
-      - SERVICE_FQDN_ASSETS=$SERVICE_FQDN_HYPERFY_3000/assets
+      #- SERVICE_FQDN_HYPERFY_3000
+      #- SERVICE_FQDN_WS=$SERVICE_FQDN_HYPERFY_3000/ws
+      #- SERVICE_FQDN_API=$SERVICE_FQDN_HYPERFY_3000/api
+      #- SERVICE_FQDN_ASSETS=$SERVICE_FQDN_HYPERFY_3000/assets
       
       # Generated secure values
       - JWT_SECRET=hyper #${SERVICE_PASSWORD_64_JWT}
-      - ADMIN_CODE=${SERVICE_PASSWORD_ADMIN}
+      - ADMIN_CODE=admin #${SERVICE_PASSWORD_ADMIN}
       
       # Static configuration
       - PORT=3000
@@ -24,9 +24,9 @@ services:
       - PUBLIC_MAX_UPLOAD_SIZE=${PUBLIC_MAX_UPLOAD_SIZE:-32}
       
       # Dynamic URLs based on FQDN
-      - PUBLIC_WS_URL=$SERVICE_URL_WS
-      - PUBLIC_API_URL=$SERVICE_URL_API
-      - PUBLIC_ASSETS_URL=$SERVICE_URL_ASSETS
+      - PUBLIC_WS_URL=${SERVICE_FQDN_HYPERFY}/ws
+      - PUBLIC_API_URL=${SERVICE_FQDN_HYPERFY}/api
+      - PUBLIC_ASSETS_URL=${SERVICE_FQDN_HYPERFY}/assets
 
     volumes:
       - type: bind
