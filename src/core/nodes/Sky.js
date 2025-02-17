@@ -9,6 +9,9 @@ const defaults = {
   sunDirection: null,
   sunIntensity: null,
   sunColor: null,
+  fogNear: null,
+  fogFar: null,
+  fogColor: null,
 }
 
 export class Sky extends Node {
@@ -21,6 +24,9 @@ export class Sky extends Node {
     this.sunDirection = data.sunDirection
     this.sunIntensity = data.sunIntensity
     this.sunColor = data.sunColor
+    this.fogNear = data.fogNear
+    this.fogFar = data.fogFar
+    this.fogColor = data.fogColor
   }
 
   mount() {
@@ -119,6 +125,48 @@ export class Sky extends Node {
     this.setDirty()
   }
 
+  get fogNear() {
+    return this._fogNear
+  }
+
+  set fogNear(value = defaults.fogNear) {
+    if (value !== null && !isNumber(value)) {
+      throw new Error('[sky] fogNear not a number')
+    }
+    if (this._fogNear === value) return
+    this._fogNear = value
+    this.needsRebuild = true
+    this.setDirty()
+  }
+
+  get fogFar() {
+    return this._fogFar
+  }
+
+  set fogFar(value = defaults.fogFar) {
+    if (value !== null && !isNumber(value)) {
+      throw new Error('[sky] fogFar not a number')
+    }
+    if (this._fogFar === value) return
+    this._fogFar = value
+    this.needsRebuild = true
+    this.setDirty()
+  }
+
+  get fogColor() {
+    return this._fogColor
+  }
+
+  set fogColor(value = defaults.fogColor) {
+    if (value !== null && !isString(value)) {
+      throw new Error('[sky] fogColor not a string')
+    }
+    if (this._fogColor === value) return
+    this._fogColor = value
+    this.needsRebuild = true
+    this.setDirty()
+  }
+
   getProxy() {
     var self = this
     if (!this.proxy) {
@@ -152,6 +200,24 @@ export class Sky extends Node {
         },
         set sunColor(value) {
           self.sunColor = value
+        },
+        get fogNear() {
+          return self.fogNear
+        },
+        set fogNear(value) {
+          self.fogNear = value
+        },
+        get fogFar() {
+          return self.fogFar
+        },
+        set fogFar(value) {
+          self.fogFar = value
+        },
+        get fogColor() {
+          return self.fogColor
+        },
+        set fogColor(value) {
+          self.fogColor = value
         },
       }
       proxy = Object.defineProperties(proxy, Object.getOwnPropertyDescriptors(super.getProxy())) // inherit Node properties

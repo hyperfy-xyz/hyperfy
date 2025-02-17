@@ -46,7 +46,20 @@ const defaults = {
   sunDirection: new THREE.Vector3(-1, -2, -2).normalize(),
   sunIntensity: 1,
   sunColor: 0xffffff,
+  fogNear: null,
+  fogFar: null,
+  fogColor: null,
 }
+
+// fix fog distance calc
+// see: https://github.com/mrdoob/three.js/issues/14601
+// future: https://www.youtube.com/watch?v=k1zGz55EqfU
+// THREE.ShaderChunk.fog_vertex = `
+// #ifdef USE_FOG
+// 	// vFogDepth = - mvPosition.z;
+//   vFogDepth = length(mvPosition);
+// #endif
+// `
 
 /**
  * Environment System
@@ -120,6 +133,9 @@ export class ClientEnvironment extends System {
     const sunDirection = node?._sunDirection || defaults.sunDirection
     const sunIntensity = isNumber(node?._sunIntensity) ? node._sunIntensity : defaults.sunIntensity
     const sunColor = isString(node?._sunColor) ? node._sunColor : defaults.sunColor
+    const fogNear = isNumber(node?._fogNear) ? node._fogNear : defaults.fogNear
+    const fogFar = isNumber(node?._fogFar) ? node._fogFar : defaults.fogFar
+    const fogColor = isString(node?._fogColor) ? node._fogColor : defaults.fogColor
 
     const n = ++this.skyN
     const bgTexture = await this.world.loader.load('texture', bgUrl)
@@ -148,12 +164,22 @@ export class ClientEnvironment extends System {
 
     this.sky.visible = true
 
+    if (isNumber(fogNear) && isNumber(fogFar) && fogColor) {
+      const color = new THREE.Color(fogColor)
+      this.world.stage.scene.fog = new THREE.Fog(color, fogNear, fogFar)
+    } else {
+      this.world.stage.scene.fog = null
+    }
+
     this.skyInfo = {
       bgUrl,
       hdrUrl,
       sunDirection,
       sunIntensity,
       sunColor,
+      fogNear,
+      fogFar,
+      fogColor,
     }
   }
 
