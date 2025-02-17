@@ -7,18 +7,12 @@ services:
     container_name: hyperfy
     restart: unless-stopped
     environment:
-      # FQDN configuration with paths
-      #- SERVICE_FQDN_HYPERFY_3000
-      #- SERVICE_FQDN_WS=$SERVICE_FQDN_HYPERFY_3000/ws
-      #- SERVICE_FQDN_API=$SERVICE_FQDN_HYPERFY_3000/api
-      #- SERVICE_FQDN_ASSETS=$SERVICE_FQDN_HYPERFY_3000/assets
-      
       # Generated secure values
-      - JWT_SECRET=hyper #${SERVICE_PASSWORD_64_JWT}
-      - ADMIN_CODE=admin #${SERVICE_PASSWORD_ADMIN}
+      - JWT_SECRET=${JWT_SECRET:-hyper}
+      - ADMIN_CODE=${ADMIN_CODE:-admin}
       
       # Static configuration
-      - PORT=3000
+      - PORT=${PORT:-3000}
       - SAVE_INTERVAL=${SAVE_INTERVAL:-60}
       - WORLD=${WORLD:-world}
       - PUBLIC_MAX_UPLOAD_SIZE=${PUBLIC_MAX_UPLOAD_SIZE:-32}
@@ -28,7 +22,7 @@ services:
       - PUBLIC_API_URL=${PUBLIC_API_URL:-${SERVICE_FQDN_HYPERFY}/api}
       - PUBLIC_ASSETS_URL=${PUBLIC_ASSETS_URL:-${SERVICE_FQDN_HYPERFY}/assets}
 
-    volumes:
+      volumes:
       - type: bind
         source: ./world
         target: /app/world
