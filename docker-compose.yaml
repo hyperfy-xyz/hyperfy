@@ -4,6 +4,7 @@ services:
     container_name: hyperfy
     restart: unless-stopped
     environment:
+      - SERVICE_FQDN_HYPERFY_3000=/
       - JWT_SECRET=${JWT_SECRET:-hyper}
       - ADMIN_CODE=${ADMIN_CODE:-admin}
       - PORT=3000
