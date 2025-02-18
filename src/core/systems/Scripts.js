@@ -40,6 +40,7 @@ export class Scripts extends System {
       Matrix4: THREE.Matrix4,
       LerpVector3,
       LerpQuaternion,
+      GameWorld: world,
       // Material: Material,
       // Curve: Curve,
       // Gradient: Gradient,
