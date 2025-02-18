@@ -359,6 +359,21 @@ export class App extends Entity {
       get isClient() {
         return world.network.isClient
       },
+      raycast(origin, direction, maxDistance = Infinity, LayerMask = 0xFFFFFFFF) {
+        if (!origin?.isVector3 || !direction?.isVector3) {
+          console.error('raycast: origin and direction must be Vector3');
+          return null;
+        }
+
+        const hit = world.physics.raycast(origin, direction, maxDistance, LayerMask);
+        if (!hit) return null;
+
+      return {
+          point: hit.point.clone(),
+        normal: hit.normal.clone(),
+        distance: hit.distnace,
+        }
+      },
       add(pNode) {
         const node = getRef(pNode)
         if (!node) return
