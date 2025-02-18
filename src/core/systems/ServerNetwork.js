@@ -5,6 +5,8 @@ import { addRole, hasRole, serializeRoles, uuid } from '../utils'
 import { System } from './System'
 import { createJWT, readJWT } from '../utils-server'
 import { cloneDeep } from 'lodash-es'
+import { CommandHandler } from '../extras/commands/commandHandler'
+import * as cmds from '../extras/commands/coreCommands'
 import * as THREE from '../extras/three'
 
 const SAVE_INTERVAL = parseInt(process.env.SAVE_INTERVAL || '60') // seconds
@@ -30,10 +32,18 @@ export class ServerNetwork extends System {
     this.dirtyApps = new Set()
     this.isServer = true
     this.queue = []
+    this.commandHandler = new CommandHandler(world, this, {
+      'default': 0,
+      'admin': 100
+    })
   }
 
   init({ db }) {
     this.db = db
+    this.commandHandler.registerCommand('admin', cmds.becomeAdmin, true, 'default')
+    this.commandHandler.registerCommand('name', cmds.updateUsersName, true, 'default')
+    this.commandHandler.registerCommand('admin', cmds.setWorldSpawn, true, 'admin')
+    
   }
 
   async start() {
@@ -245,78 +255,7 @@ export class ServerNetwork extends System {
     // handle slash commands
     if (msg.body.startsWith('/')) {
       const [cmd, arg1, arg2] = msg.body.slice(1).split(' ')
-      // become admin command
-      if (cmd === 'admin') {
-        const code = arg1
-        if (code !== process.env.ADMIN_CODE || !process.env.ADMIN_CODE) return
-        const player = socket.player
-        const id = player.data.id
-        const user = player.data.user
-        if (hasRole(user.roles, 'admin')) {
-          return socket.send('chatAdded', {
-            id: uuid(),
-            from: null,
-            fromId: null,
-            body: 'You are already an admin',
-            createdAt: moment().toISOString(),
-          })
-        }
-        addRole(user.roles, 'admin')
-        player.modify({ user })
-        this.send('entityModified', { id, user })
-        socket.send('chatAdded', {
-          id: uuid(),
-          from: null,
-          fromId: null,
-          body: 'Admin granted!',
-          createdAt: moment().toISOString(),
-        })
-        await this.db('users')
-          .where('id', user.id)
-          .update({ roles: serializeRoles(user.roles) })
-      }
-      if (cmd === 'name') {
-        const name = arg1
-        if (!name) return
-        const player = socket.player
-        const id = player.data.id
-        const user = player.data.user
-        player.data.user.name = name
-        player.modify({ user })
-        this.send('entityModified', { id, user })
-        socket.send('chatAdded', {
-          id: uuid(),
-          from: null,
-          fromId: null,
-          body: `Name set to ${name}!`,
-          createdAt: moment().toISOString(),
-        })
-        await this.db('users').where('id', user.id).update({ name })
-      }
-      if (cmd === 'spawn') {
-        const player = socket.player
-        const user = player.data.user
-        if (!hasRole(user.roles, 'admin')) return
-        const action = arg1
-        if (action === 'set') {
-          this.spawn = { position: player.data.position.slice(), quaternion: player.data.quaternion.slice() }
-        } else if (action === 'clear') {
-          this.spawn = { position: [0, 0, 0], quaternion: [0, 0, 0, 1] }
-        } else {
-          return
-        }
-        const data = JSON.stringify(this.spawn)
-        await this.db('config')
-          .insert({
-            key: 'spawn',
-            value: data,
-          })
-          .onConflict('key')
-          .merge({
-            value: data,
-          })
-      }
-      return
+      return await this.commandHandler.callCommand(cmd, socket, arg1, arg2)
     }
     // handle chat messages
     this.world.chat.add(msg, false)
