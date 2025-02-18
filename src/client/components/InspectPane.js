@@ -26,6 +26,7 @@ import {
   LockKeyholeIcon,
   SparkleIcon,
   ZapIcon,
+  Trash2Icon,
 } from 'lucide-react'
 
 import { hashFile } from '../../core/utils-client'
@@ -112,13 +113,15 @@ export function AppPane({ world, app }) {
           border-bottom: 1px solid rgba(255, 255, 255, 0.05);
           display: flex;
           align-items: center;
-          padding: 0 10px 0 10px;
+          padding: 0 10px;
           &-icon {
-            width: 30px;
+            width: 60px;
             height: 40px;
             display: flex;
             align-items: center;
-            justify-content: center;
+            svg {
+              margin-left: 10px;
+            }
           }
           &-tabs {
             flex: 1;
@@ -145,7 +148,16 @@ export function AppPane({ world, app }) {
             }
           }
 
-          &-close {
+          &-btns {
+            width: 60px;
+            display: flex;
+            align-items: center;
+            &.right {
+              justify-content: flex-end;
+            }
+          }
+
+          &-btn {
             color: #515151;
             width: 30px;
             height: 40px;
@@ -193,8 +205,21 @@ export function AppPane({ world, app }) {
             <span>Nodes</span>
           </div>
         </div>
-        <div className='apane-head-close' onClick={() => world.emit('inspect', null)}>
-          <XIcon size={20} />
+        <div className='apane-head-btns right'>
+          {canEdit && (
+            <div
+              className='apane-head-btn'
+              onClick={() => {
+                world.emit('inspect', null)
+                app.destroy(true)
+              }}
+            >
+              <Trash2Icon size={16} />
+            </div>
+          )}
+          <div className='apane-head-btn' onClick={() => world.emit('inspect', null)}>
+            <XIcon size={20} />
+          </div>
         </div>
       </div>
       {tab === 'main' && (

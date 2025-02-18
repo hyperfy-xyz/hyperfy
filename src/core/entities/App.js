@@ -28,6 +28,8 @@ export class App extends Entity {
     this.worldListeners = new Map()
     this.listeners = {}
     this.eventQueue = []
+    this.snaps = []
+    this.root = createNode('group')
     this.fields = []
     this.target = null
     this.projectLimit = Infinity
