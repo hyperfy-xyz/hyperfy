@@ -463,6 +463,13 @@ export class App extends Entity {
         const node = entity.createNode(name, data)
         return node.getProxy()
       },
+      createClone() {
+        const data = cloneDeep(entity.data);
+        data.id = uuid();
+
+        entity.world.entities.add(data, true);
+        return data.id;
+      },
       control(options) {
         // TODO: only allow on user interaction
         // TODO: show UI with a button to release()
