@@ -95,6 +95,8 @@ export class Node {
       children[i].deactivate()
     }
     this.unmount()
+    this.isDirty = false
+    this.isTransformed = true
     this.mounted = false
   }
 

@@ -394,7 +394,7 @@ export class Physics extends System {
           hit = nHit
         }
       }
-      _raycastHit.actor = hit.actor
+      _raycastHit.handle = this.handles.get(hit.actor.ptr)
       _raycastHit.point.set(hit.position.x, hit.position.y, hit.position.z)
       _raycastHit.normal.set(hit.normal.x, hit.normal.y, hit.normal.z)
       _raycastHit.distance = hit.distance

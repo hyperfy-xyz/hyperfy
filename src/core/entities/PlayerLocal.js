@@ -298,10 +298,7 @@ export class PlayerLocal extends Entity {
         origin.y += 0.2
         const hitMask = Layers.environment.group | Layers.prop.group | Layers.tool.group
         const hit = this.world.physics.raycast(origin, DOWN, 2, hitMask)
-        let actor = hit?.actor || null
-        if (actor) {
-          actor = this.world.physics.handles.get(actor.ptr)?.actor || null
-        }
+        let actor = hit?.handle?.actor || null
         // if we found a new platform, set it up for tracking
         if (this.platform.actor !== actor) {
           this.platform.actor = actor
