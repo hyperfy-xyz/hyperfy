@@ -3,8 +3,8 @@ import { Entity } from './Entity'
 import { createNode } from '../extras/createNode'
 import { LerpQuaternion } from '../extras/LerpQuaternion'
 import { LerpVector3 } from '../extras/LerpVector3'
-import { emotes } from '../extras/playerEmotes'
 import { createPlayerProxy } from '../extras/createPlayerProxy'
+import { Emotes } from '../extras/playerEmotes'
 
 let capsuleGeometry
 {
@@ -101,10 +101,22 @@ export class PlayerRemote extends Entity {
     })
   }
 
+  getAnchorMatrix() {
+    if (this.effect?.anchorId) {
+      return this.world.anchors.get(this.effect.anchorId)
+    }
+  }
+
   update(delta) {
-    this.position.update(delta)
-    this.quaternion.update(delta)
-    this.avatar?.setEmote(emotes[this.emote])
+    const anchor = this.getAnchorMatrix()
+    if (anchor) {
+      this.base.position.setFromMatrixPosition(anchor)
+      this.base.quaternion.setFromRotationMatrix(anchor)
+    } else {
+      this.position.update(delta)
+      this.quaternion.update(delta)
+    }
+    this.avatar?.setEmote(this.emote)
   }
 
   modify(data) {
@@ -122,6 +134,10 @@ export class PlayerRemote extends Entity {
     if (data.hasOwnProperty('e')) {
       this.data.emote = data.e
       this.emote = data.e
+    }
+    if (data.hasOwnProperty('ef')) {
+      this.data.effect = data.ef
+      this.effect = data.ef
     }
     if (data.hasOwnProperty('user')) {
       this.data.user = data.user

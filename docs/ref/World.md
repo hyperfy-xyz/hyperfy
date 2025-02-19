@@ -45,3 +45,8 @@ If `layerMask` is not specified, it will hit anything.
 
 Creates a bitmask to be used in `world.raycast()`.
 Currently the only groups available are `environment` and `player`.
+
+### `.getPlayer(playerId)`: Player
+
+Returns a player. If no `playerId` is provided it returns the local player.
+

@@ -6,6 +6,7 @@ export { Snap as snap } from './Snap.js'
 
 export { Avatar as avatar } from './Avatar.js'
 export { Action as action } from './Action.js'
+export { Anchor as anchor } from './Anchor.js'
 export { Nametag as nametag } from './Nametag.js'
 
 export { Sky as sky } from './Sky.js'

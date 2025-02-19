@@ -1,6 +1,6 @@
 import * as THREE from 'three'
 import { isString } from 'lodash'
-import { emotes, Emotes } from '../core/extras/playerEmotes'
+import { Emotes } from '../core/extras/playerEmotes'
 
 const MAX_UPLOAD_SIZE = 1000000000000 // TODO
 const MAX_UPLOAD_SIZE_LABEL = '1LOLS'
@@ -95,7 +95,7 @@ export class AvatarPreview {
       })
       .get('avatar')
     this.node.activate({})
-    this.node.setEmote(emotes[Emotes.IDLE])
+    this.node.setEmote(Emotes.IDLE)
     // check we're still alive / didnt destroy
     if (!this.renderer) return
     // position camera
