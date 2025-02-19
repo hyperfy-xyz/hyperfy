@@ -16,6 +16,7 @@ import {
   JustifyContent,
 } from '../extras/yoga'
 import CustomShaderMaterial from '../libs/three-custom-shader-material'
+import { borderRoundRect } from '../extras/borderRoundRect'
 
 const v1 = new THREE.Vector3()
 const v2 = new THREE.Vector3()
@@ -53,6 +54,8 @@ const defaults = {
 
   transparent: true,
   backgroundColor: null,
+  borderWidth: 0,
+  borderColor: null,
   borderRadius: 0,
   padding: 0,
   flexDirection: 'column',
@@ -80,6 +83,9 @@ export class UI extends Node {
 
     this.transparent = data.transparent
     this.backgroundColor = data.backgroundColor
+
+    this.borderWidth = data.borderWidth
+    this.borderColor = data.borderColor
     this.borderRadius = data.borderRadius
     this.padding = data.padding
     this.flexDirection = data.flexDirection
@@ -149,11 +155,33 @@ export class UI extends Node {
     const width = this.yogaNode.getComputedWidth()
     const height = this.yogaNode.getComputedHeight()
     if (this._backgroundColor) {
+      // when theres a border, slightly inset to prevent bleeding
+      const inset = this._borderColor && this._borderWidth ? 1 * this._res : 0
+      const radius = this._borderRadius * this._res - inset
+      const insetLeft = left + inset
+      const insetTop = top + inset
+      const insetWidth = width - inset * 2
+      const insetHeight = height - inset * 2
       ctx.fillStyle = this._backgroundColor
-      if (this._borderRadius) {
-        fillRoundRect(ctx, left, top, width, height, this._borderRadius * this._res)
+      if (this.borderRadius) {
+        fillRoundRect(ctx, insetLeft, insetTop, insetWidth, insetHeight, radius)
       } else {
-        ctx.fillRect(left, top, width, height)
+        ctx.fillRect(insetLeft, insetTop, insetWidth, insetHeight)
+      }
+    }
+    if (this._borderWidth && this._borderColor) {
+      const radius = this._borderRadius * this._res
+      const thickness = this._borderWidth * this._res
+      ctx.strokeStyle = this._borderColor
+      ctx.lineWidth = thickness
+      if (this._borderRadius) {
+        borderRoundRect(ctx, left, top, width, height, radius, thickness)
+      } else {
+        const insetLeft = left + thickness / 2
+        const insetTop = top + thickness / 2
+        const insetWidth = width - thickness
+        const insetHeight = height - thickness
+        ctx.strokeRect(insetLeft, insetTop, insetWidth, insetHeight)
       }
     }
     this.box = { left, top, width, height }
@@ -168,6 +196,7 @@ export class UI extends Node {
     this.yogaNode = Yoga.Node.create()
     this.yogaNode.setWidth(this._width * this._res)
     this.yogaNode.setHeight(this._height * this._res)
+    this.yogaNode.setBorder(Yoga.EDGE_ALL, this._borderWidth * this._res)
     this.yogaNode.setPadding(Yoga.EDGE_ALL, this._padding * this._res)
     this.yogaNode.setFlexDirection(FlexDirection[this._flexDirection])
     this.yogaNode.setJustifyContent(JustifyContent[this._justifyContent])
@@ -229,6 +258,8 @@ export class UI extends Node {
     this._size = source._size
     this._res = source._res
     this._backgroundColor = source._backgroundColor
+    this._borderWidth = source._borderWidth
+    this._borderColor = source._borderColor
     this._borderRadius = source._borderRadius
     this._padding = source._padding
     this._flexDirection = source._flexDirection
@@ -471,6 +502,32 @@ export class UI extends Node {
     this.redraw()
   }
 
+  get borderWidth() {
+    return this._borderWidth
+  }
+
+  set borderWidth(value = defaults.borderWidth) {
+    if (!isNumber(value)) {
+      throw new Error('[ui] borderWidth not a number')
+    }
+    if (this._borderWidth === value) return
+    this._borderWidth = value
+    this.redraw()
+  }
+
+  get borderColor() {
+    return this._borderColor
+  }
+
+  set borderColor(value = defaults.borderColor) {
+    if (value !== null && !isString(value)) {
+      throw new Error('[ui] borderColor not a string')
+    }
+    if (this._borderColor === value) return
+    this._borderColor = value
+    this.redraw()
+  }
+
   get borderRadius() {
     return this._borderRadius
   }
@@ -645,6 +702,18 @@ export class UI extends Node {
         },
         set backgroundColor(value) {
           self.backgroundColor = value
+        },
+        get borderWidth() {
+          return self.borderWidth
+        },
+        set borderWidth(value) {
+          self.borderWidth = value
+        },
+        get borderColor() {
+          return self.borderColor
+        },
+        set borderColor(value) {
+          self.borderColor = value
         },
         get borderRadius() {
           return self.borderRadius
