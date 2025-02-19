@@ -238,6 +238,7 @@ export function AppPane({ world, app }) {
 }
 
 function AppPaneMain({ world, app, blueprint, canEdit }) {
+  const [fileInputKey, setFileInputKey] = useState(0)
   const downloadModel = e => {
     if (e.shiftKey) {
       e.preventDefault()
@@ -247,6 +248,7 @@ function AppPaneMain({ world, app, blueprint, canEdit }) {
     }
   }
   const changeModel = async e => {
+    setFileInputKey(n => n + 1)
     const file = e.target.files[0]
     if (!file) return
     const ext = file.name.split('.').pop()
@@ -421,7 +423,7 @@ function AppPaneMain({ world, app, blueprint, canEdit }) {
           <div className='amain-line mt mb' />
           <div className='amain-btns'>
             <label className='amain-btns-btn' onClick={downloadModel}>
-              <input type='file' accept='.glb,.vrm' onChange={changeModel} />
+              <input key={fileInputKey} type='file' accept='.glb,.vrm' onChange={changeModel} />
               <BoxIcon size={16} />
               <span>Model</span>
             </label>

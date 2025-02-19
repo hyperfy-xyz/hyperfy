@@ -17,12 +17,15 @@ import {
   isAlignContent,
   isFlexWrap,
 } from '../extras/yoga'
+import { borderRoundRect } from '../extras/borderRoundRect'
 
 const defaults = {
   display: 'flex',
   width: null,
   height: null,
   backgroundColor: null,
+  borderWidth: 0,
+  borderColor: null,
   borderRadius: 0,
   margin: 0,
   padding: 0,
@@ -46,6 +49,8 @@ export class UIView extends Node {
     this.width = data.width
     this.height = data.height
     this.backgroundColor = data.backgroundColor
+    this.borderWidth = data.borderWidth
+    this.borderColor = data.borderColor
     this.borderRadius = data.borderRadius
     this.margin = data.margin
     this.padding = data.padding
@@ -68,11 +73,33 @@ export class UIView extends Node {
     const width = this.yogaNode.getComputedWidth()
     const height = this.yogaNode.getComputedHeight()
     if (this._backgroundColor) {
+      // when theres a border, slightly inset to prevent bleeding
+      const inset = this._borderColor && this._borderWidth ? 0.5 * this.ui._res : 0
+      const radius = this._borderRadius * this.ui._res - inset
+      const insetLeft = left + inset
+      const insetTop = top + inset
+      const insetWidth = width - inset * 2
+      const insetHeight = height - inset * 2
       ctx.fillStyle = this._backgroundColor
       if (this.borderRadius) {
-        fillRoundRect(ctx, left, top, width, height, this._borderRadius * this.ui._res)
+        fillRoundRect(ctx, insetLeft, insetTop, insetWidth, insetHeight, radius)
       } else {
-        ctx.fillRect(left, top, width, height)
+        ctx.fillRect(insetLeft, insetTop, insetWidth, insetHeight)
+      }
+    }
+    if (this._borderWidth && this._borderColor) {
+      const radius = this._borderRadius * this.ui._res
+      const thickness = this._borderWidth * this.ui._res
+      ctx.strokeStyle = this._borderColor
+      ctx.lineWidth = thickness
+      if (this._borderRadius) {
+        borderRoundRect(ctx, left, top, width, height, radius, thickness)
+      } else {
+        const insetLeft = left + thickness / 2
+        const insetTop = top + thickness / 2
+        const insetWidth = width - thickness
+        const insetHeight = height - thickness
+        ctx.strokeRect(insetLeft, insetTop, insetWidth, insetHeight)
       }
     }
     this.box = { left, top, width, height }
@@ -87,6 +114,7 @@ export class UIView extends Node {
     this.yogaNode.setDisplay(Display[this._display])
     this.yogaNode.setWidth(this._width === null ? undefined : this._width * this.ui._res)
     this.yogaNode.setHeight(this._height === null ? undefined : this._height * this.ui._res)
+    this.yogaNode.setBorder(Yoga.EDGE_ALL, this._borderWidth * this.ui._res)
     this.yogaNode.setMargin(Yoga.EDGE_ALL, this._margin * this.ui._res)
     this.yogaNode.setPadding(Yoga.EDGE_ALL, this._padding * this.ui._res)
     this.yogaNode.setFlexDirection(FlexDirection[this._flexDirection])
@@ -121,6 +149,8 @@ export class UIView extends Node {
     this._width = source._width
     this._height = source._height
     this._backgroundColor = source._backgroundColor
+    this._borderWidth = source._borderWidth
+    this._borderColor = source._borderColor
     this._borderRadius = source._borderRadius
     this._margin = source._margin
     this._padding = source._padding
@@ -188,6 +218,32 @@ export class UIView extends Node {
     }
     if (this._backgroundColor === value) return
     this._backgroundColor = value
+    this.ui?.redraw()
+  }
+
+  get borderWidth() {
+    return this._borderWidth
+  }
+
+  set borderWidth(value = defaults.borderWidth) {
+    if (!isNumber(value)) {
+      throw new Error(`[uiview] borderWidth not a number`)
+    }
+    if (this._borderWidth === value) return
+    this._borderWidth = value
+    this.ui?.redraw()
+  }
+
+  get borderColor() {
+    return this._borderColor
+  }
+
+  set borderColor(value = defaults.borderColor) {
+    if (value !== null && !isString(value)) {
+      throw new Error(`[uiview] borderColor not a string`)
+    }
+    if (this._borderColor === value) return
+    this._borderColor = value
     this.ui?.redraw()
   }
 
@@ -385,6 +441,18 @@ export class UIView extends Node {
         },
         set backgroundColor(value) {
           self.backgroundColor = value
+        },
+        get borderWidth() {
+          return self.borderWidth
+        },
+        set borderWidth(value) {
+          self.borderWidth = value
+        },
+        get borderColor() {
+          return self.borderColor
+        },
+        set borderColor(value) {
+          self.borderColor = value
         },
         get borderRadius() {
           return self.borderRadius

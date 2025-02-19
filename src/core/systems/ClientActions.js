@@ -145,7 +145,7 @@ function createAction(world) {
         if (node.progress === node._duration) {
           node.progress = 0
           try {
-            node._onTrigger()
+            node._onTrigger({ player: world.entities.player.getProxy() })
           } catch (err) {
             console.error('action.onTrigger:', err)
           }

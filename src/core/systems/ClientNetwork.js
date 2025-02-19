@@ -130,6 +130,10 @@ export class ClientNetwork extends System {
     this.world.entities.player?.teleport(data)
   }
 
+  onPlayerEffect = data => {
+    this.world.entities.player?.setEffect(data.effect)
+  }
+
   onClose = code => {
     this.world.emit('disconnect', code || true)
     console.log('disconnect', code)

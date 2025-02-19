@@ -35,4 +35,18 @@ Currently only `enter` and `leave` are available which let you know when a playe
 
 Unsubscribes from world events.
 
+### `.raycast(origin: Vector3, direction: Vector3, maxDistance: ?Number, layerMask: ?Number)`
+
+Raycasts the physics scene.
+If `maxDistance` is not specified, max distance is infinite.
+If `layerMask` is not specified, it will hit anything.
+
+### `.createLayerMask(...groups)`
+
+Creates a bitmask to be used in `world.raycast()`.
+Currently the only groups available are `environment` and `player`.
+
+### `.getPlayer(playerId)`: Player
+
+Returns a player. If no `playerId` is provided it returns the local player.
 
