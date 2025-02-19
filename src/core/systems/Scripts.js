@@ -32,6 +32,7 @@ export class Scripts extends System {
       lockdown: undefined,
       num,
       clamp,
+      structuredClone,
       // Layers,
       Object3D: THREE.Object3D,
       Quaternion: THREE.Quaternion,
