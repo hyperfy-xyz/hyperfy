@@ -148,7 +148,7 @@ function Side({ world, player, toggleSettings, toggleApps }) {
     const data = {
       id: uuid(),
       from: player.data.user.name,
-      fromId: player.data.id,
+      fromId: player.data.user.id,
       body: msg,
       createdAt: moment().toISOString(),
     }
