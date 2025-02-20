@@ -110,7 +110,7 @@ export class ClientBuilder extends System {
       this.select(null)
     }
     // deselect if stolen
-    if (this.selected?.data.mover !== this.world.network.id) {
+    if (this.selected && this.selected?.data.mover !== this.world.network.id) {
       this.select(null)
     }
     // stop here if build mode not enabled
@@ -303,6 +303,8 @@ export class ClientBuilder extends System {
   }
 
   select(app) {
+    // do nothing if not changed
+    if (this.selected === app) return
     // deselect existing
     if (this.selected) {
       if (!this.selected.dead && this.selected.data.mover === this.world.network.id) {
@@ -338,6 +340,7 @@ export class ClientBuilder extends System {
       this.target.quaternion.copy(app.root.quaternion)
       this.target.limit = PROJECT_MAX
     }
+    // update actions
     this.updateActions()
   }
 
