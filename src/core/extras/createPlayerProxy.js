@@ -62,5 +62,8 @@ export function createPlayerProxy(player) {
         world.network.sendTo(player.data.owner, 'playerEffect', { effect })
       }
     },
+    getBoneTransform(boneName) {
+      return player.avatar?.getBoneTransform?.(boneName)
+    },
   }
 }

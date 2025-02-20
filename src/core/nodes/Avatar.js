@@ -43,6 +43,10 @@ export class Avatar extends Node {
     return this.instance?.setEmote(url)
   }
 
+  getBoneTransform(boneName) {
+    return this.instance?.getBoneTransform(boneName)
+  }
+
   copy(source, recursive) {
     super.copy(source, recursive)
     this.factory = source.factory
@@ -59,6 +63,9 @@ export class Avatar extends Node {
         },
         setEmote(url) {
           return self.setEmote(url)
+        },
+        getBoneMatrix(boneName) {
+          return self.getBoneMatrix(boneName)
         },
       }
       proxy = Object.defineProperties(proxy, Object.getOwnPropertyDescriptors(super.getProxy())) // inherit Node properties

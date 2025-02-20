@@ -243,11 +243,6 @@ export function createVRMFactory(glb, setupMaterial) {
       return bonesByName[name]
     }
 
-    const applyBoneMatrixWorld = (name, matrix) => {
-      const bone = findBone(name)
-      matrix.multiplyMatrices(vrm.scene.matrixWorld, bone.matrixWorld)
-    }
-
     let firstPersonActive = false
     const setFirstPerson = active => {
       if (firstPersonActive === active) return
@@ -256,13 +251,21 @@ export function createVRMFactory(glb, setupMaterial) {
       firstPersonActive = active
     }
 
+    const m1 = new THREE.Matrix4()
+    const getBoneTransform = boneName => {
+      const bone = findBone(boneName)
+      if (!bone) return null
+      // combine the scene's world matrix with the bone's world matrix
+      return m1.multiplyMatrices(vrm.scene.matrixWorld, bone.matrixWorld)
+    }
+
     return {
       raw: vrm,
       height,
-      applyBoneMatrixWorld,
       setEmote,
       setFirstPerson,
       update,
+      getBoneTransform,
       move(_matrix) {
         matrix.copy(_matrix)
         hooks.octree?.move(sItem)

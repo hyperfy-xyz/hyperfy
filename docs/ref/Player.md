@@ -61,3 +61,21 @@ All options are optional.
 **duration**: how long this effect should last in seconds.
 
 **cancellable**: whether any movement keys will cancel the effect. if enabled, freeze is ignored.
+
+### `.getBoneTransform(boneName)`: Matrix4
+
+Returns a matrix of the bone transform in world space.
+
+```jsx
+const matrix = player.getBoneTransform('rightHand')
+weapon.position.setFromMatrixPosition(matrix)
+weapon.quaternion.setFromRotationMatrix(matrix)
+```
+
+Note that VRM avatars have required and optional bones, and in some cases eg while avatars are loading this method may return null.
+
+The VRM spec defines the following bones as required:
+
+```
+hips, spine, chest, neck, head, leftShoulder, leftUpperArm, leftLowerArm, leftHand, rightShoulder, rightUpperArm, rightLowerArm, rightHand, leftUpperLeg, leftLowerLeg, leftFoot, leftToes, rightUpperLeg, rightLowerLeg, rightFoot, rightToes
+```
