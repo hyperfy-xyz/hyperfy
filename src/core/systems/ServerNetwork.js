@@ -317,6 +317,17 @@ export class ServerNetwork extends System {
             value: data,
           })
       }
+      if (cmd === 'chat') {
+        const code = arg1
+        if (code !== 'clear') return
+        const player = socket.player
+        const user = player.data.user
+        if (!hasRole(user.roles, 'admin')) {
+          return
+        }
+        this.world.chat.clear(true)
+        return
+      }
       return
     }
     // handle chat messages
