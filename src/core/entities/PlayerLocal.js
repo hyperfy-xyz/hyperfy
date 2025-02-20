@@ -93,7 +93,7 @@ export class PlayerLocal extends Entity {
     this.base.position.fromArray(this.data.position)
     this.base.quaternion.fromArray(this.data.quaternion)
 
-    // this.nametag = createNode({ name: 'nametag', label: this.data.user.name, active: false })
+    // this.nametag = createNode({ name: 'nametag', label: this.data.name, active: false })
     // this.base.add(this.nametag)
 
     this.bubble = createNode('ui', {
@@ -144,7 +144,7 @@ export class PlayerLocal extends Entity {
   }
 
   applyAvatar() {
-    const avatarUrl = this.data.user.avatar || 'asset://avatar.vrm'
+    const avatarUrl = this.data.avatar || 'asset://avatar.vrm'
     if (this.avatarUrl === avatarUrl) return
     this.world.loader
       .load('avatar', avatarUrl)
@@ -268,7 +268,7 @@ export class PlayerLocal extends Entity {
   }
 
   toggleFlying() {
-    const canFly = hasRole(this.data.user.roles, 'admin', 'builder')
+    const canFly = hasRole(this.data.roles, 'admin', 'builder')
     if (!canFly) return
     this.flying = !this.flying
     if (this.flying) {
@@ -884,10 +884,17 @@ export class PlayerLocal extends Entity {
   }
 
   modify(data) {
-    if (data.hasOwnProperty('user')) {
-      this.data.user = data.user
-      // this.nametag.label = data.user.name
+    if (data.hasOwnProperty('name')) {
+      this.data.name = data.name
+      this.world.emit('player', this)
+    }
+    if (data.hasOwnProperty('avatar')) {
+      this.data.avatar = data.avatar
       this.applyAvatar()
+      this.world.emit('player', this)
+    }
+    if (data.hasOwnProperty('roles')) {
+      this.data.roles = data.roles
       this.world.emit('player', this)
     }
   }

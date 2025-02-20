@@ -63,7 +63,7 @@ export class ClientBuilder extends System {
   }
 
   canBuild() {
-    return hasRole(this.world.entities.player?.data.user.roles, 'admin', 'builder')
+    return hasRole(this.world.entities.player?.data.roles, 'admin', 'builder')
   }
 
   updateActions() {
@@ -606,24 +606,22 @@ export class ClientBuilder extends System {
         this.world.emit('avatar', null)
         // prep new user data
         const player = this.world.entities.player
-        const prevUser = player.data.user
-        const newUser = cloneDeep(player.data.user)
-        newUser.avatar = url
+        const prevUrl = player.data.avatar
         // update locally
-        player.modify({ user: newUser })
+        player.modify({ avatar: url })
         // upload
         try {
           await this.world.network.upload(file)
         } catch (err) {
           console.error(err)
           // revert
-          player.modify({ user: prevUser })
+          player.modify({ avatar: prevUrl })
           return
         }
         // update for everyone
         this.world.network.send('entityModified', {
           id: player.data.id,
-          user: newUser,
+          avatar: url,
         })
       },
     })

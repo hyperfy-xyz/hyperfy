@@ -1,7 +1,7 @@
 import moment from 'moment'
 import { writePacket } from '../packets'
 import { Socket } from '../Socket'
-import { addRole, hasRole, serializeRoles, uuid } from '../utils'
+import { addRole, hasRole, removeRole, serializeRoles, uuid } from '../utils'
 import { System } from './System'
 import { createJWT, readJWT } from '../utils-server'
 import { cloneDeep } from 'lodash-es'
@@ -204,6 +204,7 @@ export class ServerNetwork extends System {
         user = {
           id: uuid(),
           name: 'Anonymous',
+          avatar: null,
           roles: '',
           createdAt: moment().toISOString(),
         }
@@ -229,7 +230,10 @@ export class ServerNetwork extends System {
           position: this.spawn.position.slice(),
           quaternion: this.spawn.quaternion.slice(),
           owner: socket.id,
-          user,
+          userId: user.id,
+          name: user.name,
+          avatar: user.avatar,
+          roles: user.roles,
         },
         true
       )
@@ -299,10 +303,21 @@ export class ServerNetwork extends System {
       // mark for saving
       this.dirtyApps.add(entity.data.id)
     }
-    if (entity.isPlayer && data.user) {
+    if (entity.isPlayer) {
       // update player (only name & avatar field for now)
-      const { id, name, avatar } = entity.data.user
-      await this.db('users').where('id', id).update({ name, avatar })
+      const changes = {}
+      let changed
+      if (data.hasOwnProperty('name')) {
+        changes.name = data.name
+        changed = true
+      }
+      if (data.hasOwnProperty('avatar')) {
+        changes.avatar = data.avatar
+        changed = true
+      }
+      if (changed) {
+        await this.db('users').where('id', entity.data.userId).update(changes)
+      }
     }
   }
 

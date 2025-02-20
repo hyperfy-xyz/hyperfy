@@ -14,10 +14,10 @@ export function createPlayerProxy(player) {
       return player.data.id
     },
     get id() {
-      return player.data.user.id
+      return player.data.userId
     },
     get name() {
-      return player.data.user.name
+      return player.data.name
     },
     get position() {
       return position.copy(player.base.position)

@@ -14,7 +14,7 @@ export function SettingsPane({ world, player, close }) {
   usePane('settings', paneRef, headRef)
   const [tab, setTab] = useState('general')
   const canBuild = useMemo(() => {
-    return hasRole(player.data.user.roles, 'admin', 'builder')
+    return hasRole(player.data.roles, 'admin', 'builder')
   }, [player])
   return (
     <div
@@ -123,7 +123,7 @@ const onOffOptions = [
   { label: 'On', value: true },
 ]
 function GeneralSettings({ world, player }) {
-  const [name, setName] = useState(() => player.data.user.name)
+  const [name, setName] = useState(() => player.data.name)
   const [dpr, setDPR] = useState(world.prefs.dpr)
   const [shadows, setShadows] = useState(world.prefs.shadows)
   const [postprocessing, setPostprocessing] = useState(world.prefs.postprocessing)
@@ -216,14 +216,9 @@ function GeneralSettings({ world, player }) {
             value={name}
             onChange={name => {
               if (!name) {
-                return setName(player.data.user.name)
+                return setName(player.data.name)
               }
-              player.modify({
-                user: {
-                  ...player.data.user,
-                  name,
-                },
-              })
+              player.modify({ name })
             }}
           />
         </div>

@@ -32,6 +32,13 @@ export function addRole(arr, role) {
   }
 }
 
+export function removeRole(arr, role) {
+  const idx = arr.indexOf(role)
+  if (idx !== -1) {
+    arr.splice(idx, 1)
+  }
+}
+
 export function serializeRoles(roles) {
   // remove temporary (~) roles
   roles = roles.filter(role => !role.startsWith('~'))

@@ -44,7 +44,7 @@ export class PlayerRemote extends Entity {
     // })
     // this.base.add(this.caps)
 
-    this.nametag = createNode('nametag', { label: this.data.user.name, active: false })
+    this.nametag = createNode('nametag', { label: this.data.name, active: false })
     this.base.add(this.nametag)
 
     this.bubble = createNode('ui', {
@@ -86,7 +86,7 @@ export class PlayerRemote extends Entity {
   }
 
   applyAvatar() {
-    const avatarUrl = this.data.user.avatar || 'asset://avatar.vrm'
+    const avatarUrl = this.data.avatar || 'asset://avatar.vrm'
     if (this.avatarUrl === avatarUrl) return
     this.world.loader.load('avatar', avatarUrl).then(src => {
       if (this.avatar) this.avatar.deactivate()
@@ -139,10 +139,16 @@ export class PlayerRemote extends Entity {
       this.data.effect = data.ef
       this.effect = data.ef
     }
-    if (data.hasOwnProperty('user')) {
-      this.data.user = data.user
-      this.nametag.label = data.user.name
+    if (data.hasOwnProperty('name')) {
+      this.data.name = data.name
+      this.nametag.label = data.name
+    }
+    if (data.hasOwnProperty('avatar')) {
+      this.data.avatar = data.avatar
       this.applyAvatar()
+    }
+    if (data.hasOwnProperty('roles')) {
+      this.data.roles = data.roles
     }
   }
 
