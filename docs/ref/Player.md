@@ -61,3 +61,10 @@ All options are optional.
 **duration**: how long this effect should last in seconds.
 
 **cancellable**: whether any movement keys will cancel the effect. if enabled, freeze is ignored.
+
+### `.getBoneTransform(boneName)`: Matrix4
+
+Returns a matrix of the bone transform in world space.
+
+See [Avatar](/docs/ref/Avatar.md) for full details.
+

@@ -468,6 +468,9 @@ export class App extends Entity {
       get version() {
         return entity.blueprint.version
       },
+      get modelUrl() {
+        return entity.blueprint.model
+      },
       get state() {
         return entity.data.state
       },
@@ -525,7 +528,7 @@ export class App extends Entity {
         // apply any initial values
         const props = entity.blueprint.props
         for (const field of entity.fields) {
-          if (field.initial && props[field.key] === undefined) {
+          if (field.initial !== undefined && props[field.key] === undefined) {
             props[field.key] = field.initial
           }
         }

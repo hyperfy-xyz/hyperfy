@@ -66,7 +66,7 @@ export function AppPane({ world, app }) {
   const paneRef = useRef()
   const headRef = useRef()
   const [blueprint, setBlueprint] = useState(app.blueprint)
-  const canEdit = !blueprint.frozen && hasRole(world.entities.player.data.user.roles, 'admin', 'builder')
+  const canEdit = !blueprint.frozen && hasRole(world.entities.player.data.roles, 'admin', 'builder')
   const [tab, setTab] = useState('main')
   usePane('inspect', paneRef, headRef)
   useEffect(() => {

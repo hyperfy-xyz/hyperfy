@@ -105,7 +105,7 @@ function Side({ world, player, toggleSettings, toggleApps }) {
   const [msg, setMsg] = useState('')
   const [chat, setChat] = useState(false)
   const canBuild = useMemo(() => {
-    return player && hasRole(player.data.user.roles, 'admin', 'builder')
+    return player && hasRole(player.data.roles, 'admin', 'builder')
   }, [player])
   useEffect(() => {
     const control = world.controls.bind({ priority: ControlPriorities.GUI })
@@ -147,7 +147,7 @@ function Side({ world, player, toggleSettings, toggleApps }) {
     const player = world.entities.player
     const data = {
       id: uuid(),
-      from: player.data.user.name,
+      from: player.data.name,
       fromId: player.data.id,
       body: msg,
       createdAt: moment().toISOString(),

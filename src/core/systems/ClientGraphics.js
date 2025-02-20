@@ -52,6 +52,7 @@ export class ClientGraphics extends System {
     this.renderer.xr.setReferenceSpaceType('local-floor')
     this.renderer.xr.setFoveation(1)
     this.maxAnisotropy = this.renderer.capabilities.getMaxAnisotropy()
+    THREE.Texture.DEFAULT_ANISOTROPY = this.maxAnisotropy
     this.usePostprocessing = this.world.prefs.postprocessing
     const context = this.renderer.getContext()
     const maxMultisampling = context.getParameter(context.MAX_SAMPLES)

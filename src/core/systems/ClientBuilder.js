@@ -63,7 +63,7 @@ export class ClientBuilder extends System {
   }
 
   canBuild() {
-    return hasRole(this.world.entities.player?.data.user.roles, 'admin', 'builder')
+    return hasRole(this.world.entities.player?.data.roles, 'admin', 'builder')
   }
 
   updateActions() {
@@ -110,7 +110,7 @@ export class ClientBuilder extends System {
       this.select(null)
     }
     // deselect if stolen
-    if (this.selected?.data.mover !== this.world.network.id) {
+    if (this.selected && this.selected?.data.mover !== this.world.network.id) {
       this.select(null)
     }
     // stop here if build mode not enabled
@@ -303,6 +303,8 @@ export class ClientBuilder extends System {
   }
 
   select(app) {
+    // do nothing if not changed
+    if (this.selected === app) return
     // deselect existing
     if (this.selected) {
       if (!this.selected.dead && this.selected.data.mover === this.world.network.id) {
@@ -338,6 +340,7 @@ export class ClientBuilder extends System {
       this.target.quaternion.copy(app.root.quaternion)
       this.target.limit = PROJECT_MAX
     }
+    // update actions
     this.updateActions()
   }
 
@@ -603,24 +606,22 @@ export class ClientBuilder extends System {
         this.world.emit('avatar', null)
         // prep new user data
         const player = this.world.entities.player
-        const prevUser = player.data.user
-        const newUser = cloneDeep(player.data.user)
-        newUser.avatar = url
+        const prevUrl = player.data.avatar
         // update locally
-        player.modify({ user: newUser })
+        player.modify({ avatar: url, sessionAvatar: null })
         // upload
         try {
           await this.world.network.upload(file)
         } catch (err) {
           console.error(err)
           // revert
-          player.modify({ user: prevUser })
+          player.modify({ avatar: prevUrl })
           return
         }
         // update for everyone
         this.world.network.send('entityModified', {
           id: player.data.id,
-          user: newUser,
+          avatar: url,
         })
       },
     })

@@ -1,7 +1,7 @@
 import moment from 'moment'
 import { writePacket } from '../packets'
 import { Socket } from '../Socket'
-import { addRole, hasRole, serializeRoles, uuid } from '../utils'
+import { addRole, hasRole, removeRole, serializeRoles, uuid } from '../utils'
 import { System } from './System'
 import { createJWT, readJWT } from '../utils-server'
 import { cloneDeep } from 'lodash-es'
@@ -194,6 +194,7 @@ export class ServerNetwork extends System {
         user = {
           id: uuid(),
           name: 'Anonymous',
+          avatar: null,
           roles: '',
           createdAt: moment().toISOString(),
         }
@@ -219,7 +220,10 @@ export class ServerNetwork extends System {
           position: this.spawn.position.slice(),
           quaternion: this.spawn.quaternion.slice(),
           owner: socket.id,
-          user,
+          userId: user.id,
+          name: user.name,
+          avatar: user.avatar,
+          roles: user.roles,
         },
         true
       )
@@ -251,39 +255,36 @@ export class ServerNetwork extends System {
         if (code !== process.env.ADMIN_CODE || !process.env.ADMIN_CODE) return
         const player = socket.player
         const id = player.data.id
-        const user = player.data.user
-        if (hasRole(user.roles, 'admin')) {
-          return socket.send('chatAdded', {
-            id: uuid(),
-            from: null,
-            fromId: null,
-            body: 'You are already an admin',
-            createdAt: moment().toISOString(),
-          })
+        const userId = player.data.userId
+        const roles = player.data.roles
+        const granting = !hasRole(roles, 'admin')
+        if (granting) {
+          addRole(roles, 'admin')
+        } else {
+          removeRole(roles, 'admin')
         }
-        addRole(user.roles, 'admin')
-        player.modify({ user })
-        this.send('entityModified', { id, user })
+        player.modify({ roles })
+        this.send('entityModified', { id, roles })
         socket.send('chatAdded', {
           id: uuid(),
           from: null,
           fromId: null,
-          body: 'Admin granted!',
+          body: granting ? 'Admin granted!' : 'Admin revoked!',
           createdAt: moment().toISOString(),
         })
         await this.db('users')
-          .where('id', user.id)
-          .update({ roles: serializeRoles(user.roles) })
+          .where('id', userId)
+          .update({ roles: serializeRoles(roles) })
       }
       if (cmd === 'name') {
         const name = arg1
         if (!name) return
         const player = socket.player
         const id = player.data.id
-        const user = player.data.user
-        player.data.user.name = name
-        player.modify({ user })
-        this.send('entityModified', { id, user })
+        const userId = player.data.userId
+        player.data.name = name
+        player.modify({ name })
+        this.send('entityModified', { id, name })
         socket.send('chatAdded', {
           id: uuid(),
           from: null,
@@ -291,12 +292,12 @@ export class ServerNetwork extends System {
           body: `Name set to ${name}!`,
           createdAt: moment().toISOString(),
         })
-        await this.db('users').where('id', user.id).update({ name })
+        await this.db('users').where('id', userId).update({ name })
       }
       if (cmd === 'spawn') {
         const player = socket.player
-        const user = player.data.user
-        if (!hasRole(user.roles, 'admin')) return
+        const roles = player.data.roles
+        if (!hasRole(roles, 'admin')) return
         const action = arg1
         if (action === 'set') {
           this.spawn = { position: player.data.position.slice(), quaternion: player.data.quaternion.slice() }
@@ -360,10 +361,21 @@ export class ServerNetwork extends System {
       // mark for saving
       this.dirtyApps.add(entity.data.id)
     }
-    if (entity.isPlayer && data.user) {
-      // update player (only name & avatar field for now)
-      const { id, name, avatar } = entity.data.user
-      await this.db('users').where('id', id).update({ name, avatar })
+    if (entity.isPlayer) {
+      // persist player name and avatar changes
+      const changes = {}
+      let changed
+      if (data.hasOwnProperty('name')) {
+        changes.name = data.name
+        changed = true
+      }
+      if (data.hasOwnProperty('avatar')) {
+        changes.avatar = data.avatar
+        changed = true
+      }
+      if (changed) {
+        await this.db('users').where('id', entity.data.userId).update(changes)
+      }
     }
   }
 
@@ -387,6 +399,10 @@ export class ServerNetwork extends System {
 
   onPlayerEffect = (socket, data) => {
     this.sendTo(data.networkId, 'playerEffect', data.effect)
+  }
+
+  onPlayerSessionAvatar = (socket, data) => {
+    this.sendTo(data.networkId, 'playerSessionAvatar', data.avatar)
   }
 
   onDisconnect = (socket, code) => {
