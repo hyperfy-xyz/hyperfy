@@ -201,6 +201,7 @@ export function createVRMFactory(glb, setupMaterial) {
         currentEmote.action?.fadeOut(0.15)
         currentEmote = null
       }
+      if (!url) return
       if (emotes[url]) {
         currentEmote = emotes[url]
         currentEmote.action?.reset().fadeIn(0.15).play()
