@@ -560,7 +560,7 @@ export class App extends Entity {
         // apply any initial values
         const props = entity.blueprint.props
         for (const field of entity.fields) {
-          if (field.initial && props[field.key] === undefined) {
+          if (field.initial !== undefined && props[field.key] === undefined) {
             props[field.key] = field.initial
           }
         }
