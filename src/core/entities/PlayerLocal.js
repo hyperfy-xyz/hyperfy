@@ -918,6 +918,10 @@ export class PlayerLocal extends Entity {
     if (changed) {
       this.world.emit('player', this)
     }
+    if (data.hasOwnProperty('roles')) {
+      this.data.roles = data.roles
+      this.world.emit('player', this)
+    }
   }
 
   getProxy() {

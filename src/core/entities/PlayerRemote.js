@@ -158,6 +158,9 @@ export class PlayerRemote extends Entity {
     if (avatarChanged) {
       this.applyAvatar()
     }
+    if (data.hasOwnProperty('roles')) {
+      this.data.roles = data.roles
+    }
   }
 
   chat(msg) {

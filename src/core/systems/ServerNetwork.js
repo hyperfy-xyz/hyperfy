@@ -304,7 +304,7 @@ export class ServerNetwork extends System {
       this.dirtyApps.add(entity.data.id)
     }
     if (entity.isPlayer) {
-      // persist player name and avatar changes
+      // update player (only name & avatar field for now)
       const changes = {}
       let changed
       if (data.hasOwnProperty('name')) {
