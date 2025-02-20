@@ -472,6 +472,9 @@ export class App extends Entity {
       get version() {
         return entity.blueprint.version
       },
+      get modelUrl() {
+        return entity.blueprint.model
+      },
       get state() {
         return entity.data.state
       },
