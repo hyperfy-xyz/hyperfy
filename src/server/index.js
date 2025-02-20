@@ -83,8 +83,7 @@ fastify.get('/env.js', async (req, reply) => {
 
 fastify.post('/api/upload', async (req, reply) => {
   // console.log('DEBUG: slow uploads')
-  await new Promise(resolve => setTimeout(resolve, 2000))
-
+  // await new Promise(resolve => setTimeout(resolve, 2000))
   const file = await req.file()
   const ext = file.filename.split('.').pop().toLowerCase()
   // create temp buffer to store contents
