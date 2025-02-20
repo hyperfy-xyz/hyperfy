@@ -151,10 +151,13 @@ export class ClientLoader extends System {
         const buffer = await file.arrayBuffer()
         const glb = await this.gltfLoader.parseAsync(buffer)
         const factory = createVRMFactory(glb, this.world.setupMaterial)
+        const hooks = this.vrmHooks
         const node = createNode('group', { id: '$root' })
-        const node2 = createNode('avatar', { id: 'avatar', factory, hooks: this.vrmHooks })
+        const node2 = createNode('avatar', { id: 'avatar', factory, hooks })
         node.add(node2)
         const avatar = {
+          factory,
+          hooks,
           toNodes(customHooks) {
             const clone = node.clone(true)
             if (customHooks) {
@@ -238,10 +241,13 @@ export class ClientLoader extends System {
     if (type === 'avatar') {
       promise = this.gltfLoader.loadAsync(localUrl).then(glb => {
         const factory = createVRMFactory(glb, this.world.setupMaterial)
+        const hooks = this.vrmHooks
         const node = createNode('group', { id: '$root' })
-        const node2 = createNode('avatar', { id: 'avatar', factory, hooks: this.vrmHooks })
+        const node2 = createNode('avatar', { id: 'avatar', factory, hooks })
         node.add(node2)
         const avatar = {
+          factory,
+          hooks,
           toNodes(customHooks) {
             const clone = node.clone(true)
             if (customHooks) {

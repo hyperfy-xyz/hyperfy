@@ -86,7 +86,7 @@ export class PlayerRemote extends Entity {
   }
 
   applyAvatar() {
-    const avatarUrl = this.data.avatar || 'asset://avatar.vrm'
+    const avatarUrl = this.data.sessionAvatar || this.data.avatar || 'asset://avatar.vrm'
     if (this.avatarUrl === avatarUrl) return
     this.world.loader.load('avatar', avatarUrl).then(src => {
       if (this.avatar) this.avatar.deactivate()
@@ -120,6 +120,7 @@ export class PlayerRemote extends Entity {
   }
 
   modify(data) {
+    let avatarChanged
     if (data.hasOwnProperty('t')) {
       this.teleport++
     }
@@ -145,10 +146,17 @@ export class PlayerRemote extends Entity {
     }
     if (data.hasOwnProperty('avatar')) {
       this.data.avatar = data.avatar
-      this.applyAvatar()
+      avatarChanged = true
+    }
+    if (data.hasOwnProperty('sessionAvatar')) {
+      this.data.sessionAvatar = data.sessionAvatar
+      avatarChanged = true
     }
     if (data.hasOwnProperty('roles')) {
       this.data.roles = data.roles
+    }
+    if (avatarChanged) {
+      this.applyAvatar()
     }
   }
 

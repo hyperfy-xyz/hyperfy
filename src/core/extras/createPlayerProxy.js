@@ -65,5 +65,18 @@ export function createPlayerProxy(player) {
     getBoneTransform(boneName) {
       return player.avatar?.getBoneTransform?.(boneName)
     },
+    setSessionAvatar(url) {
+      const avatar = url
+      if (player.data.owner === world.network.id) {
+        // if player is local we can set directly
+        world.network.enqueue('onPlayerSessionAvatar', { avatar })
+      } else if (world.network.isClient) {
+        // if we're a client we need to notify server
+        world.network.send('playerSessionAvatar', { networkId: player.data.owner, avatar })
+      } else {
+        // if we're the server we need to notify the player
+        world.network.sendTo(player.data.owner, 'playerSessionAvatar', { avatar })
+      }
+    },
   }
 }

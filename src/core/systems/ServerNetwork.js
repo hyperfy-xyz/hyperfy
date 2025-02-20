@@ -304,7 +304,7 @@ export class ServerNetwork extends System {
       this.dirtyApps.add(entity.data.id)
     }
     if (entity.isPlayer) {
-      // update player (only name & avatar field for now)
+      // persist player name and avatar changes
       const changes = {}
       let changed
       if (data.hasOwnProperty('name')) {
@@ -341,6 +341,10 @@ export class ServerNetwork extends System {
 
   onPlayerEffect = (socket, data) => {
     this.sendTo(data.networkId, 'playerEffect', data.effect)
+  }
+
+  onPlayerSessionAvatar = (socket, data) => {
+    this.sendTo(data.networkId, 'playerSessionAvatar', data.avatar)
   }
 
   onDisconnect = (socket, code) => {

@@ -144,7 +144,7 @@ export class PlayerLocal extends Entity {
   }
 
   applyAvatar() {
-    const avatarUrl = this.data.avatar || 'asset://avatar.vrm'
+    const avatarUrl = this.data.sessionAvatar || this.data.avatar || 'asset://avatar.vrm'
     if (this.avatarUrl === avatarUrl) return
     this.world.loader
       .load('avatar', avatarUrl)
@@ -872,6 +872,15 @@ export class PlayerLocal extends Entity {
     this.effect = effect
   }
 
+  setSessionAvatar(avatar) {
+    this.data.sessionAvatar = avatar
+    this.applyAvatar()
+    this.world.network.send('entityModified', {
+      id: this.data.id,
+      sessionAvatar: avatar,
+    })
+  }
+
   chat(msg) {
     // this.nametag.active = false
     this.bubbleText.value = msg
@@ -884,17 +893,29 @@ export class PlayerLocal extends Entity {
   }
 
   modify(data) {
+    let avatarChanged
+    let changed
     if (data.hasOwnProperty('name')) {
       this.data.name = data.name
-      this.world.emit('player', this)
+      changed = true
     }
     if (data.hasOwnProperty('avatar')) {
       this.data.avatar = data.avatar
-      this.applyAvatar()
-      this.world.emit('player', this)
+      avatarChanged = true
+      changed = true
+    }
+    if (data.hasOwnProperty('sessionAvatar')) {
+      this.data.sessionAvatar = data.sessionAvatar
+      avatarChanged = true
     }
     if (data.hasOwnProperty('roles')) {
       this.data.roles = data.roles
+      changed = true
+    }
+    if (avatarChanged) {
+      this.applyAvatar()
+    }
+    if (changed) {
       this.world.emit('player', this)
     }
   }

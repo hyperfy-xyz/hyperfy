@@ -66,16 +66,5 @@ All options are optional.
 
 Returns a matrix of the bone transform in world space.
 
-```jsx
-const matrix = player.getBoneTransform('rightHand')
-weapon.position.setFromMatrixPosition(matrix)
-weapon.quaternion.setFromRotationMatrix(matrix)
-```
+See [Avatar](/docs/ref/Avatar.md) for full details.
 
-Note that VRM avatars have required and optional bones, and in some cases eg while avatars are loading this method may return null.
-
-The VRM spec defines the following bones as required:
-
-```
-hips, spine, chest, neck, head, leftShoulder, leftUpperArm, leftLowerArm, leftHand, rightShoulder, rightUpperArm, rightLowerArm, rightHand, leftUpperLeg, leftLowerLeg, leftFoot, leftToes, rightUpperLeg, rightLowerLeg, rightFoot, rightToes
-```

@@ -134,6 +134,10 @@ export class ClientNetwork extends System {
     this.world.entities.player?.setEffect(data.effect)
   }
 
+  onPlayerSessionAvatar = data => {
+    this.world.entities.player?.setSessionAvatar(data.avatar)
+  }
+
   onClose = code => {
     this.world.emit('disconnect', code || true)
     console.log('disconnect', code)

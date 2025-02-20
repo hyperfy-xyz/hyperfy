@@ -608,7 +608,7 @@ export class ClientBuilder extends System {
         const player = this.world.entities.player
         const prevUrl = player.data.avatar
         // update locally
-        player.modify({ avatar: url })
+        player.modify({ avatar: url, sessionAvatar: null })
         // upload
         try {
           await this.world.network.upload(file)
