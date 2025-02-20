@@ -454,6 +454,9 @@ export class App extends Entity {
         this.raycastHit.distance = hit.distance
         this.raycastHit.tag = hit.handle?.tag
         this.raycastHit.player = hit.handle?.player
+        if (!hit.handle?.player) {
+          this.raycastHit.app = hit.handle?.node.ctx.entity
+        }
         return this.raycastHit
       },
     }
