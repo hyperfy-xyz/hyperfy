@@ -311,7 +311,7 @@ function Messages({ world, active, touch }) {
   const [msgs, setMsgs] = useState([])
   useEffect(() => {
     return world.chat.subscribe(setMsgs)
-  }, [])
+}, [])
   useEffect(() => {
     let timerId
     const updateNow = () => {
