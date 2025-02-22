@@ -260,6 +260,7 @@ export class ServerNetwork extends System {
     if (msg.body.startsWith('/')) {
       const [cmd, ...args] = msg.body.slice(1).split(' ')
       return await this.commandHandler.callCommand(cmd, socket, ...args)
+
     }
     // handle chat messages
     this.world.chat.add(msg, false)
@@ -308,7 +309,7 @@ export class ServerNetwork extends System {
       this.dirtyApps.add(entity.data.id)
     }
     if (entity.isPlayer) {
-      // update player (only name & avatar field for now)
+      // persist player name and avatar changes
       const changes = {}
       let changed
       if (data.hasOwnProperty('name')) {
@@ -341,10 +342,6 @@ export class ServerNetwork extends System {
 
   onPlayerTeleport = (socket, data) => {
     this.sendTo(data.networkId, 'playerTeleport', data)
-  }
-
-  onPlayerEffect = (socket, data) => {
-    this.sendTo(data.networkId, 'playerEffect', data.effect)
   }
 
   onPlayerSessionAvatar = (socket, data) => {

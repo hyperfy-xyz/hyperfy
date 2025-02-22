@@ -130,10 +130,6 @@ export class ClientNetwork extends System {
     this.world.entities.player?.teleport(data)
   }
 
-  onPlayerEffect = data => {
-    this.world.entities.player?.setEffect(data.effect)
-  }
-
   onPlayerSessionAvatar = data => {
     this.world.entities.player?.setSessionAvatar(data.avatar)
   }

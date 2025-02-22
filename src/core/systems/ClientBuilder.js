@@ -74,28 +74,24 @@ export class ClientBuilder extends System {
       }
     }
     if (this.enabled && !this.selected) {
-      actions.push({ type: 'tab', label: 'Exit Build Mode' })
-      actions.push({ type: 'space', label: 'Jump / Fly (Double-Tap)' })
-      actions.push({ type: 'keyR', label: 'Inspect' })
-      actions.push({ type: 'keyU', label: 'Unlink' })
-      actions.push({ type: 'keyP', label: 'Pin' })
       actions.push({ type: 'mouseLeft', label: 'Grab' })
       actions.push({ type: 'mouseRight', label: 'Duplicate' })
+      actions.push({ type: 'keyR', label: 'Inspect' })
+      actions.push({ type: 'keyP', label: 'Pin' })
       actions.push({ type: 'keyX', label: 'Destroy' })
+      actions.push({ type: 'space', label: 'Jump / Fly (Double-Tap)' })
+      actions.push({ type: 'tab', label: 'Exit Build Mode' })
     }
     if (this.enabled && this.selected) {
-      actions.push({ type: 'tab', label: 'Exit Build Mode' })
-      actions.push({ type: 'space', label: 'Jump / Fly (Double-Tap)' })
-      actions.push({ type: 'keyR', label: 'Inspect' })
-      actions.push({ type: 'keyU', label: 'Unlink' })
-      actions.push({ type: 'keyP', label: 'Pin' })
       actions.push({ type: 'mouseLeft', label: 'Place' })
       actions.push({ type: 'mouseWheel', label: 'Rotate' })
       actions.push({ type: 'mouseRight', label: 'Duplicate' })
-      actions.push({ type: 'keyX', label: 'Destroy' })
-      actions.push({ type: 'controlLeft', label: 'No Snap (Hold)' })
       actions.push({ type: 'keyF', label: 'Push' })
       actions.push({ type: 'keyC', label: 'Pull' })
+      actions.push({ type: 'keyX', label: 'Destroy' })
+      actions.push({ type: 'controlLeft', label: 'No Snap (Hold)' })
+      actions.push({ type: 'space', label: 'Jump / Fly (Double-Tap)' })
+      actions.push({ type: 'tab', label: 'Exit Build Mode' })
     }
     this.control.setActions(actions)
   }
@@ -118,7 +114,7 @@ export class ClientBuilder extends System {
       return
     }
     // inspect
-    if (this.control.keyR.pressed) {
+    if (!this.selected && this.control.keyR.pressed) {
       const entity = this.getEntityAtReticle()
       if (entity) {
         this.select(null)
@@ -158,7 +154,7 @@ export class ClientBuilder extends System {
       }
     }
     // pin/unpin
-    if (this.control.keyP.pressed) {
+    if (!this.selected && this.control.keyP.pressed) {
       const entity = this.getEntityAtReticle()
       if (entity?.isApp) {
         entity.data.pinned = !entity.data.pinned

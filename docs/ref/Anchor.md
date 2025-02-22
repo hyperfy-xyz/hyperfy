@@ -10,10 +10,9 @@ const seat = app.create('anchor', { id: 'seat' })
 car.add(seat)
 
 // later...
-player.setEffect({ anchor: seat })
-```
 
-For more information about effects, see [Player.setEffect](/docs/ref/Player.md).
+control.setEffect({ anchor: seat })
+```
 
 ## Properties
 

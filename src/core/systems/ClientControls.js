@@ -213,6 +213,7 @@ export class ClientControls extends System {
   bind(options = {}) {
     const self = this
     const entries = {}
+    let activeEffect
     const control = {
       options,
       entries,
@@ -230,11 +231,38 @@ export class ClientControls extends System {
           }
           self.buildActions()
         },
+        hasEffect() {
+          const player = self.world.entities.player
+          return !!player.effect
+        },
+        setEffect(opts) {
+          // opts = { anchorId, emote, snare, freeze, duration, cancellable }
+          const player = self.world.entities.player
+          const effect = {}
+          if (opts.anchor) effect.anchorId = opts.anchor.anchorId
+          if (opts.emote) effect.emote = opts.emote
+          if (opts.snare) effect.snare = opts.snare
+          if (opts.freeze) effect.freeze = opts.freeze
+          if (opts.duration) effect.duration = opts.duration
+          if (opts.cancellable) {
+            effect.cancellable = opts.cancellable
+            delete effect.freeze // overrides
+          }
+          const cancel = () => {
+            player.setEffect(null)
+            opts.onCancel?.()
+            activeEffect = null
+          }
+          player.setEffect(effect, cancel)
+          activeEffect = { effect, cancel }
+        },
         release: () => {
           const idx = this.controls.indexOf(control)
           if (idx === -1) return
           this.controls.splice(idx, 1)
           options.onRelease?.()
+          activeEffect?.cancel()
+          activeEffect = null
         },
       },
     }
@@ -315,6 +343,7 @@ export class ClientControls extends System {
       e.preventDefault()
     }
     const prop = codeToProp[code]
+    const text = e.key
     this.buttonsDown.add(prop)
     for (const control of this.controls) {
       const button = control.entries[prop]
@@ -324,6 +353,8 @@ export class ClientControls extends System {
         button.onPress?.()
         if (button.capture) break
       }
+      const capture = control.onButtonPress?.(prop, text)
+      if (capture) break
     }
   }
 

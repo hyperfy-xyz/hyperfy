@@ -1,6 +1,6 @@
 {
   "name": "hyperfy",
-  "version": "0.7.0",
+  "version": "0.7.1",
   "type": "module",
   "main": "index.js",
   "homepage": "https://github.com/hyperfy-xyz/hyperfy#readme",

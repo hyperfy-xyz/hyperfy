@@ -96,6 +96,8 @@ export class PlayerLocal extends Entity {
     // this.nametag = createNode({ name: 'nametag', label: this.data.name, active: false })
     // this.base.add(this.nametag)
 
+    this.aura = createNode('group')
+
     this.bubble = createNode('ui', {
       width: 300,
       height: 512,
@@ -119,8 +121,9 @@ export class PlayerLocal extends Entity {
     })
     this.bubble.add(this.bubbleBox)
     this.bubbleBox.add(this.bubbleText)
-    this.base.add(this.bubble)
+    this.aura.add(this.bubble)
 
+    this.aura.activate({ world: this.world, entity: this })
     this.base.activate({ world: this.world, entity: this })
 
     this.camHeight = DEFAULT_CAM_HEIGHT
@@ -153,12 +156,12 @@ export class PlayerLocal extends Entity {
         this.avatar = src.toNodes().get('avatar')
         this.base.add(this.avatar)
         // this.nametag.position.y = this.avatar.height + 0.2
-        this.bubble.position.y = this.avatar.height + 0.2
+        this.bubble.position.y = this.avatar.getHeadToHeight() + 0.2
         // if (!this.bubble.active) {
         //   this.nametag.active = true
         // }
         this.avatarUrl = avatarUrl
-        this.camHeight = this.avatar.height * 1.1
+        this.camHeight = this.avatar.height * 0.95
       })
       .catch(err => {
         console.error(err)
@@ -676,7 +679,7 @@ export class PlayerLocal extends Entity {
 
     // check effect cancel
     if (this.effect?.cancellable && (this.moving || this.jumpDown)) {
-      this.effect = null
+      this.setEffect(null)
     }
 
     if (freeze || anchor) {
@@ -841,6 +844,10 @@ export class PlayerLocal extends Entity {
       // otherwise interpolate camera towards target
       simpleCamLerp(this.world, this.control.camera, this.cam, delta)
     }
+    if (this.avatar) {
+      const matrix = this.avatar.getBoneTransform('head')
+      this.aura.position.setFromMatrixPosition(matrix)
+    }
   }
 
   teleport({ position, rotationY }) {
@@ -867,9 +874,20 @@ export class PlayerLocal extends Entity {
     this.control.camera.quaternion.copy(this.cam.quaternion)
   }
 
-  setEffect(effect) {
-    // { anchorId, emote, snare, freeze, duration, cancellable }
+
+  setEffect(effect, cancel) {
+    if (this.effect === effect) return
+    if (this.effect) {
+      this.effect = null
+      this.cancelEffect()
+      this.cancelEffect = null
+    }
     this.effect = effect
+    this.cancelEffect = cancel
+    this.world.network.send('entityModified', {
+      id: this.data.id,
+      ef: effect,
+    })
   }
 
   setSessionAvatar(avatar) {
@@ -916,10 +934,6 @@ export class PlayerLocal extends Entity {
       this.applyAvatar()
     }
     if (changed) {
-      this.world.emit('player', this)
-    }
-    if (data.hasOwnProperty('roles')) {
-      this.data.roles = data.roles
       this.world.emit('player', this)
     }
   }
@@ -977,7 +991,11 @@ class PointerState {
     for (let j = oldPath.length - 1; j >= i; j--) {
       if (oldPath[j].onPointerLeave) {
         this.event.set(PointerEvents.LEAVE)
-        oldPath[j].onPointerLeave?.(this.event)
+        try {
+          oldPath[j].onPointerLeave?.(this.event)
+        } catch (err) {
+          console.error(err)
+        }
         // if (this.event._propagationStopped) break
       }
       this.activePath.delete(oldPath[j])
@@ -987,7 +1005,11 @@ class PointerState {
     for (let j = i; j < newPath.length; j++) {
       if (newPath[j].onPointerEnter) {
         this.event.set(PointerEvents.ENTER)
-        newPath[j].onPointerEnter?.(this.event)
+        try {
+          newPath[j].onPointerEnter?.(this.event)
+        } catch (err) {
+          console.error(err)
+        }
         if (this.event._propagationStopped) break
       }
       this.activePath.add(newPath[j])
@@ -1014,7 +1036,11 @@ class PointerState {
         const node = newPath[i]
         if (node.onPointerDown) {
           this.event.set(PointerEvents.DOWN)
-          node.onPointerDown(this.event)
+          try {
+            node.onPointerDown(this.event)
+          } catch (err) {
+            console.error(err)
+          }
           this.pressedNodes.add(node)
           if (this.event._propagationStopped) break
         }
@@ -1026,7 +1052,11 @@ class PointerState {
       for (const node of this.pressedNodes) {
         if (node.onPointerUp) {
           this.event.set(PointerEvents.UP)
-          node.onPointerUp(this.event)
+          try {
+            node.onPointerUp(this.event)
+          } catch (err) {
+            console.error(err)
+          }
           if (this.event._propagationStopped) break
         }
       }

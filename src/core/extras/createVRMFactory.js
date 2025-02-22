@@ -89,6 +89,10 @@ export function createVRMFactory(glb, setupMaterial) {
     }
   }
 
+  // this.headToEyes = this.eyePosition.clone().sub(headPos)
+  const headPos = normBones.head.node.getWorldPosition(new THREE.Vector3())
+  const headToHeight = height - headPos.y
+
   const getBoneName = vrmBoneName => {
     return glb.userData.vrm.humanoid.getRawBoneNode(vrmBoneName)?.name
   }
@@ -263,6 +267,7 @@ export function createVRMFactory(glb, setupMaterial) {
     return {
       raw: vrm,
       height,
+      headToHeight,
       setEmote,
       setFirstPerson,
       update,
