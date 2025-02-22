@@ -9,13 +9,14 @@ export class CommandHandler {
         this.commands = new Map();
     }
 
-    registerCommand(name, callback, isStatic, min_perm_level) {
+    registerCommand(name, callback, isStatic, min_perm_level, isServer) {
         const command = this.commands.get(name);
         if (command && command.isStatic) return 0;
 
         this.commands.set(name, {
             callback: callback,
             isStatic: isStatic,
+            isServer: isServer,
             min_perm_level: min_perm_level
         });
 
@@ -55,7 +56,7 @@ export class CommandHandler {
         return user_perm_level >= required_perm_level;
     }
 
-    callCommand(name, socket, arg1, arg2) {
+    callCommand(name, socket, ...args) {
         const command = this.commands.get(name);
         if (!command) return 0;
 
@@ -70,6 +71,10 @@ export class CommandHandler {
             return 0;
         }
 
-        return command.callback(this.world, this.server, socket, arg1, arg2);
+        if (command.isServer) {
+          return command.callback(this.world, this.server, socket, arg1, arg2);
+        } else {
+          return command.callback(this.world, socket, ...args);
+        }
     }
 }

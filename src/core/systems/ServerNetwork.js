@@ -258,12 +258,16 @@ export class ServerNetwork extends System {
     // TODO: check for spoofed messages, permissions/roles etc
     // handle slash commands
     if (msg.body.startsWith('/')) {
-      const [cmd, arg1, arg2] = msg.body.slice(1).split(' ')
-      return await this.commandHandler.callCommand(cmd, socket, arg1, arg2)
+      const [cmd, ...args] = msg.body.slice(1).split(' ')
+      return await this.commandHandler.callCommand(cmd, socket, ...args)
     }
     // handle chat messages
     this.world.chat.add(msg, false)
     this.send('chatAdded', msg, socket.id)
+  }
+
+  onRegisterCommand = (name, callback, isStatic, min_perm_level='default', isServer=true) => {
+    this.commandHandler.registerCommand(name, callback, isStatic, min_perm_level, isServer);
   }
 
   onBlueprintAdded = (socket, blueprint) => {
