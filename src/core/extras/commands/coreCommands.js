@@ -5,7 +5,8 @@ export async function becomeAdmin(world, server, socket, adminCode) {
     if (adminCode !== process.env.ADMIN_CODE || !process.env.ADMIN_CODE) return 0
 
     const player = socket.player
-    const id = player.data.id
+    const id = player.data.id;
+    const userId = player.data.userId
     const user = player.data
 
     if (hasRole(user.roles, 'admin')) {
@@ -19,8 +20,9 @@ export async function becomeAdmin(world, server, socket, adminCode) {
     }
 
     addRole(user.roles, 'admin')
-    player.modify({ user })
-    server.send('entityModified', { id, user })
+    const roles = uesr.roles;
+    player.modify({ roles })
+    server.send('entityModified', { id, roles })
 
     socket.send('chatAdded', {
         id: uuid(),
@@ -31,21 +33,20 @@ export async function becomeAdmin(world, server, socket, adminCode) {
     })
 
     await server.db('users')
-        .where('id', user.id)
-        .update( { roles: serializeRoles(user.roles) })
+        .where('id', userId)
+        .update( { roles: serializeRoles(roles) })
 }
 
 export async function updateUsersName(world, server, socket, name) {
-    console.log("NAME:", name);
     if (!name) return
 
     const player = socket.player
     const id = player.data.id
-    const user = player.data
+    const userId = player.data.userId
 
     player.data.name = name
-    player.modify({ user })
-    server.send('entityModified', { id, user })
+    player.modify({ name })
+    server.send('entityModified', {id, name })
 
     socket.send('chatAdded', {
         id: uuid(),
@@ -56,7 +57,7 @@ export async function updateUsersName(world, server, socket, name) {
     })
 
     await server.db('users')
-        .where('id', user.id)
+        .where('id', userId)
         .update({ name })
 }
 
