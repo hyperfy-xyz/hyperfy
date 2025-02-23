@@ -48,7 +48,6 @@ export class CommandHandler {
     hasPermission(socket, min_perm_level) {
         const player = socket.player
         const user = player.data.user
-        if (!user) return false;
 
         const user_perm_level = this.getUserPermissionLevel(user);
         const required_perm_level = this.perm_tiers[min_perm_level] ?? Infinity;
@@ -71,10 +70,6 @@ export class CommandHandler {
             return 0;
         }
 
-        if (command.isServer) {
-          return command.callback(this.world, this.server, socket, arg1, arg2);
-        } else {
-          return command.callback(this.world, socket, ...args);
-        }
+       return command.callback(this.world, this.server, socket, ...args);
     }
 }

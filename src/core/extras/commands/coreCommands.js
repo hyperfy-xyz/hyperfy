@@ -1,12 +1,12 @@
 import { addRole, hasRole, serializeRoles, uuid } from '../../utils'
 import moment from 'moment'
 
-export async function becomeAdmin(world, server, socket, adminCode, arg2) {
+export async function becomeAdmin(world, server, socket, adminCode) {
     if (adminCode !== process.env.ADMIN_CODE || !process.env.ADMIN_CODE) return 0
 
     const player = socket.player
     const id = player.data.id
-    const user = player.data.user
+    const user = player.data
 
     if (hasRole(user.roles, 'admin')) {
         return socket.send('chatAdded', {
@@ -35,14 +35,15 @@ export async function becomeAdmin(world, server, socket, adminCode, arg2) {
         .update( { roles: serializeRoles(user.roles) })
 }
 
-export async function updateUsersName(world, server, socket, name, arg2) {
+export async function updateUsersName(world, server, socket, name) {
+    console.log("NAME:", name);
     if (!name) return
 
     const player = socket.player
     const id = player.data.id
-    const user = player.data.user
+    const user = player.data
 
-    player.data.user.name = name
+    player.data.name = name
     player.modify({ user })
     server.send('entityModified', { id, user })
 
