@@ -27,6 +27,7 @@ import {
   SparkleIcon,
   ZapIcon,
   Trash2Icon,
+  ClipboardCopy,
 } from 'lucide-react'
 
 import { hashFile } from '../../core/utils-client'
@@ -273,6 +274,14 @@ function AppPaneMain({ world, app, blueprint, canEdit }) {
   const editCode = () => {
     world.emit('code', true)
   }
+  const copyAppId = async() => {
+    if (!navigator) {
+      world.emit('toast', 'Cannot copy to clipboard "navigator" is undefined')
+      return;
+    }
+    navigator.clipboard.writeText(app.data.id)
+    world.emit('toast', 'Coppied App Id to clipboard')
+  }
   const toggle = async key => {
     const value = !blueprint[key]
     const version = blueprint.version + 1
@@ -430,6 +439,13 @@ function AppPaneMain({ world, app, blueprint, canEdit }) {
             <div className='amain-btns-btn' onClick={editCode}>
               <FileCode2Icon size={16} />
               <span>Code</span>
+            </div>
+            <div
+              className='amain-btns-btn'
+              onClick={() => copyAppId() }
+            >
+              <ClipboardCopy size={12} />
+              <span>Copy Id</span>
             </div>
           </div>
           <div className='amain-btns2'>

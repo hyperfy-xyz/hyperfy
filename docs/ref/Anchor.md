@@ -10,6 +10,7 @@ const seat = app.create('anchor', { id: 'seat' })
 car.add(seat)
 
 // later...
+
 control.setEffect({ anchor: seat })
 ```
 

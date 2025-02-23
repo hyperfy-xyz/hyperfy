@@ -890,6 +890,7 @@ export class PlayerLocal extends Entity {
 
   setEffect(config, onEnd) {
     if (this.effect === config) return
+    
     if (this.effect) {
       this.effect = null
       this.onEffectEnd()
