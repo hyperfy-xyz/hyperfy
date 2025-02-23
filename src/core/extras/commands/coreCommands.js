@@ -20,7 +20,7 @@ export async function becomeAdmin(world, server, socket, adminCode) {
     }
 
     addRole(user.roles, 'admin')
-    const roles = uesr.roles;
+    const roles = user.roles;
     player.modify({ roles })
     server.send('entityModified', { id, roles })
 
