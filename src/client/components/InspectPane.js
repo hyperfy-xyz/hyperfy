@@ -804,6 +804,9 @@ const fieldTypes = {
 }
 
 function Field({ world, props, field, value, modify }) {
+  if (field.hidden) {
+    return null
+  }
   if (field.when) {
     for (const rule of field.when) {
       if (rule.op === 'eq' && props[rule.key] !== rule.value) {

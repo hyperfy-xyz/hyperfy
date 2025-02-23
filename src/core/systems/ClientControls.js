@@ -213,11 +213,11 @@ export class ClientControls extends System {
   bind(options = {}) {
     const self = this
     const entries = {}
-    let activeEffect
     const control = {
       options,
       entries,
       actions: null,
+      effect: null,
       api: {
         setActions(value) {
           if (value !== null && !Array.isArray(value)) {
@@ -236,33 +236,51 @@ export class ClientControls extends System {
           return !!player.effect
         },
         setEffect(opts) {
-          // opts = { anchorId, emote, snare, freeze, duration, cancellable }
           const player = self.world.entities.player
-          const effect = {}
-          if (opts.anchor) effect.anchorId = opts.anchor.anchorId
-          if (opts.emote) effect.emote = opts.emote
-          if (opts.snare) effect.snare = opts.snare
-          if (opts.freeze) effect.freeze = opts.freeze
-          if (opts.duration) effect.duration = opts.duration
-          if (opts.cancellable) {
-            effect.cancellable = opts.cancellable
-            delete effect.freeze // overrides
+          // opts = { anchorId, emote, snare, freeze, turn, duration, cancellable, onEnd }
+          //
+          // cancel any current effect
+          control.effect?.onEnd()
+          control.effect = null
+          // construct effect
+          let config = null
+          let onEnd
+          if (opts) {
+            config = {}
+            if (opts.anchor) config.anchorId = opts.anchor.anchorId
+            if (opts.emote) config.emote = opts.emote
+            if (opts.snare) config.snare = opts.snare
+            if (opts.freeze) config.freeze = opts.freeze
+            if (opts.turn) config.turn = opts.turn
+            if (opts.duration) config.duration = opts.duration
+            if (opts.cancellable) {
+              config.cancellable = opts.cancellable
+              delete config.freeze // overrides
+            }
+            onEnd = opts.onEnd
           }
-          const cancel = () => {
-            player.setEffect(null)
-            opts.onCancel?.()
-            activeEffect = null
+          const effect = {
+            config,
+            ended: false,
+            onEnd: () => {
+              if (effect.ended) return
+              effect.ended = true
+              control.effect = null
+              player.cancelEffect(effect.config)
+              onEnd?.()
+            },
           }
-          player.setEffect(effect, cancel)
-          activeEffect = { effect, cancel }
+          // set effect on player
+          player.setEffect(effect.config, effect.onEnd)
+          control.effect = effect
         },
         release: () => {
           const idx = this.controls.indexOf(control)
           if (idx === -1) return
           this.controls.splice(idx, 1)
           options.onRelease?.()
-          activeEffect?.cancel()
-          activeEffect = null
+          control.effect?.onEnd()
+          control.effect = null
         },
       },
     }

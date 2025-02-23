@@ -506,7 +506,7 @@ export class ClientBuilder extends System {
     const blueprint = {
       id: uuid(),
       version: 0,
-      name: file.name,
+      name: file.name.split('.')[0],
       image: null,
       author: null,
       url: null,

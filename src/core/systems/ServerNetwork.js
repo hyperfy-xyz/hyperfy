@@ -260,7 +260,6 @@ export class ServerNetwork extends System {
     if (msg.body.startsWith('/')) {
       const [cmd, ...args] = msg.body.slice(1).split(' ')
       return await this.commandHandler.callCommand(cmd, socket, ...args)
-
     }
     // handle chat messages
     this.world.chat.add(msg, false)
