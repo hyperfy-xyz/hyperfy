@@ -96,6 +96,8 @@ export class PlayerLocal extends Entity {
     // this.nametag = createNode({ name: 'nametag', label: this.data.name, active: false })
     // this.base.add(this.nametag)
 
+    this.aura = createNode('group')
+
     this.bubble = createNode('ui', {
       width: 300,
       height: 512,
@@ -119,8 +121,9 @@ export class PlayerLocal extends Entity {
     })
     this.bubble.add(this.bubbleBox)
     this.bubbleBox.add(this.bubbleText)
-    this.base.add(this.bubble)
+    this.aura.add(this.bubble)
 
+    this.aura.activate({ world: this.world, entity: this })
     this.base.activate({ world: this.world, entity: this })
 
     this.camHeight = DEFAULT_CAM_HEIGHT
@@ -135,7 +138,7 @@ export class PlayerLocal extends Entity {
     bindRotations(this.cam.quaternion, this.cam.rotation)
     this.cam.quaternion.copy(this.base.quaternion)
     this.cam.rotation.x += -15 * DEG2RAD
-    this.cam.zoom = 3
+    this.cam.zoom = 2
 
     this.initCapsule()
     this.initControl()
@@ -153,12 +156,12 @@ export class PlayerLocal extends Entity {
         this.avatar = src.toNodes().get('avatar')
         this.base.add(this.avatar)
         // this.nametag.position.y = this.avatar.height + 0.2
-        this.bubble.position.y = this.avatar.height + 0.2
+        this.bubble.position.y = this.avatar.getHeadToHeight() + 0.2
         // if (!this.bubble.active) {
         //   this.nametag.active = true
         // }
         this.avatarUrl = avatarUrl
-        this.camHeight = this.avatar.height * 1.1
+        this.camHeight = this.avatar.height * 0.95
       })
       .catch(err => {
         console.error(err)
@@ -293,7 +296,7 @@ export class PlayerLocal extends Entity {
     const freeze = this.effect?.freeze
     const anchor = this.getAnchorMatrix()
     const snare = this.effect?.snare || 0
-    if (freeze || anchor) {
+    if (anchor) {
       /**
        *
        * ZERO MODE
@@ -676,7 +679,7 @@ export class PlayerLocal extends Entity {
 
     // check effect cancel
     if (this.effect?.cancellable && (this.moving || this.jumpDown)) {
-      this.effect = null
+      this.setEffect(null)
     }
 
     if (freeze || anchor) {
@@ -716,8 +719,22 @@ export class PlayerLocal extends Entity {
       this.moveDir.applyQuaternion(yQuaternion)
     }
 
+    // if our effect has turn enabled, face the camera direction
+    if (this.effect?.turn) {
+      let cameraY = 0
+      if (isXR) {
+        e1.copy(this.world.xr.camera.rotation).reorder('YXZ')
+        cameraY = e1.y
+      } else {
+        cameraY = this.cam.rotation.y
+      }
+      e1.set(0, cameraY, 0)
+      q1.setFromEuler(e1)
+      const alpha = 1 - Math.pow(0.00000001, delta)
+      this.base.quaternion.slerp(q1, alpha)
+    }
     // if we're moving continually rotate ourselves toward the direction we are moving
-    if (this.moving) {
+    else if (this.moving) {
       const alpha = 1 - Math.pow(0.00000001, delta)
       q1.setFromUnitVectors(FORWARD, this.moveDir)
       this.base.quaternion.slerp(q1, alpha)
@@ -827,7 +844,7 @@ export class PlayerLocal extends Entity {
     if (this.effect?.duration) {
       this.effect.duration -= delta
       if (this.effect.duration <= 0) {
-        this.effect = null
+        this.setEffect(null)
       }
     }
   }
@@ -840,6 +857,10 @@ export class PlayerLocal extends Entity {
     } else {
       // otherwise interpolate camera towards target
       simpleCamLerp(this.world, this.control.camera, this.cam, delta)
+    }
+    if (this.avatar) {
+      const matrix = this.avatar.getBoneTransform('head')
+      this.aura.position.setFromMatrixPosition(matrix)
     }
   }
 
@@ -867,9 +888,32 @@ export class PlayerLocal extends Entity {
     this.control.camera.quaternion.copy(this.cam.quaternion)
   }
 
-  setEffect(effect) {
-    // { anchorId, emote, snare, freeze, duration, cancellable }
-    this.effect = effect
+  setEffect(config, onEnd) {
+    if (this.effect === config) return
+    if (this.effect) {
+      this.effect = null
+      this.onEffectEnd()
+      this.onEffectEnd = null
+    }
+    this.effect = config
+    this.onEffectEnd = onEnd
+    this.world.network.send('entityModified', {
+      id: this.data.id,
+      ef: config,
+    })
+  }
+
+  cancelEffect(config) {
+    // specifically only cancel the passed in effect,
+    // and ignore if effect is different
+    if (this.effect !== config) return
+    this.effect = null
+    this.onEffectEnd?.()
+    this.onEffectEnd = null
+    this.world.network.send('entityModified', {
+      id: this.data.id,
+      ef: null,
+    })
   }
 
   setSessionAvatar(avatar) {
@@ -973,7 +1017,11 @@ class PointerState {
     for (let j = oldPath.length - 1; j >= i; j--) {
       if (oldPath[j].onPointerLeave) {
         this.event.set(PointerEvents.LEAVE)
-        oldPath[j].onPointerLeave?.(this.event)
+        try {
+          oldPath[j].onPointerLeave?.(this.event)
+        } catch (err) {
+          console.error(err)
+        }
         // if (this.event._propagationStopped) break
       }
       this.activePath.delete(oldPath[j])
@@ -983,7 +1031,11 @@ class PointerState {
     for (let j = i; j < newPath.length; j++) {
       if (newPath[j].onPointerEnter) {
         this.event.set(PointerEvents.ENTER)
-        newPath[j].onPointerEnter?.(this.event)
+        try {
+          newPath[j].onPointerEnter?.(this.event)
+        } catch (err) {
+          console.error(err)
+        }
         if (this.event._propagationStopped) break
       }
       this.activePath.add(newPath[j])
@@ -1010,7 +1062,11 @@ class PointerState {
         const node = newPath[i]
         if (node.onPointerDown) {
           this.event.set(PointerEvents.DOWN)
-          node.onPointerDown(this.event)
+          try {
+            node.onPointerDown(this.event)
+          } catch (err) {
+            console.error(err)
+          }
           this.pressedNodes.add(node)
           if (this.event._propagationStopped) break
         }
@@ -1022,7 +1078,11 @@ class PointerState {
       for (const node of this.pressedNodes) {
         if (node.onPointerUp) {
           this.event.set(PointerEvents.UP)
-          node.onPointerUp(this.event)
+          try {
+            node.onPointerUp(this.event)
+          } catch (err) {
+            console.error(err)
+          }
           if (this.event._propagationStopped) break
         }
       }

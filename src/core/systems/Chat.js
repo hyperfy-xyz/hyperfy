@@ -40,6 +40,16 @@ export class Chat extends System {
     this.world.events.emit('chat', readOnly)
   }
 
+  clear(broadcast) {
+    this.msgs = []
+    for (const callback of this.listeners) {
+      callback(this.msgs)
+    }
+    if (broadcast) {
+      this.world.network.send('chatCleared')
+    }
+  }
+
   serialize() {
     return this.msgs
   }

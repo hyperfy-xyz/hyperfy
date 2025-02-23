@@ -1,5 +1,6 @@
 import { System } from './System'
 import * as THREE from '../extras/three'
+import { XRControllerModelFactory } from 'three/addons'
 
 const UP = new THREE.Vector3(0, 1, 0)
 
@@ -23,12 +24,12 @@ export class XR extends System {
     this.yOrientation = new THREE.Quaternion()
     this.supportsVR = false
     this.supportsAR = false
-    this.controllerModelFactory = new THREE.XRControllerModelFactory()
+    this.controllerModelFactory = new XRControllerModelFactory()
   }
 
   async init() {
-    this.supportsVR = await navigator.xr.isSessionSupported('immersive-vr')
-    this.supportsAR = await navigator.xr.isSessionSupported('immersive-ar')
+    this.supportsVR = await navigator.xr?.isSessionSupported('immersive-vr')
+    this.supportsAR = await navigator.xr?.isSessionSupported('immersive-ar')
   }
 
   lateUpdate() {
@@ -38,7 +39,7 @@ export class XR extends System {
   }
 
   async enter() {
-    const session = await navigator.xr.requestSession('immersive-vr', {
+    const session = await navigator.xr?.requestSession('immersive-vr', {
       requiredFeatures: ['local-floor'],
     })
     this.world.entities.player.avatar.unmount()

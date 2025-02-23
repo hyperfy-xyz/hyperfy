@@ -21,6 +21,8 @@ const defaults = {
 
 let nodeIds = -1
 
+const EPSILON = 0.000000001
+
 const secure = { allowRef: false }
 export function getRef(pNode) {
   secure.allowRef = true
@@ -59,6 +61,11 @@ export class Node {
       this.setTransformed()
     })
     this.scale._onChange(() => {
+      // scale set to exactly zero on any axis causes matrices to have NaN values.
+      // this causes our octrees to fail into an infinite loop
+      if (this.scale.x === 0 || this.scale.y === 0 || this.scale.z === 0) {
+        return this.scale.set(this.scale.x || EPSILON, this.scale.y || EPSILON, this.scale.z || EPSILON)
+      }
       this.setTransformed()
     })
     this._onPointerEnter = data.onPointerEnter
@@ -177,6 +184,8 @@ export class Node {
       this.deactivate()
     } else if (this._active && this.parent?.mounted) {
       this.activate(this.parent.ctx)
+    } else if (this._active && !this.parent) {
+      this.activate(this.ctx)
     }
   }
 

@@ -103,6 +103,10 @@ export class Avatar extends Node {
     return this.instance?.height || null
   }
 
+  getHeadToHeight() {
+    return this.instance?.headToHeight || null
+  }
+
   getBoneTransform(boneName) {
     return this.instance?.getBoneTransform(boneName)
   }
@@ -152,6 +156,9 @@ export class Avatar extends Node {
         },
         getHeight() {
           return self.getHeight()
+        },
+        getHeadToHeight() {
+          return self.getHeadToHeight()
         },
         getBoneTransform(boneName) {
           return self.getBoneTransform(boneName)

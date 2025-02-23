@@ -140,6 +140,9 @@ export class App extends Entity {
   }
 
   unbuild() {
+    // cancel any control
+    this.control?.release()
+    this.control = null
     // deactivate local node
     this.root?.deactivate()
     // deactivate world nodes
@@ -265,6 +268,7 @@ export class App extends Entity {
     if (!this.listeners[name]) {
       this.listeners[name] = new Set()
     }
+    if (this.listeners[name].has(callback)) return
     this.listeners[name].add(callback)
     if (hotEventNames.includes(name)) {
       this.hotEvents++
@@ -274,6 +278,7 @@ export class App extends Entity {
 
   off(name, callback) {
     if (!this.listeners[name]) return
+    if (!this.listeners[name].has(callback)) return
     this.listeners[name].delete(callback)
     if (hotEventNames.includes(name)) {
       this.hotEvents--
@@ -455,6 +460,36 @@ export class App extends Entity {
         this.raycastHit.player = hit.handle?.player
         return this.raycastHit
       },
+      // applyEffect(effect) {
+      //   effect.entityId = entity.data.id
+      //   if (effect?.anchor) {
+      //     effect.anchorId = effect.anchor.anchorId
+      //     delete effect.anchor
+      //   }
+      //   if (effect?.cancellable) {
+      //     delete effect.freeze // not applicable
+      //   }
+      //   if (effect?.player) {
+      //     effect.playerNetworkId = effect.player.networkId
+      //     delete effect.player
+      //   }
+      //   // targeting local player
+      //   if (effect.playerNetworkId === world.network.id) {
+      //     world.network.enqueue('onPlayerEffect', effect)
+      //   }
+      //   // targeting remote player from a client
+      //   else if (effect.playerNetworkId && world.network.isClient) {
+      //     world.network.send('playerEffect', effect)
+      //   }
+      //   // targeting remote player from the server
+      //   else if (effect.playerNetworkId && world.network.isServer) {
+      //     world.network.sendTo(effect.playerNetworkId, 'playerEffect', effect)
+      //   }
+      //   // targeting everyone from a client -OR- the server
+      //   else {
+      //     world.network.send('playerEffect', effect)
+      //   }
+      // },
     }
   }
 

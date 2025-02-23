@@ -317,6 +317,16 @@ export class ServerNetwork extends System {
             value: data,
           })
       }
+      if (cmd === 'chat') {
+        const code = arg1
+        if (code !== 'clear') return
+        const player = socket.player
+        if (!hasRole(player.data.roles, 'admin')) {
+          return
+        }
+        this.world.chat.clear(true)
+        return
+      }
       return
     }
     // handle chat messages
@@ -395,10 +405,6 @@ export class ServerNetwork extends System {
 
   onPlayerTeleport = (socket, data) => {
     this.sendTo(data.networkId, 'playerTeleport', data)
-  }
-
-  onPlayerEffect = (socket, data) => {
-    this.sendTo(data.networkId, 'playerEffect', data.effect)
   }
 
   onPlayerSessionAvatar = (socket, data) => {
