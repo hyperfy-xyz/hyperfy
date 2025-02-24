@@ -542,6 +542,7 @@ export class App extends Entity {
         return node.getProxy()
       },
       control(options) {
+        entity.control?.release()
         // TODO: only allow on user interaction
         // TODO: show UI with a button to release()
         entity.control = world.controls.bind({
