@@ -531,6 +531,13 @@ export class App extends Entity {
         const event = [entity.data.id, entity.blueprint.version, name, data]
         world.network.send('entityEvent', event, ignoreSocketId)
       },
+      sendTo(name, data, targetSocketId) {
+        if (internalEvents.includes(name)) {
+          return console.error(`apps cannot send internal events (${name})`)
+        }
+        const event = [entity.data.id, entity.blueprint.version, name, data]
+        world.network.sendTo(targetSocketId, 'entityEvent', event)
+      },
       emit(name, data) {
         if (internalEvents.includes(name)) {
           return console.error(`apps cannot emit internal events (${name})`)
