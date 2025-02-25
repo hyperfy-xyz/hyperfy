@@ -37,6 +37,7 @@ const clientHtmlDest = path.join(rootDir, 'build/public/index.html')
     jsxImportSource: '@firebolt-dev/jsx',
     define: {
       // 'process.env.NODE_ENV': '"development"',
+      'process.env.BASE_PATH': `"${process.env.BASE_PATH || '/'}"`,
     },
     loader: {
       '.js': 'jsx',
@@ -59,6 +60,7 @@ const clientHtmlDest = path.join(rootDir, 'build/public/index.html')
             let htmlContent = await fs.readFile(clientHtmlSrc, 'utf-8')
             htmlContent = htmlContent.replace('{jsFile}', jsFile)
             htmlContent = htmlContent.replaceAll('{buildId}', Date.now())
+            htmlContent = htmlContent.replace('{basePath}', process.env.BASE_PATH || '/')
             await fs.writeFile(clientHtmlDest, htmlContent)
           })
         },

@@ -22,6 +22,7 @@ const rootDir = path.join(__dirname, '../')
 const worldDir = path.join(rootDir, process.env.WORLD)
 const assetsDir = path.join(worldDir, '/assets')
 const port = process.env.PORT
+const basePath = process.env.BASE_PATH || '/'
 
 await fs.ensureDir(worldDir)
 await fs.ensureDir(assetsDir)
@@ -40,7 +41,7 @@ fastify.register(cors)
 fastify.register(compress)
 fastify.register(statics, {
   root: path.join(__dirname, 'public'),
-  prefix: '/',
+  prefix: basePath,
   decorateReply: false,
   setHeaders: res => {
     res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate')
@@ -50,7 +51,7 @@ fastify.register(statics, {
 })
 fastify.register(statics, {
   root: assetsDir,
-  prefix: '/assets/',
+  prefix: path.join(basePath, 'assets/').replace(/\\/g, '/'),
   decorateReply: false,
   setHeaders: res => {
     // all assets are hashed & immutable so we can use aggressive caching
@@ -73,15 +74,18 @@ for (const key in process.env) {
     publicEnvs[key] = value
   }
 }
+// Add BASE_PATH to public envs
+publicEnvs.BASE_PATH = basePath
+
 const envsCode = `
   if (!globalThis.process) globalThis.process = {}
   globalThis.process.env = ${JSON.stringify(publicEnvs)}
 `
-fastify.get('/env.js', async (req, reply) => {
+fastify.get(path.join(basePath, 'env.js'), async (req, reply) => {
   reply.type('application/javascript').send(envsCode)
 })
 
-fastify.post('/api/upload', async (req, reply) => {
+fastify.post(path.join(basePath, 'api/upload'), async (req, reply) => {
   // console.log('DEBUG: slow uploads')
   // await new Promise(resolve => setTimeout(resolve, 2000))
   const file = await req.file()
@@ -103,14 +107,14 @@ fastify.post('/api/upload', async (req, reply) => {
   }
 })
 
-fastify.get('/api/upload-check', async (req, reply) => {
+fastify.get(path.join(basePath, 'api/upload-check'), async (req, reply) => {
   const filename = req.query.filename
   const filePath = path.join(assetsDir, filename)
   const exists = await fs.exists(filePath)
   return { exists }
 })
 
-fastify.get('/health', async (request, reply) => {
+fastify.get(path.join(basePath, 'health'), async (request, reply) => {
   try {
     // Basic health check
     const health = {
@@ -129,7 +133,7 @@ fastify.get('/health', async (request, reply) => {
   }
 })
 
-fastify.get('/status', async (request, reply) => {
+fastify.get(path.join(basePath, 'status'), async (request, reply) => {
   try {
     const status = {
       uptime: Math.round(world.time),
@@ -169,7 +173,7 @@ try {
 }
 
 async function worldNetwork(fastify) {
-  fastify.get('/ws', { websocket: true }, (ws, req) => {
+  fastify.get(path.join(basePath, 'ws'), { websocket: true }, (ws, req) => {
     world.network.onConnection(ws, req.query.authToken)
   })
 }
