@@ -11,7 +11,9 @@ export function createEmoteFactory(glb, url) {
 
   const scale = glb.scene.children[0].scale.x // armature should be here?
 
-  const yOffset = 0
+  // no matter what vrm/emote combo we use for some reason avatars
+  // levitate roughly 5cm above ground. this is a hack but it works.
+  const yOffset = -0.05 / scale
 
   // we only keep tracks that are:
   // 1. the root position
@@ -38,7 +40,7 @@ export function createEmoteFactory(glb, url) {
     return true
   })
 
-  if (!haveRoot) console.warn(`emote missing root bone: ${url}`)
+  // if (!haveRoot) console.warn(`emote missing root bone: ${url}`)
 
   // fix new mixamo update normalized bones
   // see: https://github.com/pixiv/three-vrm/pull/1032/files
@@ -65,7 +67,7 @@ export function createEmoteFactory(glb, url) {
         track.values = track.values.map((v, i) => {
           // if this is Y then offset it
           if (i % 3 === 1) {
-            // console.log(v, v + item.yOffset)
+            // console.log(v, v + yOffset)
             return v + yOffset
           }
           return v

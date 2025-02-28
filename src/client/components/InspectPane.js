@@ -401,7 +401,7 @@ function AppPaneMain({ world, app, blueprint, canEdit }) {
         <div
           className='amain-image'
           css={css`
-            background-image: ${blueprint.image ? `url(${resolveURL(blueprint.image.url)})` : 'none'};
+            background-image: ${blueprint.image ? `url(${world.resolveURL(blueprint.image.url)})` : 'none'};
           `}
         />
       )}
@@ -410,7 +410,7 @@ function AppPaneMain({ world, app, blueprint, canEdit }) {
         <div className='amain-author'>
           <span>by </span>
           {blueprint.url && (
-            <a href={resolveURL(blueprint.url)} target='_blank'>
+            <a href={world.resolveURL(blueprint.url)} target='_blank'>
               {blueprint.author || 'Unknown'}
             </a>
           )}
@@ -916,18 +916,4 @@ function FieldDropdown({ world, field, value, modify }) {
       <InputDropdown options={field.options} value={value} onChange={value => modify(field.key, value)} />
     </FieldWithLabel>
   )
-}
-
-function resolveURL(url) {
-  url = url.trim()
-  if (url.startsWith('asset://')) {
-    return url.replace('asset:/', process.env.PUBLIC_ASSETS_URL)
-  }
-  if (url.match(/^https?:\/\//i)) {
-    return url
-  }
-  if (url.startsWith('//')) {
-    return `https:${url}`
-  }
-  return `https://${url}`
 }

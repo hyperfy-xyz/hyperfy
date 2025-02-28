@@ -3,13 +3,13 @@ import { System } from './System'
 import * as THREE from '../extras/three'
 import { initYoga } from '../extras/yoga'
 
+let worker
+
 /**
  * Client System
  *
  * - Runs on the client
- * - Connects to the server
- * - Receives snapshots and spawns entities
- * - Sends and receives events and state updates
+ *
  *
  */
 export class Client extends System {
@@ -38,7 +38,7 @@ export class Client extends System {
     // See: https://gamedev.stackexchange.com/a/200503 (kinda fucking genius)
     if (document.hidden) {
       // spawn worker if we haven't yet
-      if (!this.worker) {
+      if (!worker) {
         const script = `
           const rate = 1000 / 5 // 5 FPS
           let intervalId = null;
@@ -57,8 +57,8 @@ export class Client extends System {
           }
         `
         const blob = new Blob([script], { type: 'application/javascript' })
-        this.worker = new Worker(URL.createObjectURL(blob))
-        this.worker.onmessage = () => {
+        worker = new Worker(URL.createObjectURL(blob))
+        worker.onmessage = () => {
           const time = performance.now()
           this.world.tick(time)
         }
@@ -66,12 +66,17 @@ export class Client extends System {
       // stop rAF
       this.world.graphics.renderer.setAnimationLoop(null)
       // tell the worker to start
-      this.worker.postMessage('start')
+      worker.postMessage('start')
     } else {
       // tell the worker to stop
-      this.worker.postMessage('stop')
+      worker.postMessage('stop')
       // resume rAF
       this.world.graphics.renderer.setAnimationLoop(this.world.tick)
     }
+  }
+
+  destroy() {
+    this.world.graphics.renderer.setAnimationLoop(null)
+    worker?.postMessage('stop')
   }
 }

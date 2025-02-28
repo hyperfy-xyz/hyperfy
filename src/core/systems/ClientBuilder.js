@@ -11,7 +11,6 @@ import { importApp } from '../extras/appTools'
 import { DEG2RAD, RAD2DEG } from '../extras/general'
 
 const FORWARD = new THREE.Vector3(0, 0, -1)
-const MAX_UPLOAD_SIZE = parseInt(process.env.PUBLIC_MAX_UPLOAD_SIZE || '100')
 const SNAP_DISTANCE = 1
 const SNAP_DEGREES = 5
 const PROJECT_SPEED = 10
@@ -420,13 +419,13 @@ export class ClientBuilder extends System {
     // ensure we in build mode
     this.toggle(true)
     // add it!
-    const maxSize = MAX_UPLOAD_SIZE * 1024 * 1024
+    const maxSize = this.world.network.maxUploadSize * 1024 * 1024
     if (file.size > maxSize) {
       this.world.chat.add({
         id: uuid(),
         from: null,
         fromId: null,
-        body: `File size too large (>${MAX_UPLOAD_SIZE}mb)`,
+        body: `File size too large (>${this.world.network.maxUploadSize}mb)`,
         createdAt: moment().toISOString(),
       })
       console.error(`File too large. Maximum size is ${maxSize / (1024 * 1024)}MB`)

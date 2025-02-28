@@ -27,6 +27,9 @@ export class Scripts extends System {
       Date: {
         now: () => Date.now(),
       },
+      URL: {
+        createObjectURL: blob => URL.createObjectURL(blob),
+      },
       eval: undefined,
       harden: undefined,
       lockdown: undefined,

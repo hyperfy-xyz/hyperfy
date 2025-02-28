@@ -16,6 +16,19 @@ import { System } from './System'
 
 const v1 = new THREE.Vector3()
 
+let renderer
+function getRenderer() {
+  if (!renderer) {
+    renderer = new THREE.WebGLRenderer({
+      powerPreference: 'high-performance',
+      antialias: true,
+      // logarithmicDepthBuffer: true,
+      // reverseDepthBuffer: true,
+    })
+  }
+  return renderer
+}
+
 /**
  * Graphics System
  *
@@ -34,12 +47,7 @@ export class ClientGraphics extends System {
     this.width = this.viewport.offsetWidth
     this.height = this.viewport.offsetHeight
     this.aspect = this.width / this.height
-    this.renderer = new THREE.WebGLRenderer({
-      powerPreference: 'high-performance',
-      antialias: true,
-      // logarithmicDepthBuffer: true,
-      // reverseDepthBuffer: true,
-    })
+    this.renderer = getRenderer()
     this.renderer.setSize(this.width, this.height)
     this.renderer.setClearColor(0xffffff, 0)
     this.renderer.setPixelRatio(this.world.prefs.dpr)
@@ -143,5 +151,9 @@ export class ClientGraphics extends System {
     if (changes.bloom) {
       this.bloomPass.enabled = changes.bloom.value
     }
+  }
+
+  destroy() {
+    this.resizer.disconnect()
   }
 }

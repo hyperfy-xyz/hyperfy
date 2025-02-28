@@ -335,6 +335,7 @@ export class App extends Entity {
         json: async () => await resp.json(),
         text: async () => await resp.text(),
         blob: async () => await resp.blob(),
+        arrayBuffer: async () => await resp.arrayBuffer(),
       }
       return secureResp
     } catch (err) {
