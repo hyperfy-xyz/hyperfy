@@ -6,7 +6,7 @@
 
 services:
   hyperfy:
-    image: howieduhzit/hyperfy:latest
+    image: ghcr.io/hyperfy-xyz/hyperfy:main
     environment:
       - SERVICE_FQDN_HYPERFY_3000
       - JWT_SECRET=${SERVICE_PASSWORD_JWT}
