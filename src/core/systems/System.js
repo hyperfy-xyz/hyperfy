@@ -78,4 +78,9 @@ export class System extends EventEmitter {
     // runs at the very end of a tick, eg
     // - end performance monitoring
   }
+
+  destroy() {
+    // runs when the world is destroyed, eg
+    // - stop animating, disconnect connections, cleanup
+  }
 }

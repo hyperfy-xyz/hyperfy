@@ -1,3 +1,4 @@
+import Yoga from 'yoga-layout'
 import * as THREE from '../extras/three'
 import { isNumber, isString } from 'lodash-es'
 

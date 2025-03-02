@@ -1,5 +1,6 @@
 import * as THREE from '../extras/three'
 import { isBoolean, isNumber, isString } from 'lodash-es'
+import Yoga from 'yoga-layout'
 
 import { Node } from './Node'
 import { fillRoundRect } from '../extras/fillRoundRect'

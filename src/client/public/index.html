@@ -12,26 +12,11 @@
     <!-- <link rel='icon' href='/favicon.ico' /> -->
     <link rel="preload" href="/rubik.woff2" as="font" type="font/woff2" crossorigin />
     <link rel="stylesheet" type="text/css" href="/index.css?v={buildId}" />
-    <!--
-      SES is loaded via script tag due to esbuild import issues.
-      The core has a local copy direct from jsdelivr as jsdelivr occasionally fails.
-      Ref: https://cdn.jsdelivr.net/npm/ses@1.10.0/dist/ses.umd.min.js 
-    -->
-    <script src="/ses.umd.min.js"></script>
-    <!--
-      Yoga is loaded via script tag due to esbuild import issues.
-      The core has a local copy direct from jsdelivr as that occasionally fails.
-      Ref: https://cdn.jsdelivr.net/npm/yoga-layout@3.2.1/+esm
-    -->
-    <script type="module">
-      import Yoga from '/yoga-layout.js'
-      window.Yoga = Yoga
-    </script>
   </head>
   <body>
     <div id="root"></div>
     <script src="/physx-js-webidl.js"></script>
     <script src="/env.js?v={buildId}"></script>
-    <script src="{jsFile}"></script>
+    <script src="{jsFile}" type="module"></script>
   </body>
 </html>

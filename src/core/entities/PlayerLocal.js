@@ -50,6 +50,7 @@ export class PlayerLocal extends Entity {
     if (this.world.loader.preloader) {
       await this.world.loader.preloader
     }
+
     this.mass = 1
     this.gravity = 20
     this.effectiveGravity = this.gravity * this.mass
@@ -146,8 +147,12 @@ export class PlayerLocal extends Entity {
     this.world.setHot(this, true)
   }
 
+  getAvatarUrl() {
+    return this.data.sessionAvatar || this.data.avatar || 'asset://avatar.vrm'
+  }
+
   applyAvatar() {
-    const avatarUrl = this.data.sessionAvatar || this.data.avatar || 'asset://avatar.vrm'
+    const avatarUrl = this.getAvatarUrl()
     if (this.avatarUrl === avatarUrl) return
     this.world.loader
       .load('avatar', avatarUrl)
@@ -740,15 +745,6 @@ export class PlayerLocal extends Entity {
       this.base.quaternion.slerp(q1, alpha)
     }
 
-    // if we're anchored, force into that pose
-    if (anchor) {
-      this.base.position.setFromMatrixPosition(anchor)
-      this.base.quaternion.setFromRotationMatrix(anchor)
-      const pose = this.capsule.getGlobalPose()
-      this.base.position.toPxTransform(pose)
-      this.capsuleHandle.snap(pose)
-    }
-
     // make camera follow our position horizontally
     this.cam.position.copy(this.base.position)
     if (isXR) {
@@ -850,6 +846,15 @@ export class PlayerLocal extends Entity {
   }
 
   lateUpdate(delta) {
+    const anchor = this.getAnchorMatrix()
+    // if we're anchored, force into that pose
+    if (anchor) {
+      this.base.position.setFromMatrixPosition(anchor)
+      this.base.quaternion.setFromRotationMatrix(anchor)
+      const pose = this.capsule.getGlobalPose()
+      this.base.position.toPxTransform(pose)
+      this.capsuleHandle.snap(pose)
+    }
     if (this.world.xr.session) {
       // in vr snap camera
       this.control.camera.position.copy(this.cam.position)
@@ -860,7 +865,7 @@ export class PlayerLocal extends Entity {
     }
     if (this.avatar) {
       const matrix = this.avatar.getBoneTransform('head')
-      this.aura.position.setFromMatrixPosition(matrix)
+      if (matrix) this.aura.position.setFromMatrixPosition(matrix)
     }
   }
 

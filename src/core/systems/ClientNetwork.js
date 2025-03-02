@@ -1,3 +1,4 @@
+import { emoteUrls } from '../extras/playerEmotes'
 import { readPacket, writePacket } from '../packets'
 import { storage } from '../storage'
 import { hashFile } from '../utils-client'
@@ -21,9 +22,8 @@ export class ClientNetwork extends System {
     this.queue = []
   }
 
-  init({ wsUrl, apiUrl }) {
+  init({ wsUrl }) {
     const authToken = storage.get('authToken')
-    this.apiUrl = apiUrl
     this.ws = new WebSocket(`${wsUrl}?authToken=${authToken}`)
     this.ws.binaryType = 'arraybuffer'
     this.ws.addEventListener('message', this.onPacket)
@@ -89,6 +89,39 @@ export class ClientNetwork extends System {
   onSnapshot(data) {
     this.id = data.id
     this.serverTimeOffset = data.serverTime - performance.now()
+    this.apiUrl = data.apiUrl
+    this.maxUploadSize = data.maxUploadSize
+    this.world.assetsUrl = data.assetsUrl
+
+    // preload some blueprints
+    for (const item of data.blueprints) {
+      if (item.preload) {
+        if (item.model) {
+          const type = item.model.endsWith('.vrm') ? 'avatar' : 'model'
+          this.world.loader.preload(type, item.model)
+        }
+        if (item.script) {
+          this.world.loader.preload('script', item.script)
+        }
+        for (const value of Object.values(item.props || {})) {
+          if (value === undefined || value === null || !value?.url || !value?.type) continue
+          this.world.loader.preload(value.type, value.url)
+        }
+      }
+    }
+    // preload emotes
+    for (const url of emoteUrls) {
+      this.world.loader.preload('emote', url)
+    }
+    // preload local player avatar
+    for (const item of data.entities) {
+      if (item.type === 'player' && item.owner === this.id) {
+        const url = item.sessionAvatar || item.avatar || 'asset://avatar.vrm'
+        this.world.loader.preload('avatar', url)
+      }
+    }
+    this.world.loader.execPreload()
+
     this.world.chat.deserialize(data.chat)
     this.world.blueprints.deserialize(data.blueprints)
     this.world.entities.deserialize(data.entities)

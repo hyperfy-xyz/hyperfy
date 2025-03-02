@@ -21,6 +21,7 @@ export class World extends EventEmitter {
     this.accumulator = 0
     this.systems = []
     this.networkRate = 1 / 8 // 8Hz
+    this.assetsUrl = null
     this.hot = new Set()
 
     this.rig = new THREE.Object3D()
@@ -188,6 +189,34 @@ export class World extends EventEmitter {
       this.hot.add(item)
     } else {
       this.hot.delete(item)
+    }
+  }
+
+  resolveURL(url) {
+    if (!url) return url
+    url = url.trim()
+    if (url.startsWith('blob')) {
+      return url
+    }
+    if (url.startsWith('asset://')) {
+      if (!this.assetsUrl) console.error('resolveURL: no assetsUrl defined')
+      return url.replace('asset:/', this.assetsUrl)
+    }
+    if (url.match(/^https?:\/\//i)) {
+      return url
+    }
+    if (url.startsWith('//')) {
+      return `https:${url}`
+    }
+    if (url.startsWith('/')) {
+      return url
+    }
+    return `https://${url}`
+  }
+
+  destroy() {
+    for (const system of this.systems) {
+      system.destroy()
     }
   }
 }

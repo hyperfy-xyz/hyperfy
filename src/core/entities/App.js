@@ -336,6 +336,7 @@ export class App extends Entity {
         json: async () => await resp.json(),
         text: async () => await resp.text(),
         blob: async () => await resp.blob(),
+        arrayBuffer: async () => await resp.arrayBuffer(),
       }
       return secureResp
     } catch (err) {
@@ -582,6 +583,7 @@ export class App extends Entity {
         return data.id;
       },
       control(options) {
+        entity.control?.release()
         // TODO: only allow on user interaction
         // TODO: show UI with a button to release()
         entity.control = world.controls.bind({

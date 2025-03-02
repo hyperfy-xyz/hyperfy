@@ -10,7 +10,7 @@ const DRY_RUN = false
 const world = process.env.WORLD || 'world'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
-const rootDir = path.join(__dirname, './')
+const rootDir = path.join(__dirname, '../')
 const worldDir = path.join(rootDir, world)
 const assetsDir = path.join(worldDir, '/assets')
 

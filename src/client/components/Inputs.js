@@ -368,9 +368,9 @@ export const fileKinds = {
   },
   texture: {
     type: 'texture',
-    accept: '.jpg,.jpeg,.png',
-    exts: ['jpg', 'jpeg', 'png'],
-    placeholder: '.jpg / .png',
+    accept: '.jpg,.jpeg,.png,.webp',
+    exts: ['jpg', 'jpeg', 'png', 'webp'],
+    placeholder: '.jpg / .png / .webp',
   },
   hdr: {
     type: 'hdr',
