@@ -48,6 +48,11 @@ export class Scripts extends System {
       DEG2RAD,
       RAD2DEG,
       uuid,
+      WebAssembly: {
+        instantiate: WebAssembly.instantiate,
+        Memory: WebAssembly.Memory,
+        Table: WebAssembly.Table,
+      },
       // pause: () => this.world.pause(),
     })
   }
