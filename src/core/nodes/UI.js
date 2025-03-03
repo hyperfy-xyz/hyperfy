@@ -106,6 +106,7 @@ export class UI extends Node {
     this.canvas.height = this._height * this._res
     this.canvasCtx = this.canvas.getContext('2d')
     this.texture = new THREE.CanvasTexture(this.canvas)
+    this.texture.colorSpace = THREE.SRGBColorSpace
     this.texture.anisotropy = this.ctx.world.graphics.maxAnisotropy
     // this.texture.minFilter = THREE.LinearFilter // or THREE.NearestFilter for pixel-perfect but potentially aliased text
     // this.texture.magFilter = THREE.LinearFilter
