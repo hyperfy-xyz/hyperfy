@@ -429,6 +429,14 @@ export class App extends Entity {
         const player = world.entities.getPlayer(playerId || world.entities.player?.data.id)
         return player?.getProxy()
       },
+      getPlayers() {
+        // tip: probably dont wanna call this every frame
+        const players = []
+        world.entities.players.forEach(player => {
+          players.push(player.getProxy())
+        })
+        return players
+      },
       createLayerMask(...groups) {
         let mask = 0
         for (const group of groups) {
