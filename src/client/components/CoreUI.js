@@ -29,7 +29,7 @@ import { ControlPriorities } from '../../core/extras/ControlPriorities'
 import { AppsPane } from './AppsPane'
 import { SettingsPane } from './SettingsPane'
 
-export function GUI({ world }) {
+export function CoreUI({ world }) {
   const [ref, width, height] = useElemSize()
   return (
     <div
@@ -45,6 +45,7 @@ export function GUI({ world }) {
 }
 
 function Content({ world, width, height }) {
+  const ref = useRef()
   const small = width < 600
   const [ready, setReady] = useState(false)
   const [player, setPlayer] = useState(() => world.entities.player)
@@ -70,9 +71,20 @@ function Content({ world, width, height }) {
       world.off('disconnect', setDisconnected)
     }
   }, [])
+  useEffect(() => {
+    const elem = ref.current
+    const onEvent = e => {
+      e.isCoreUI = true
+    }
+    elem.addEventListener('click', onEvent)
+    elem.addEventListener('pointerdown', onEvent)
+    elem.addEventListener('pointermove', onEvent)
+    elem.addEventListener('pointerup', onEvent)
+  }, [])
   return (
     <div
-      className='gui'
+      ref={ref}
+      className='coreUI'
       css={css`
         position: absolute;
         inset: 0;
@@ -108,7 +120,7 @@ function Side({ world, player, toggleSettings, toggleApps }) {
     return player && hasRole(player.data.roles, 'admin', 'builder')
   }, [player])
   useEffect(() => {
-    const control = world.controls.bind({ priority: ControlPriorities.GUI })
+    const control = world.controls.bind({ priority: ControlPriorities.CORE_UI })
     control.enter.onPress = () => {
       if (!chat) setChat(true)
     }

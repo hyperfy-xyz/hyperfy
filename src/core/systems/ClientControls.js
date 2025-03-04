@@ -398,12 +398,12 @@ export class ClientControls extends System {
   }
 
   onPointerDown = e => {
-    if (e.isGUI) return
+    if (e.isCoreUI) return
     this.checkPointerChanges(e)
   }
 
   onPointerMove = e => {
-    if (e.isGUI) return
+    if (e.isCoreUI) return
     // this.checkPointerChanges(e)
     const rect = this.viewport.getBoundingClientRect()
     const offsetX = e.pageX - rect.left
@@ -417,7 +417,7 @@ export class ClientControls extends System {
   }
 
   onPointerUp = e => {
-    if (e.isGUI) return
+    if (e.isCoreUI) return
     this.checkPointerChanges(e)
   }
 
