@@ -2,6 +2,11 @@ import { bindRotations } from '../extras/bindRotations'
 import { buttons, codeToProp } from '../extras/buttons'
 import * as THREE from '../extras/three'
 import { System } from './System'
+import { cloneDeep } from 'lodash-es'
+import { uuid } from '../utils'
+import moment from 'moment'
+import { HyperFone } from '../nodes/HyperFone'
+import { createNode } from '../extras/createNode'
 
 const LMB = 1 // bitmask
 const RMB = 2 // bitmask
@@ -355,6 +360,110 @@ export class ClientControls extends System {
     if (e.defaultPrevented) return
     if (e.repeat) return
     if (this.isInputFocused()) return
+    
+    // Only allow editor shortcuts in build mode
+    if ((e.ctrlKey || e.metaKey) && this.buildMode.active) {
+        switch (e.key.toLowerCase()) {
+            case 'c': // Copy
+                if (this.buildMode.hoveredEntity?.isApp) {
+                    e.preventDefault()
+                    this.copyEntity(this.buildMode.hoveredEntity)
+                }
+                break
+
+            case 'x': // Cut
+                if (this.buildMode.hoveredEntity?.isApp) {
+                    e.preventDefault()
+                    this.copyEntity(this.buildMode.hoveredEntity)
+                    this.buildMode.hoveredEntity.destroy(true)
+                    this.buildMode.hoveredEntity = null
+                }
+                break
+
+            case 'v': // Paste
+                e.preventDefault()
+                this.pasteEntity()
+                break
+        }
+        return
+    }
+
+    // Single key shortcuts - only in build mode
+    if (this.buildMode.active) {
+        switch (e.key.toLowerCase()) {
+            case 'delete':
+            case 'backspace':
+                if (this.buildMode.hoveredEntity?.isApp) {
+                    e.preventDefault()
+                    this.buildMode.hoveredEntity.destroy(true)
+                    this.buildMode.hoveredEntity = null
+                    this.buildMode.selectedEntity = null
+                }
+                break
+
+            case 'g': // Grab/Move
+                if (this.buildMode.hoveredEntity?.isApp) {
+                    e.preventDefault()
+                    this.buildMode.selectedEntity = this.buildMode.hoveredEntity
+                    this.buildMode.transformMode = 'translate'
+                    this.startTransform()
+                }
+                break
+
+            case 'r': // Rotate
+                if (this.buildMode.hoveredEntity?.isApp) {
+                    e.preventDefault()
+                    this.buildMode.selectedEntity = this.buildMode.hoveredEntity
+                    this.buildMode.transformMode = 'rotate'
+                    this.startTransform()
+                }
+                break
+
+            case 's': // Scale
+                if (this.buildMode.hoveredEntity?.isApp) {
+                    e.preventDefault()
+                    this.buildMode.selectedEntity = this.buildMode.hoveredEntity
+                    this.buildMode.transformMode = 'scale'
+                    this.startTransform()
+                }
+                break
+
+            case 'escape':
+                if (this.buildMode.transformMode) {
+                    this.cancelTransform()
+                }
+                this.buildMode.selectedEntity = null
+                break
+        }
+    }
+
+    // VRM avatar swap - available at all times
+    if (e.key.toLowerCase() === 't') {
+        const hits = this.world.stage.raycastPointer(this.pointer.position)
+        let entity = null
+        for (const hit of hits) {
+            entity = hit.getEntity?.()
+            if (entity && entity.isApp) break
+        }
+        
+        if (entity?.isApp) {
+            const blueprint = this.world.blueprints.get(entity.data.blueprint)
+            const isVrm = blueprint?.model?.toLowerCase().endsWith('.vrm')
+            
+            if (isVrm) {
+                e.preventDefault()
+                this.handleVrmSwap(entity, blueprint)
+            }
+        }
+    }
+
+    // Add HyperFone toggle
+    if (e.code === 'KeyP') {
+        this.toggleHyperFone()
+    }
+
+    // Handle existing key events
+    if (e.repeat) return
     const code = e.code
     if (code === 'Tab') {
       // prevent default focus switching behavior
@@ -414,6 +523,23 @@ export class ClientControls extends System {
     this.pointer.position.y = offsetY
     this.pointer.delta.x += e.movementX
     this.pointer.delta.y += e.movementY
+    } else {
+      const rect = this.viewport.getBoundingClientRect()
+      const x = e.clientX - rect.left
+      const y = e.clientY - rect.top
+      this.pointer.delta.x = x - this.pointer.position.x
+      this.pointer.delta.y = y - this.pointer.position.y
+      this.pointer.position.x = x
+      this.pointer.position.y = y
+      this.pointer.coords.x = x / rect.width
+      this.pointer.coords.y = y / rect.height
+    }
+
+    // Update controls
+    for (const control of this.controls) {
+      const consume = control.options.onPointer?.()
+      if (consume) break
+    }
   }
 
   onPointerUp = e => {
@@ -481,6 +607,7 @@ export class ClientControls extends System {
   }
 
   async lockPointer() {
+    if (!this.isPointerLocked()) {
     this.pointer.shouldLock = true
     try {
       await this.viewport.requestPointerLock()
@@ -492,10 +619,10 @@ export class ClientControls extends System {
   }
 
   unlockPointer() {
+    if (this.isPointerLocked()) {
+      document.exitPointerLock()
+    }
     this.pointer.shouldLock = false
-    if (!this.pointer.locked) return
-    document.exitPointerLock()
-    this.onPointerLockEnd()
   }
 
   onPointerLockChange = e => {
