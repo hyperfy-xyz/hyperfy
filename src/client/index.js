@@ -7,7 +7,7 @@ import { css } from '@firebolt-dev/css'
 
 import { createClientWorld } from '../core/createClientWorld'
 import { loadPhysX } from './loadPhysX'
-import { GUI } from './components/GUI'
+import { CoreUI } from './components/CoreUI'
 
 function App() {
   const viewportRef = useRef()
@@ -29,16 +29,6 @@ function App() {
       fogColor: null,
     }
     world.init({ viewport, ui, wsUrl, loadPhysX, baseEnvironment })
-  }, [])
-  useEffect(() => {
-    const ui = uiRef.current
-    const onEvent = e => {
-      e.isGUI = true
-    }
-    ui.addEventListener('click', onEvent)
-    ui.addEventListener('pointerdown', onEvent)
-    ui.addEventListener('pointermove', onEvent)
-    ui.addEventListener('pointerup', onEvent)
   }, [])
   return (
     <div
@@ -62,9 +52,10 @@ function App() {
         }
       `}
     >
-      <div className='App__viewport' ref={viewportRef} />
-      <div className='App__ui' ref={uiRef}>
-        <GUI world={world} />
+      <div className='App__viewport' ref={viewportRef}>
+        <div className='App__ui' ref={uiRef}>
+          <CoreUI world={world} />
+        </div>
       </div>
     </div>
   )

@@ -14,5 +14,6 @@ export const ControlPriorities = {
   ENTITY: 2,
   APP: 3,
   ACTION: 4,
-  GUI: 5,
+  CORE_UI: 5,
+  POINTER: 6,
 }
