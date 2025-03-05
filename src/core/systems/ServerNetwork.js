@@ -5,6 +5,8 @@ import { addRole, hasRole, removeRole, serializeRoles, uuid } from '../utils'
 import { System } from './System'
 import { createJWT, readJWT } from '../utils-server'
 import { cloneDeep } from 'lodash-es'
+import { CommandHandler } from '../extras/commands/commandHandler'
+import * as cmds from '../extras/commands/coreCommands'
 import * as THREE from '../extras/three'
 
 const SAVE_INTERVAL = parseInt(process.env.SAVE_INTERVAL || '60') // seconds
@@ -32,10 +34,18 @@ export class ServerNetwork extends System {
     this.dirtyApps = new Set()
     this.isServer = true
     this.queue = []
+    this.commandHandler = new CommandHandler(world, this, {
+      'default': 0,
+      'admin': 100
+    })
   }
 
   init({ db }) {
     this.db = db
+    this.commandHandler.registerCommand('admin', cmds.becomeAdmin, true, 'default')
+    this.commandHandler.registerCommand('name', cmds.updateUsersName, true, 'default')
+    this.commandHandler.registerCommand('admin', cmds.setWorldSpawn, true, 'admin')
+    
   }
 
   async start() {
@@ -254,90 +264,16 @@ export class ServerNetwork extends System {
     // TODO: check for spoofed messages, permissions/roles etc
     // handle slash commands
     if (msg.body.startsWith('/')) {
-      const [cmd, arg1, arg2] = msg.body.slice(1).split(' ')
-      // become admin command
-      if (cmd === 'admin') {
-        const code = arg1
-        if (code !== process.env.ADMIN_CODE || !process.env.ADMIN_CODE) return
-        const player = socket.player
-        const id = player.data.id
-        const userId = player.data.userId
-        const roles = player.data.roles
-        const granting = !hasRole(roles, 'admin')
-        if (granting) {
-          addRole(roles, 'admin')
-        } else {
-          removeRole(roles, 'admin')
-        }
-        player.modify({ roles })
-        this.send('entityModified', { id, roles })
-        socket.send('chatAdded', {
-          id: uuid(),
-          from: null,
-          fromId: null,
-          body: granting ? 'Admin granted!' : 'Admin revoked!',
-          createdAt: moment().toISOString(),
-        })
-        await this.db('users')
-          .where('id', userId)
-          .update({ roles: serializeRoles(roles) })
-      }
-      if (cmd === 'name') {
-        const name = arg1
-        if (!name) return
-        const player = socket.player
-        const id = player.data.id
-        const userId = player.data.userId
-        player.data.name = name
-        player.modify({ name })
-        this.send('entityModified', { id, name })
-        socket.send('chatAdded', {
-          id: uuid(),
-          from: null,
-          fromId: null,
-          body: `Name set to ${name}!`,
-          createdAt: moment().toISOString(),
-        })
-        await this.db('users').where('id', userId).update({ name })
-      }
-      if (cmd === 'spawn') {
-        const player = socket.player
-        const roles = player.data.roles
-        if (!hasRole(roles, 'admin')) return
-        const action = arg1
-        if (action === 'set') {
-          this.spawn = { position: player.data.position.slice(), quaternion: player.data.quaternion.slice() }
-        } else if (action === 'clear') {
-          this.spawn = { position: [0, 0, 0], quaternion: [0, 0, 0, 1] }
-        } else {
-          return
-        }
-        const data = JSON.stringify(this.spawn)
-        await this.db('config')
-          .insert({
-            key: 'spawn',
-            value: data,
-          })
-          .onConflict('key')
-          .merge({
-            value: data,
-          })
-      }
-      if (cmd === 'chat') {
-        const code = arg1
-        if (code !== 'clear') return
-        const player = socket.player
-        if (!hasRole(player.data.roles, 'admin')) {
-          return
-        }
-        this.world.chat.clear(true)
-        return
-      }
-      return
+      const [cmd, ...args] = msg.body.slice(1).split(' ')
+      return await this.commandHandler.callCommand(cmd, socket, ...args)
     }
     // handle chat messages
     this.world.chat.add(msg, false)
     this.send('chatAdded', msg, socket.id)
+  }
+
+  onRegisterCommand = (name, callback, isStatic, min_perm_level='default', isServer=true) => {
+    this.commandHandler.registerCommand(name, callback, isStatic, min_perm_level, isServer);
   }
 
   onBlueprintAdded = (socket, blueprint) => {

@@ -157,6 +157,7 @@ export class Avatar extends Node {
         getHeight() {
           return self.getHeight()
         },
+
         getHeadToHeight() {
           return self.getHeadToHeight()
         },

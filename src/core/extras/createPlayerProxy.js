@@ -47,6 +47,7 @@ export function createPlayerProxy(player) {
         world.network.sendTo(player.data.owner, 'playerTeleport', { position: position.toArray(), rotationY })
       }
     },
+
     getBoneTransform(boneName) {
       return player.avatar?.getBoneTransform?.(boneName)
     },

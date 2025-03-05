@@ -101,6 +101,7 @@ export class PlayerRemote extends Entity {
   }
 
   getAnchorMatrix() {
+
     if (this.data.effect?.anchorId) {
       return this.world.anchors.get(this.data.effect.anchorId)
     }
@@ -186,6 +187,9 @@ export class PlayerRemote extends Entity {
     }
     if (avatarChanged) {
       this.applyAvatar()
+    }
+    if (data.hasOwnProperty('roles')) {
+      this.data.roles = data.roles
     }
   }
 

@@ -1,5 +1,5 @@
 import * as THREE from '../extras/three'
-import { isArray, isFunction, isNumber, isString } from 'lodash-es'
+import { isArray, isFunction, isNumber, isString, cloneDeep } from 'lodash-es'
 import moment from 'moment'
 
 import { Entity } from './Entity'
@@ -10,6 +10,7 @@ import { ControlPriorities } from '../extras/ControlPriorities'
 import { getRef } from '../nodes/Node'
 import { Layers } from '../extras/Layers'
 import { createPlayerProxy } from '../extras/createPlayerProxy'
+import { uuid } from '../utils'
 
 const hotEventNames = ['fixedUpdate', 'update', 'lateUpdate']
 const internalEvents = ['fixedUpdate', 'updated', 'lateUpdate', 'enter', 'leave', 'chat']
@@ -484,6 +485,10 @@ export class App extends Entity {
         this.raycastHit.distance = hit.distance
         this.raycastHit.tag = hit.handle?.tag
         this.raycastHit.playerId = hit.handle?.playerId
+        this.raycastHit.player = hit.handle?.player
+        if (!hit.handle?.player) {
+          this.raycastHit.app = hit.handle?.node.ctx.entity
+        }
         return this.raycastHit
       },
     }
@@ -522,6 +527,13 @@ export class App extends Entity {
         const event = [entity.data.id, entity.blueprint.version, name, data]
         world.network.send('entityEvent', event, ignoreSocketId)
       },
+      sendTo(name, data, targetSocketId) {
+        if (internalEvents.includes(name)) {
+          return console.error(`apps cannot send internal events (${name})`)
+        }
+        const event = [entity.data.id, entity.blueprint.version, name, data]
+        world.network.sendTo(targetSocketId, 'entityEvent', event)
+      },
       emit(name, data) {
         if (internalEvents.includes(name)) {
           return console.error(`apps cannot emit internal events (${name})`)
@@ -536,6 +548,34 @@ export class App extends Entity {
       create(name, data) {
         const node = entity.createNode(name, data)
         return node.getProxy()
+      },
+      createClone() {
+        const data = structuredClone(entity.data);
+        if (entity.blueprint.unique) {
+          const blueprint = {
+            id: uuid(),
+            version: 0,
+            name: entity.blueprint.name,
+            image: entity.blueprint.image,
+            author: entity.blueprint.author,
+            url: entity.blueprint.url,
+            desc: entity.blueprint.desc,
+            model: entity.blueprint.model,
+            script: entity.blueprint.script,
+            props: structuredClone(entity.blueprint.props),
+            preload: entity.blueprint.preload,
+            public: entity.blueprint.public,
+            locked: entity.blueprint.locked,
+            frozen: entity.blueprint.frozen,
+            unique: entity.blueprint.unique,
+          };
+          world.blueprints.add(blueprint, true);
+          data.blueprint = blueprint.id;
+        }
+        data.id = uuid();
+
+        entity.world.entities.add(data, true);
+        return data.id;
       },
       control(options) {
         entity.control?.release()

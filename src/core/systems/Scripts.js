@@ -35,6 +35,7 @@ export class Scripts extends System {
       lockdown: undefined,
       num,
       clamp,
+      structuredClone,
       // Layers,
       Object3D: THREE.Object3D,
       Quaternion: THREE.Quaternion,
@@ -43,12 +44,18 @@ export class Scripts extends System {
       Matrix4: THREE.Matrix4,
       LerpVector3,
       LerpQuaternion,
+      GameWorld: world,
       // Material: Material,
       // Curve: Curve,
       // Gradient: Gradient,
       DEG2RAD,
       RAD2DEG,
       uuid,
+      WebAssembly: {
+        instantiate: WebAssembly.instantiate,
+        Memory: WebAssembly.Memory,
+        Table: WebAssembly.Table,
+      },
       // pause: () => this.world.pause(),
     })
   }
