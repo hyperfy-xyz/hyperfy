@@ -206,9 +206,14 @@ export function createVRMFactory(glb, setupMaterial) {
         currentEmote = null
       }
       if (!url) return
+      const loop = !url.includes('l=0')
       if (emotes[url]) {
         currentEmote = emotes[url]
-        currentEmote.action?.reset().fadeIn(0.15).play()
+        if (currentEmote.action) {
+          currentEmote.action.clampWhenFinished = !loop
+          currentEmote.action.setLoop(loop ? THREE.LoopRepeat : THREE.LoopOnce)
+          currentEmote.action.reset().fadeIn(0.15).play()
+        }
       } else {
         const emote = {
           url,
@@ -227,6 +232,8 @@ export function createVRMFactory(glb, setupMaterial) {
           emote.action = action
           // if its still this emote, play it!
           if (currentEmote === emote) {
+            action.clampWhenFinished = !loop
+            action.setLoop(loop ? THREE.LoopRepeat : THREE.LoopOnce)
             action.play()
           }
         })

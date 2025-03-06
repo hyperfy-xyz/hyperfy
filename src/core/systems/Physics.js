@@ -75,7 +75,7 @@ export class Physics extends System {
           const e = this.contactEvent.get()
           if (!handle0.contactedHandles.has(handle1)) {
             e.tag = handle1.tag
-            e.player = handle1.player
+            e.playerId = handle1.playerId
             // e.isAuthority = handle1.isAuthority
             try {
               handle0.onContactStart?.(e)
@@ -86,7 +86,7 @@ export class Physics extends System {
           }
           if (!handle1.contactedHandles.has(handle0)) {
             e.tag = handle0.tag
-            e.player = handle0.player
+            e.playerId = handle0.playerId
             // e.isAuthority = handle0.isAuthority
             try {
               handle1.onContactStart?.(e)
@@ -99,7 +99,7 @@ export class Physics extends System {
           const e = this.contactEvent.get()
           if (handle0.contactedHandles.has(handle1)) {
             e.tag = handle1.tag
-            e.player = handle1.player
+            e.playerId = handle1.playerId
             // e.isAuthority = handle1.isAuthority
             try {
               handle0.onContactEnd?.(e)
@@ -110,7 +110,7 @@ export class Physics extends System {
           }
           if (handle1.contactedHandles.has(handle0)) {
             e.tag = handle0.tag
-            e.player = handle0.player
+            e.playerId = handle0.playerId
             // e.isAuthority = handle0.isAuthority
             try {
               handle1.onContactEnd?.(e)
@@ -138,7 +138,7 @@ export class Physics extends System {
         const otherHandle = this.handles.get(pair.otherShape.getActor().ptr)
         if (!triggerHandle || !otherHandle) continue
         triggerResult.tag = otherHandle.tag
-        triggerResult.player = otherHandle.player
+        triggerResult.playerId = otherHandle.playerId
         if (pair.status === PHYSX.PxPairFlagEnum.eNOTIFY_TOUCH_FOUND) {
           if (!otherHandle.triggeredHandles.has(triggerHandle)) {
             try {
@@ -294,7 +294,7 @@ export class Physics extends System {
           const e = this.contactEvent.get()
           for (const otherHandle of handle.contactedHandles) {
             e.tag = handle.tag
-            e.player = handle.player
+            e.playerId = handle.playerId
             try {
               otherHandle.onContactEnd?.(e)
             } catch (err) {
@@ -307,7 +307,7 @@ export class Physics extends System {
         if (handle.triggeredHandles.size) {
           for (const triggerHandle of handle.triggeredHandles) {
             triggerResult.tag = handle.tag
-            triggerResult.player = handle.player
+            triggerResult.playerId = handle.playerId
             try {
               triggerHandle.onTriggerLeave?.(triggerResult)
             } catch (err) {

@@ -13,11 +13,19 @@ import { System } from './System'
  *
  */
 
-const RES = 1
+const RES = 2
 const NAMETAG_WIDTH = 200 * RES
-const NAMETAG_HEIGHT = 24 * RES
-const FONT_SIZE = 16 * RES
-const BORDER_RADIUS = 10 * RES
+const NAMETAG_HEIGHT = 35 * RES
+const NAMETAG_BORDER_RADIUS = 10 * RES
+
+const NAME_FONT_SIZE = 16 * RES
+const NAME_OUTLINE_SIZE = 4 * RES
+
+const HEALTH_MAX = 100
+const HEALTH_HEIGHT = 12 * RES
+const HEALTH_WIDTH = 100 * RES
+const HEALTH_BORDER = 1.5 * RES
+const HEALTH_BORDER_RADIUS = 20 * RES
 
 const PER_ROW = 5
 const PER_COLUMN = 20
@@ -31,15 +39,19 @@ const v1 = new THREE.Vector3()
 export class Nametags extends System {
   constructor(world) {
     super(world)
-    this.handles = []
+    this.nametags = []
     this.canvas = document.createElement('canvas')
     this.canvas.width = NAMETAG_WIDTH * PER_ROW
     this.canvas.height = NAMETAG_HEIGHT * PER_COLUMN
     // console.log(`nametags: atlas is ${this.canvas.width} x ${this.canvas.height}`)
+
+    // DEBUG: show on screen
     // document.body.appendChild(this.canvas)
     // this.canvas.style = `position:absolute;top:0;left:0;z-index:9999;border:1px solid red;transform:scale(${1 / RES});transform-origin:top left;pointer-events:none;`
+
     this.ctx = this.canvas.getContext('2d')
     this.texture = new THREE.CanvasTexture(this.canvas)
+    this.texture.colorSpace = THREE.SRGBColorSpace
     this.texture.flipY = false
     this.texture.needsUpdate = true
     this.material = new CustomShaderMaterial({
@@ -103,11 +115,10 @@ export class Nametags extends System {
     this.world.stage.scene.add(this.mesh)
   }
 
-  add(name) {
-    const idx = this.handles.length
+  add({ name, health }) {
+    const idx = this.nametags.length
     if (idx >= MAX_INSTANCES) return console.error('nametags: reached max')
-    // draw name in slot
-    this.draw(idx, name)
+
     // inc instances
     this.mesh.count++
     this.mesh.instanceMatrix.needsUpdate = true
@@ -117,67 +128,78 @@ export class Nametags extends System {
     const coords = this.mesh.geometry.attributes.coords
     coords.setXY(idx, col / PER_ROW, row / PER_COLUMN)
     coords.needsUpdate = true
-    // make a handle
+    // make nametag
     const matrix = new THREE.Matrix4()
     matrix.compose(new THREE.Vector3(), defaultQuaternion, defaultScale)
-    const handle = {
+    const nametag = {
       idx,
       name,
+      health,
       matrix,
       move: newMatrix => {
         // copy over just position
         matrix.elements[12] = newMatrix.elements[12] // x position
         matrix.elements[13] = newMatrix.elements[13] // y position
         matrix.elements[14] = newMatrix.elements[14] // z position
-        this.mesh.setMatrixAt(handle.idx, matrix)
+        this.mesh.setMatrixAt(nametag.idx, matrix)
         this.mesh.instanceMatrix.needsUpdate = true
       },
-      rename: name => {
-        handle.name = name
-        this.draw(handle.idx, name)
+      setName: name => {
+        if (nametag.name === name) return
+        nametag.name = name
+        this.draw(nametag)
+      },
+      setHealth: health => {
+        if (nametag.health === health) return
+        nametag.health = health
+        this.draw(nametag)
+        console.log('SET HEALTH', health)
       },
       destroy: () => {
-        this.remove(handle)
+        this.remove(nametag)
       },
     }
-    this.handles[idx] = handle
-    return handle
+    this.nametags[idx] = nametag
+    // draw it
+    this.draw(nametag)
+    return nametag
   }
 
-  remove(handle) {
-    if (!this.handles.includes(handle)) {
-      return console.warn('nametags: attempted to remove non-existent handle')
+  remove(nametag) {
+    if (!this.nametags.includes(nametag)) {
+      return console.warn('nametags: attempted to remove non-existent nametag')
     }
-    const last = this.handles[this.handles.length - 1]
-    const isLast = handle === last
+    const last = this.nametags[this.nametags.length - 1]
+    const isLast = nametag === last
     if (isLast) {
       // this is the last instance in the buffer, pop it off the end
-      this.handles.pop()
+      this.nametags.pop()
       // clear slot
-      this.undraw(handle.idx)
+      this.undraw(nametag)
     } else {
-      // there are other instances after this one in the buffer, swap it with the last one and pop it off the end
-      // undraw last slot
-      this.undraw(last.idx)
-      // draw last name in this slot
-      this.draw(handle.idx, last.name)
+      // there are other instances after this one in the buffer...
+      // so we move the last one into this slot
+      this.undraw(last)
+      // move last to this slot
+      last.idx = nametag.idx
+      this.draw(last)
       // update coords for swapped instance
       const coords = this.mesh.geometry.attributes.coords
-      const row = Math.floor(handle.idx / PER_ROW)
-      const col = handle.idx % PER_ROW
-      coords.setXY(handle.idx, col / PER_ROW, row / PER_COLUMN)
+      const row = Math.floor(nametag.idx / PER_ROW)
+      const col = nametag.idx % PER_ROW
+      coords.setXY(nametag.idx, col / PER_ROW, row / PER_COLUMN)
       coords.needsUpdate = true
-      // swap handle references and update matrix
-      this.mesh.setMatrixAt(handle.idx, last.matrix)
-      last.idx = handle.idx
-      this.handles[handle.idx] = last
-      this.handles.pop()
+      // swap nametag references and update matrix
+      this.mesh.setMatrixAt(last.idx, last.matrix)
+      this.nametags[last.idx] = last
+      this.nametags.pop()
     }
     this.mesh.count--
     this.mesh.instanceMatrix.needsUpdate = true
   }
 
-  draw(idx, name) {
+  draw(nametag) {
+    const idx = nametag.idx
     const row = Math.floor(idx / PER_ROW)
     const col = idx % PER_ROW
     const x = col * NAMETAG_WIDTH
@@ -186,14 +208,46 @@ export class Nametags extends System {
     this.ctx.clearRect(x, y, NAMETAG_WIDTH, NAMETAG_HEIGHT)
     // draw background
     // this.ctx.fillStyle = 'rgba(0, 0, 0, 0.5)'
-    // fillRoundRect(this.ctx, x, y, NAMETAG_WIDTH, NAMETAG_HEIGHT, BORDER_RADIUS)
+    // fillRoundRect(this.ctx, x, y, NAMETAG_WIDTH, NAMETAG_HEIGHT, NAMETAG_BORDER_RADIUS)
     // draw name
-    this.ctx.font = `400 ${FONT_SIZE}px Rubik`
+    this.ctx.font = `800 ${NAME_FONT_SIZE}px Rubik`
     this.ctx.fillStyle = 'white'
     this.ctx.textAlign = 'center'
-    this.ctx.textBaseline = 'middle'
-    const text = this.fitText(name, NAMETAG_WIDTH)
-    this.ctx.fillText(text, x + NAMETAG_WIDTH / 2, y + NAMETAG_HEIGHT / 2)
+    this.ctx.textBaseline = 'top'
+    this.ctx.lineWidth = NAME_OUTLINE_SIZE
+    this.ctx.strokeStyle = 'rgba(0,0,0,0.5)'
+    const text = this.fitText(nametag.name, NAMETAG_WIDTH)
+    this.ctx.save()
+    this.ctx.globalCompositeOperation = 'xor'
+    this.ctx.globalAlpha = 1 // Adjust as needed
+    this.ctx.strokeText(text, x + NAMETAG_WIDTH / 2, y + 2)
+    this.ctx.restore()
+    this.ctx.fillText(text, x + NAMETAG_WIDTH / 2, y + 2)
+    // draw health
+    if (nametag.health < HEALTH_MAX) {
+      // bar
+      {
+        this.ctx.fillStyle = 'rgba(0, 0, 0, 0.6)'
+        const width = HEALTH_WIDTH
+        const height = HEALTH_HEIGHT
+        const left = x + (NAMETAG_WIDTH - HEALTH_WIDTH) / 2
+        const top = y + NAME_FONT_SIZE + 5
+        const borderRadius = HEALTH_BORDER_RADIUS
+        fillRoundRect(this.ctx, left, top, width, height, borderRadius)
+      }
+      // health
+      {
+        this.ctx.fillStyle = '#229710'
+        const maxWidth = HEALTH_WIDTH - HEALTH_BORDER * 2
+        const perc = nametag.health / HEALTH_MAX
+        const width = maxWidth * perc
+        const height = HEALTH_HEIGHT - HEALTH_BORDER * 2
+        const left = x + (NAMETAG_WIDTH - HEALTH_WIDTH) / 2 + HEALTH_BORDER
+        const top = y + NAME_FONT_SIZE + 5 + HEALTH_BORDER
+        const borderRadius = HEALTH_BORDER_RADIUS
+        fillRoundRect(this.ctx, left, top, width, height, borderRadius)
+      }
+    }
     // update texture
     this.texture.needsUpdate = true
   }
@@ -219,7 +273,8 @@ export class Nametags extends System {
     return ellipsis
   }
 
-  undraw(idx) {
+  undraw(nametag) {
+    const idx = nametag.idx
     const row = Math.floor(idx / PER_ROW)
     const col = idx % PER_ROW
     const x = col * NAMETAG_WIDTH

@@ -222,7 +222,6 @@ export class ClientControls extends System {
       options,
       entries,
       actions: null,
-      effect: null,
       api: {
         setActions(value) {
           if (value !== null && !Array.isArray(value)) {
@@ -236,56 +235,11 @@ export class ClientControls extends System {
           }
           self.buildActions()
         },
-        hasEffect() {
-          const player = self.world.entities.player
-          return !!player.effect
-        },
-        setEffect(opts) {
-          const player = self.world.entities.player
-          // opts = { anchorId, emote, snare, freeze, turn, duration, cancellable, onEnd }
-          //
-          // cancel any current effect
-          control.effect?.onEnd()
-          control.effect = null
-          // construct effect
-          let config = null
-          let onEnd
-          if (opts) {
-            config = {}
-            if (opts.anchor) config.anchorId = opts.anchor.anchorId
-            if (opts.emote) config.emote = opts.emote
-            if (opts.snare) config.snare = opts.snare
-            if (opts.freeze) config.freeze = opts.freeze
-            if (opts.turn) config.turn = opts.turn
-            if (opts.duration) config.duration = opts.duration
-            if (opts.cancellable) {
-              config.cancellable = opts.cancellable
-              delete config.freeze // overrides
-            }
-            onEnd = opts.onEnd
-          }
-          const effect = {
-            config,
-            ended: false,
-            onEnd: () => {
-              if (effect.ended) return
-              effect.ended = true
-              control.effect = null
-              player.cancelEffect(effect.config)
-              onEnd?.()
-            },
-          }
-          // set effect on player
-          player.setEffect(effect.config, effect.onEnd)
-          control.effect = effect
-        },
         release: () => {
           const idx = this.controls.indexOf(control)
           if (idx === -1) return
           this.controls.splice(idx, 1)
           options.onRelease?.()
-          control.effect?.onEnd()
-          control.effect = null
         },
       },
     }
@@ -649,6 +603,7 @@ export class ClientControls extends System {
   }
 
   onScroll = e => {
+    if (e.isCoreUI) return
     e.preventDefault()
     let delta = e.shiftKey ? e.deltaX : e.deltaY
     if (!this.isMac) delta = -delta

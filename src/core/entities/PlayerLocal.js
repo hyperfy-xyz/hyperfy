@@ -8,7 +8,6 @@ import { bindRotations } from '../extras/bindRotations'
 import { simpleCamLerp } from '../extras/simpleCamLerp'
 import { Emotes } from '../extras/playerEmotes'
 import { ControlPriorities } from '../extras/ControlPriorities'
-import { createPlayerProxy } from '../extras/createPlayerProxy'
 import { isNumber } from 'lodash-es'
 
 const UP = new THREE.Vector3(0, 1, 0)
@@ -94,7 +93,7 @@ export class PlayerLocal extends Entity {
     this.base.position.fromArray(this.data.position)
     this.base.quaternion.fromArray(this.data.quaternion)
 
-    // this.nametag = createNode({ name: 'nametag', label: this.data.name, active: false })
+    // this.nametag = createNode({ name: 'nametag', label: this.data.name, health: this.data.health, active: false })
     // this.base.add(this.nametag)
 
     this.aura = createNode('group')
@@ -239,7 +238,7 @@ export class PlayerLocal extends Entity {
     }
     this.capsuleHandle = this.world.physics.addActor(this.capsule, {
       tag: null,
-      player: this.getProxy(),
+      playerId: this.data.id,
       onInterpolate: position => {
         this.base.position.copy(position)
       },
@@ -291,16 +290,16 @@ export class PlayerLocal extends Entity {
   }
 
   getAnchorMatrix() {
-    if (this.effect?.anchorId) {
-      return this.world.anchors.get(this.effect.anchorId)
+    if (this.data.effect?.anchorId) {
+      return this.world.anchors.get(this.data.effect.anchorId)
     }
     return null
   }
 
   fixedUpdate(delta) {
-    const freeze = this.effect?.freeze
+    const freeze = this.data.effect?.freeze
     const anchor = this.getAnchorMatrix()
-    const snare = this.effect?.snare || 0
+    const snare = this.data.effect?.snare || 0
     if (anchor) {
       /**
        *
@@ -540,7 +539,8 @@ export class PlayerLocal extends Entity {
       }
 
       // ground/air jump
-      const shouldJump = this.grounded && !this.jumping && this.jumpDown && !this.effect?.snare
+      const shouldJump =
+        this.grounded && !this.jumping && this.jumpDown && !this.data.effect?.snare && !this.data.effect?.freeze
       const shouldAirJump = !this.grounded && !this.airJumped && this.jumpPressed && !this.world.builder.enabled
       if (shouldJump || shouldAirJump) {
         // calc velocity needed to reach jump height
@@ -612,7 +612,7 @@ export class PlayerLocal extends Entity {
 
   update(delta) {
     const isXR = this.world.xr.session
-    const freeze = this.effect?.freeze
+    const freeze = this.data.effect?.freeze
     const anchor = this.getAnchorMatrix()
 
     // update cam look direction
@@ -683,7 +683,7 @@ export class PlayerLocal extends Entity {
     this.moving = this.moveDir.length() > 0
 
     // check effect cancel
-    if (this.effect?.cancellable && (this.moving || this.jumpDown)) {
+    if (this.data.effect?.cancellable && (this.moving || this.jumpDown)) {
       this.setEffect(null)
     }
 
@@ -725,7 +725,7 @@ export class PlayerLocal extends Entity {
     }
 
     // if our effect has turn enabled, face the camera direction
-    if (this.effect?.turn) {
+    if (this.data.effect?.turn) {
       let cameraY = 0
       if (isXR) {
         e1.copy(this.world.xr.camera.rotation).reorder('YXZ')
@@ -760,8 +760,8 @@ export class PlayerLocal extends Entity {
 
     // emote
     let emote
-    if (this.effect?.emote) {
-      emote = this.effect.emote
+    if (this.data.effect?.emote) {
+      emote = this.data.effect.emote
     } else if (this.flying) {
       emote = Emotes.FLOAT
     } else if (this.airJumping) {
@@ -790,7 +790,6 @@ export class PlayerLocal extends Entity {
           p: this.base.position.clone(),
           q: this.base.quaternion.clone(),
           e: this.emote,
-          ef: this.effect,
         }
       }
       const data = {
@@ -812,11 +811,6 @@ export class PlayerLocal extends Entity {
         this.lastState.e = this.emote
         hasChanges = true
       }
-      if (this.lastState.ef !== this.effect) {
-        data.ef = this.effect
-        this.lastState.ef = this.effect
-        hasChanges = true
-      }
       if (hasChanges) {
         this.world.network.send('entityModified', data)
       }
@@ -829,9 +823,9 @@ export class PlayerLocal extends Entity {
     }
 
     // effect duration
-    if (this.effect?.duration) {
-      this.effect.duration -= delta
-      if (this.effect.duration <= 0) {
+    if (this.data.effect?.duration) {
+      this.data.effect.duration -= delta
+      if (this.data.effect.duration <= 0) {
         this.setEffect(null)
       }
     }
@@ -885,31 +879,19 @@ export class PlayerLocal extends Entity {
     this.control.camera.quaternion.copy(this.cam.quaternion)
   }
 
-  setEffect(config, onEnd) {
-    if (this.effect === config) return
-    if (this.effect) {
-      this.effect = null
-      this.onEffectEnd()
+  setEffect(effect, onEnd) {
+    if (this.data.effect === effect) return
+    if (this.data.effect) {
+      this.data.effect = null
+      this.onEffectEnd?.()
       this.onEffectEnd = null
     }
-    this.effect = config
+    this.data.effect = effect
     this.onEffectEnd = onEnd
+    // send network update
     this.world.network.send('entityModified', {
       id: this.data.id,
-      ef: config,
-    })
-  }
-
-  cancelEffect(config) {
-    // specifically only cancel the passed in effect,
-    // and ignore if effect is different
-    if (this.effect !== config) return
-    this.effect = null
-    this.onEffectEnd?.()
-    this.onEffectEnd = null
-    this.world.network.send('entityModified', {
-      id: this.data.id,
-      ef: null,
+      ef: effect,
     })
   }
 
@@ -940,6 +922,10 @@ export class PlayerLocal extends Entity {
       this.data.name = data.name
       changed = true
     }
+    if (data.hasOwnProperty('health')) {
+      this.data.health = data.health
+      // changed = true
+    }
     if (data.hasOwnProperty('avatar')) {
       this.data.avatar = data.avatar
       avatarChanged = true
@@ -948,6 +934,14 @@ export class PlayerLocal extends Entity {
     if (data.hasOwnProperty('sessionAvatar')) {
       this.data.sessionAvatar = data.sessionAvatar
       avatarChanged = true
+    }
+    if (data.hasOwnProperty('ef')) {
+      if (this.data.effect) {
+        this.data.effect = null
+        this.onEffectEnd?.()
+        this.onEffectEnd = null
+      }
+      this.data.effect = data.ef
     }
     if (data.hasOwnProperty('roles')) {
       this.data.roles = data.roles
@@ -959,12 +953,5 @@ export class PlayerLocal extends Entity {
     if (changed) {
       this.world.emit('player', this)
     }
-  }
-
-  getProxy() {
-    if (!this.proxy) {
-      this.proxy = createPlayerProxy(this)
-    }
-    return this.proxy
   }
 }

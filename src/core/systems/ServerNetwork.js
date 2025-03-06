@@ -11,6 +11,8 @@ const SAVE_INTERVAL = parseInt(process.env.SAVE_INTERVAL || '60') // seconds
 const PING_RATE = 1 // seconds
 const defaultSpawn = '{ "position": [0, 0, 0], "quaternion": [0, 0, 0, 1] }'
 
+const HEALTH_MAX = 100
+
 /**
  * Server Network System
  *
@@ -222,6 +224,7 @@ export class ServerNetwork extends System {
           owner: socket.id,
           userId: user.id,
           name: user.name,
+          health: HEALTH_MAX,
           avatar: user.avatar,
           roles: user.roles,
         },

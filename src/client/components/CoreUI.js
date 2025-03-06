@@ -76,6 +76,7 @@ function Content({ world, width, height }) {
     const onEvent = e => {
       e.isCoreUI = true
     }
+    elem.addEventListener('wheel', onEvent)
     elem.addEventListener('click', onEvent)
     elem.addEventListener('pointerdown', onEvent)
     elem.addEventListener('pointermove', onEvent)

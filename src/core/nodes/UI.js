@@ -157,24 +157,35 @@ export class UI extends Node {
       this.canvas.style.pointerEvents = this._pointerEvents ? 'auto' : 'none'
       if (this._pointerEvents) {
         let hit
-        this.canvas.addEventListener('pointerenter', e => {
+        const canvas = this.canvas
+        const world = this.ctx.world
+        const onPointerEnter = e => {
           hit = {
             node: this,
             coords: new THREE.Vector3(0, 0, 0),
           }
-          this.ctx.world.pointer.setScreenHit(hit)
-        })
-        this.canvas.addEventListener('pointermove', e => {
-          const rect = this.canvas.getBoundingClientRect()
+          world.pointer.setScreenHit(hit)
+        }
+        const onPointerMove = e => {
+          const rect = canvas.getBoundingClientRect()
           const x = (e.clientX - rect.left) * this._res
           const y = (e.clientY - rect.top) * this._res
           hit.coords.x = x
           hit.coords.y = y
-        })
-        this.canvas.addEventListener('pointerleave', e => {
+        }
+        const onPointerLeave = e => {
           hit = null
-          this.ctx.world.pointer.setScreenHit(null)
-        })
+          world.pointer.setScreenHit(null)
+        }
+        canvas.addEventListener('pointerenter', onPointerEnter)
+        canvas.addEventListener('pointermove', onPointerMove)
+        canvas.addEventListener('pointerleave', onPointerLeave)
+        this.cleanupPointer = () => {
+          if (hit) world.pointer.setScreenHit(null)
+          canvas.removeEventListener('pointerenter', onPointerEnter)
+          canvas.removeEventListener('pointermove', onPointerMove)
+          canvas.removeEventListener('pointerleave', onPointerLeave)
+        }
       }
       this.ctx.world.pointer.ui.prepend(this.canvas)
     }
@@ -198,6 +209,8 @@ export class UI extends Node {
       this.ctx.world.pointer.ui.removeChild(this.canvas)
       this.canvas = null
     }
+    this.cleanupPointer?.()
+    this.cleanupPointer = null
   }
 
   draw() {

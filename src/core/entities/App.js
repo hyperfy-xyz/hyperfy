@@ -9,6 +9,7 @@ import { LerpQuaternion } from '../extras/LerpQuaternion'
 import { ControlPriorities } from '../extras/ControlPriorities'
 import { getRef } from '../nodes/Node'
 import { Layers } from '../extras/Layers'
+import { createPlayerProxy } from '../extras/createPlayerProxy'
 
 const hotEventNames = ['fixedUpdate', 'update', 'lateUpdate']
 const internalEvents = ['fixedUpdate', 'updated', 'lateUpdate', 'enter', 'leave', 'chat']
@@ -35,6 +36,7 @@ export class App extends Entity {
     this.fields = []
     this.target = null
     this.projectLimit = Infinity
+    this.playerProxies = new Map()
     this.build()
   }
 
@@ -143,6 +145,10 @@ export class App extends Entity {
     // cancel any control
     this.control?.release()
     this.control = null
+    // cancel any effects
+    this.playerProxies.forEach(player => {
+      player.cancelEffect()
+    })
     // deactivate local node
     this.root?.deactivate()
     // deactivate world nodes
@@ -354,6 +360,18 @@ export class App extends Entity {
     return glb.toNodes()
   }
 
+  getPlayerProxy(playerId) {
+    if (playerId === undefined) playerId = this.world.entities.player?.data.id
+    let proxy = this.playerProxies.get(playerId)
+    if (!proxy) {
+      const player = this.world.entities.getPlayer(playerId)
+      if (!player) return null
+      proxy = createPlayerProxy(player)
+      this.playerProxies.set(playerId, proxy)
+    }
+    return proxy
+  }
+
   getWorldProxy() {
     const entity = this
     const world = this.world
@@ -426,14 +444,13 @@ export class App extends Entity {
         world.chat.add(msg, broadcast)
       },
       getPlayer(playerId) {
-        const player = world.entities.getPlayer(playerId || world.entities.player?.data.id)
-        return player?.getProxy()
+        return entity.getPlayerProxy(playerId)
       },
       getPlayers() {
         // tip: probably dont wanna call this every frame
         const players = []
         world.entities.players.forEach(player => {
-          players.push(player.getProxy())
+          players.push(entity.getPlayerProxy(player.data.id))
         })
         return players
       },
@@ -459,46 +476,16 @@ export class App extends Entity {
             normal: new THREE.Vector3(),
             distance: 0,
             tag: null,
-            player: null,
+            playerId: null,
           }
         }
         this.raycastHit.point.copy(hit.point)
         this.raycastHit.normal.copy(hit.normal)
         this.raycastHit.distance = hit.distance
         this.raycastHit.tag = hit.handle?.tag
-        this.raycastHit.player = hit.handle?.player
+        this.raycastHit.playerId = hit.handle?.playerId
         return this.raycastHit
       },
-      // applyEffect(effect) {
-      //   effect.entityId = entity.data.id
-      //   if (effect?.anchor) {
-      //     effect.anchorId = effect.anchor.anchorId
-      //     delete effect.anchor
-      //   }
-      //   if (effect?.cancellable) {
-      //     delete effect.freeze // not applicable
-      //   }
-      //   if (effect?.player) {
-      //     effect.playerNetworkId = effect.player.networkId
-      //     delete effect.player
-      //   }
-      //   // targeting local player
-      //   if (effect.playerNetworkId === world.network.id) {
-      //     world.network.enqueue('onPlayerEffect', effect)
-      //   }
-      //   // targeting remote player from a client
-      //   else if (effect.playerNetworkId && world.network.isClient) {
-      //     world.network.send('playerEffect', effect)
-      //   }
-      //   // targeting remote player from the server
-      //   else if (effect.playerNetworkId && world.network.isServer) {
-      //     world.network.sendTo(effect.playerNetworkId, 'playerEffect', effect)
-      //   }
-      //   // targeting everyone from a client -OR- the server
-      //   else {
-      //     world.network.send('playerEffect', effect)
-      //   }
-      // },
     }
   }
 
