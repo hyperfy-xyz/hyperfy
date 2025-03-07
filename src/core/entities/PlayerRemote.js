@@ -173,6 +173,7 @@ export class PlayerRemote extends Entity {
     if (data.hasOwnProperty('health')) {
       this.data.health = data.health
       this.nametag.health = data.health
+      this.world.events.emit('health', { playerId: this.data.id, health: data.health })
     }
     if (data.hasOwnProperty('avatar')) {
       this.data.avatar = data.avatar

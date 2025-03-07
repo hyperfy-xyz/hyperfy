@@ -35,6 +35,9 @@ export function createPlayerProxy(player) {
     get quaternion() {
       return quaternion.copy(player.base.quaternion)
     },
+    get height() {
+      return player.avatar?.getHeight()
+    },
     teleport(position, rotationY) {
       if (player.data.owner === world.network.id) {
         // if player is local we can set directly
@@ -67,18 +70,18 @@ export function createPlayerProxy(player) {
     damage(amount) {
       const health = clamp(player.data.health - amount, 0, HEALTH_MAX)
       if (player.data.health === health) return
-      player.modify({ health })
       if (world.network.isServer) {
         world.network.send('entityModified', { id: player.data.id, health })
       }
+      player.modify({ health })
     },
-    heal(amount) {
+    heal(amount = HEALTH_MAX) {
       const health = clamp(player.data.health + amount, 0, HEALTH_MAX)
       if (player.data.health === health) return
-      player.modify({ health })
       if (world.network.isServer) {
         world.network.send('entityModified', { id: player.data.id, health })
       }
+      player.modify({ health })
     },
     hasEffect() {
       return !!player.data.effect

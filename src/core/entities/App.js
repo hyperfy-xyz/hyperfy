@@ -13,7 +13,7 @@ import { createPlayerProxy } from '../extras/createPlayerProxy'
 import { uuid } from '../utils'
 
 const hotEventNames = ['fixedUpdate', 'update', 'lateUpdate']
-const internalEvents = ['fixedUpdate', 'updated', 'lateUpdate', 'enter', 'leave', 'chat']
+const internalEvents = ['fixedUpdate', 'updated', 'lateUpdate', 'enter', 'leave', 'chat', 'health']
 
 const Modes = {
   ACTIVE: 'active',
@@ -38,6 +38,8 @@ export class App extends Entity {
     this.target = null
     this.projectLimit = Infinity
     this.playerProxies = new Map()
+    this.hitResultsPool = []
+    this.hitResults = []
     this.build()
   }
 
@@ -490,6 +492,12 @@ export class App extends Entity {
           this.raycastHit.app = hit.handle?.node.ctx.entity
         }
         return this.raycastHit
+      },
+      overlapSphere(radius, origin, layerMask) {
+        const hits = world.physics.overlapSphere(radius, origin, layerMask)
+        return hits.map(hit => {
+          return hit.proxy
+        })
       },
     }
   }

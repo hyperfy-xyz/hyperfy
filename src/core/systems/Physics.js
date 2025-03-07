@@ -25,6 +25,9 @@ const triggerResult = {
   tag: null,
 }
 
+const overlapHitPool = []
+const overlapHits = []
+
 /**
  * Physics System
  *
@@ -435,17 +438,36 @@ export class Physics extends System {
     // TODO: this.sweepResult.destroy() on this.destroy()
   }
 
-  overlap(geometry, origin, layerMask) {
+  // overlap(geometry, origin, layerMask) {
+  //   origin.toPxVec3(this.overlapPose.p)
+  //   this.queryFilterData.data.word0 = layerMask
+  //   this.queryFilterData.data.word1 = 0
+  //   const didHit = this.scene.overlap(geometry, this.overlapPose, this.overlapResult, this.queryFilterData)
+  //   if (didHit) {
+  //     // const hit = this.overlapResult.getAnyHit(0)
+  //     _overlapHit.actor = hit.actor
+  //     return _overlapHit
+  //   }
+  //   // TODO: this.overlapResult.destroy() on this.destroy()
+  // }
+
+  overlapSphere(radius, origin, layerMask) {
     origin.toPxVec3(this.overlapPose.p)
-    this.queryFilterData.data.word0 = layerMask
+    const geometry = getSphereGeometry(radius)
+    this.queryFilterData.data.word0 = layerMask // what to hit, eg Layers.player.group | Layers.environment.group
     this.queryFilterData.data.word1 = 0
     const didHit = this.scene.overlap(geometry, this.overlapPose, this.overlapResult, this.queryFilterData)
-    if (didHit) {
-      // const hit = this.overlapResult.getAnyHit(0)
-      _overlapHit.actor = hit.actor
-      return _overlapHit
+    if (!didHit) return []
+    overlapHits.length = 0
+    const numHits = this.overlapResult.getNbAnyHits()
+    for (let n = 0; n < numHits; n++) {
+      const nHit = this.overlapResult.getAnyHit(n)
+      const hit = getOrCreateOverlapHit(n)
+      hit.actor = nHit.actor
+      hit.handle = this.handles.get(nHit.actor.ptr)
+      overlapHits.push(hit)
     }
-    // TODO: this.overlapResult.destroy() on this.destroy()
+    return overlapHits
   }
 }
 
@@ -483,4 +505,34 @@ class ContactEvent {
   get() {
     return this.result
   }
+}
+
+const spheres = new Map()
+function getSphereGeometry(radius) {
+  let sphere = spheres.get(radius)
+  if (!sphere) {
+    sphere = new PHYSX.PxSphereGeometry(radius)
+    spheres.set(radius, sphere)
+  }
+  return sphere
+}
+
+function getOrCreateOverlapHit(idx) {
+  let hit = overlapHitPool[idx]
+  if (!hit) {
+    hit = {
+      actor: null,
+      handle: null,
+      proxy: {
+        get tag() {
+          return hit.handle?.tag || null
+        },
+        get playerId() {
+          return hit.handle?.playerId || null
+        },
+      },
+    }
+    overlapHitPool.push(hit)
+  }
+  return hit
 }

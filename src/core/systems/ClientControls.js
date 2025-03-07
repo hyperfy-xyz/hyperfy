@@ -322,8 +322,8 @@ export class ClientControls extends System {
       if (button?.$button) {
         button.pressed = true
         button.down = true
-        button.onPress?.()
-        if (button.capture) break
+        const capture = button.onPress?.()
+        if (capture || button.capture) break
       }
       const capture = control.onButtonPress?.(prop, text)
       if (capture) break
@@ -386,8 +386,8 @@ export class ClientControls extends System {
         if (button) {
           button.down = true
           button.pressed = true
-          button.onPress?.()
-          if (button.capture) break
+          const capture = button.onPress?.()
+          if (capture || button.capture) break
         }
       }
     }
@@ -414,8 +414,8 @@ export class ClientControls extends System {
         if (button) {
           button.down = true
           button.pressed = true
-          button.onPress?.()
-          if (button.capture) break
+          const capture = button.onPress?.()
+          if (capture || button.capture) break
         }
       }
     }

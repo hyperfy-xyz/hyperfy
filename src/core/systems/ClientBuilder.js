@@ -54,6 +54,15 @@ export class ClientBuilder extends System {
 
   start() {
     this.control = this.world.controls.bind({ priority: ControlPriorities.BUILDER })
+    this.control.mouseLeft.onPress = () => {
+      // pointer lock requires user-gesture in safari
+      // so this can't be done during update cycle
+      if (!this.control.pointer.locked) {
+        this.control.pointer.lock()
+        this.justPointerLocked = true
+        return true // capture
+      }
+    }
     this.updateActions()
   }
 
@@ -165,18 +174,21 @@ export class ClientBuilder extends System {
       }
     }
     // grab
-    if (this.control.pointer.locked && this.control.mouseLeft.pressed && !this.selected) {
+    if (!this.justPointerLocked && this.control.pointer.locked && this.control.mouseLeft.pressed && !this.selected) {
       const entity = this.getEntityAtReticle()
       if (entity?.isApp && !entity.data.pinned) {
         this.select(entity)
       }
     }
     // place
-    else if (this.control.pointer.locked && this.control.mouseLeft.pressed && this.selected) {
+    else if (
+      (!this.control.pointer.locked && this.selected) ||
+      (this.control.pointer.locked && this.control.mouseLeft.pressed && this.selected)
+    ) {
       this.select(null)
     }
     // duplicate
-    if (this.control.pointer.locked && this.control.mouseRight.pressed) {
+    if (!this.justPointerLocked && this.control.pointer.locked && this.control.mouseRight.pressed) {
       const entity = this.selected || this.getEntityAtReticle()
       if (entity?.isApp) {
         let blueprintId = entity.data.blueprint
@@ -285,6 +297,10 @@ export class ClientBuilder extends System {
         })
         this.lastMoveSendTime = 0
       }
+    }
+
+    if (this.justPointerLocked) {
+      this.justPointerLocked = false
     }
   }
 

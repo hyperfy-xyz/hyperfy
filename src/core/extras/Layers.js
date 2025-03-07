@@ -24,7 +24,7 @@ function add(group, hits) {
 }
 
 add('camera', ['environment'])
-add('player', ['environment', 'prop'])
+add('player', ['environment', 'prop', 'player'])
 add('environment', ['camera', 'player', 'environment', 'prop', 'tool'])
 add('prop', ['environment', 'prop'])
 add('tool', ['environment', 'prop'])
