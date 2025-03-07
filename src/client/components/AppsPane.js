@@ -144,7 +144,7 @@ function AppsPaneContent({ world, query, refresh }) {
       items.push(item)
     }
     return items
-  }, [refresh])
+  }, [refresh, world])
   items = useMemo(() => {
     let newItems = items
     if (query) {
@@ -347,7 +347,7 @@ function AppsPaneContent({ world, query, refresh }) {
       <div className='asettings-rows noscrollbar'>
         {items.map(item => (
           <div key={item.blueprint.id} className='asettings-row'>
-            <div className='asettings-rowitem name' onClick={() => target(item)}>
+            <div className='asettings-rowitem name' onClick={() => toggleTarget(item)}>
               <span>{item.name}</span>
             </div>
             <div className='asettings-rowitem count'>
