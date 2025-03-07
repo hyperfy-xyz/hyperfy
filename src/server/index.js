@@ -70,16 +70,51 @@ const publicEnvs = {}
 for (const key in process.env) {
   if (key.startsWith('PUBLIC_')) {
     const value = process.env[key]
-    publicEnvs[key] = value
+    
+    // Handle special 'auto' or relative URL values
+    if (key === 'PUBLIC_WS_URL' && (value === 'auto' || value.startsWith('/'))) {
+      // For auto WebSocket URLs, we'll use the request host to construct the URL
+      publicEnvs[key] = value; // We'll replace this dynamically below
+    } else {
+      publicEnvs[key] = value;
+    }
   }
 }
-const envsCode = `
-  if (!globalThis.process) globalThis.process = {}
-  globalThis.process.env = ${JSON.stringify(publicEnvs)}
-`
+
+// Modified env.js endpoint to handle dynamic WebSocket URL
 fastify.get('/env.js', async (req, reply) => {
-  reply.type('application/javascript').send(envsCode)
-})
+  // Create a copy of publicEnvs for this specific request
+  const requestEnvs = {...publicEnvs};
+  
+  // Get the request host and protocol
+  const host = req.headers.host;
+  const protocol = req.headers['x-forwarded-proto'] || 'http';
+  const wsProtocol = protocol === 'https' ? 'wss' : 'ws';
+  
+  // If WebSocket URL is set to auto or is relative, generate it dynamically
+  if (requestEnvs.PUBLIC_WS_URL === 'auto') {
+    requestEnvs.PUBLIC_WS_URL = `${wsProtocol}://${host}/ws`;
+  } else if (requestEnvs.PUBLIC_WS_URL && requestEnvs.PUBLIC_WS_URL.startsWith('/')) {
+    requestEnvs.PUBLIC_WS_URL = `${wsProtocol}://${host}${requestEnvs.PUBLIC_WS_URL}`;
+  }
+  
+  // If API URL is relative, make it absolute
+  if (requestEnvs.PUBLIC_API_URL && requestEnvs.PUBLIC_API_URL.startsWith('/')) {
+    requestEnvs.PUBLIC_API_URL = `${protocol}://${host}${requestEnvs.PUBLIC_API_URL}`;
+  }
+  
+  // If ASSETS URL is relative, make it absolute
+  if (requestEnvs.PUBLIC_ASSETS_URL && requestEnvs.PUBLIC_ASSETS_URL.startsWith('/')) {
+    requestEnvs.PUBLIC_ASSETS_URL = `${protocol}://${host}${requestEnvs.PUBLIC_ASSETS_URL}`;
+  }
+
+  const envsCode = `
+    if (!globalThis.process) globalThis.process = {}
+    globalThis.process.env = ${JSON.stringify(requestEnvs)}
+  `;
+  
+  reply.type('application/javascript').send(envsCode);
+});
 
 fastify.post('/api/upload', async (req, reply) => {
   // console.log('DEBUG: slow uploads')
