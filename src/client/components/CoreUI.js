@@ -28,6 +28,7 @@ import { hasRole, uuid } from '../../core/utils'
 import { ControlPriorities } from '../../core/extras/ControlPriorities'
 import { AppsPane } from './AppsPane'
 import { SettingsPane } from './SettingsPane'
+import { Docspane } from './DocsPane'
 
 export function CoreUI({ world }) {
   const [ref, width, height] = useElemSize()
@@ -55,12 +56,14 @@ function Content({ world, width, height }) {
   const [disconnected, setDisconnected] = useState(false)
   const [settings, setSettings] = useState(false)
   const [apps, setApps] = useState(false)
+  const [docs, setDocs] = useState(false)
   const [kicked, setKicked] = useState(null)
   useEffect(() => {
     world.on('ready', setReady)
     world.on('player', setPlayer)
     world.on('inspect', setInspect)
     world.on('code', setCode)
+    world.on('docs', setDocs)
     world.on('avatar', setAvatar)
     world.on('kick', setKicked)
     world.on('disconnect', setDisconnected)
@@ -69,6 +72,7 @@ function Content({ world, width, height }) {
       world.off('player', setPlayer)
       world.off('inspect', setInspect)
       world.off('code', setCode)
+      world.off('docs', setDocs)
       world.off('avatar', setAvatar)
       world.off('kick', setKicked)
       world.off('disconnect', setDisconnected)
@@ -96,6 +100,7 @@ function Content({ world, width, height }) {
     >
       {inspect && <InspectPane key={`inspect-${inspect.data.id}`} world={world} entity={inspect} />}
       {inspect && code && <CodePane key={`code-${inspect.data.id}`} world={world} entity={inspect} />}
+      {inspect && code && docs && <Docspane key={`docs-${inspect.data.id}`} world={world} />}
       {avatar && <AvatarPane key={avatar.hash} world={world} info={avatar} />}
       {disconnected && <Disconnected />}
       <Reticle world={world} />
