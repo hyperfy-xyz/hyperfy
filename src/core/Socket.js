@@ -1,13 +1,11 @@
 import { readPacket, writePacket } from './packets'
 
-let ids = 0
-
 export class Socket {
-  constructor({ ws, network, player }) {
+  constructor({ id, ws, network, player }) {
+    this.id = id
     this.ws = ws
     this.network = network
 
-    this.id = ++ids
     this.player = player
 
     this.alive = true

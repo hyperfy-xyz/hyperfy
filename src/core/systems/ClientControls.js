@@ -217,7 +217,6 @@ export class ClientControls extends System {
       options,
       entries,
       actions: null,
-      effect: null,
       api: {
         setActions(value) {
           if (value !== null && !Array.isArray(value)) {
@@ -231,56 +230,11 @@ export class ClientControls extends System {
           }
           self.buildActions()
         },
-        hasEffect() {
-          const player = self.world.entities.player
-          return !!player.effect
-        },
-        setEffect(opts) {
-          const player = self.world.entities.player
-          // opts = { anchorId, emote, snare, freeze, turn, duration, cancellable, onEnd }
-          //
-          // cancel any current effect
-          control.effect?.onEnd()
-          control.effect = null
-          // construct effect
-          let config = null
-          let onEnd
-          if (opts) {
-            config = {}
-            if (opts.anchor) config.anchorId = opts.anchor.anchorId
-            if (opts.emote) config.emote = opts.emote
-            if (opts.snare) config.snare = opts.snare
-            if (opts.freeze) config.freeze = opts.freeze
-            if (opts.turn) config.turn = opts.turn
-            if (opts.duration) config.duration = opts.duration
-            if (opts.cancellable) {
-              config.cancellable = opts.cancellable
-              delete config.freeze // overrides
-            }
-            onEnd = opts.onEnd
-          }
-          const effect = {
-            config,
-            ended: false,
-            onEnd: () => {
-              if (effect.ended) return
-              effect.ended = true
-              control.effect = null
-              player.cancelEffect(effect.config)
-              onEnd?.()
-            },
-          }
-          // set effect on player
-          player.setEffect(effect.config, effect.onEnd)
-          control.effect = effect
-        },
         release: () => {
           const idx = this.controls.indexOf(control)
           if (idx === -1) return
           this.controls.splice(idx, 1)
           options.onRelease?.()
-          control.effect?.onEnd()
-          control.effect = null
         },
       },
     }
@@ -368,8 +322,8 @@ export class ClientControls extends System {
       if (button?.$button) {
         button.pressed = true
         button.down = true
-        button.onPress?.()
-        if (button.capture) break
+        const capture = button.onPress?.()
+        if (capture || button.capture) break
       }
       const capture = control.onButtonPress?.(prop, text)
       if (capture) break
@@ -398,13 +352,13 @@ export class ClientControls extends System {
   }
 
   onPointerDown = e => {
-    if (e.isGUI) return
+    if (e.isCoreUI) return
     this.checkPointerChanges(e)
   }
 
   onPointerMove = e => {
-    if (e.isGUI) return
-    this.checkPointerChanges(e)
+    if (e.isCoreUI) return
+    // this.checkPointerChanges(e)
     const rect = this.viewport.getBoundingClientRect()
     const offsetX = e.pageX - rect.left
     const offsetY = e.pageY - rect.top
@@ -417,7 +371,7 @@ export class ClientControls extends System {
   }
 
   onPointerUp = e => {
-    if (e.isGUI) return
+    if (e.isCoreUI) return
     this.checkPointerChanges(e)
   }
 
@@ -432,8 +386,8 @@ export class ClientControls extends System {
         if (button) {
           button.down = true
           button.pressed = true
-          button.onPress?.()
-          if (button.capture) break
+          const capture = button.onPress?.()
+          if (capture || button.capture) break
         }
       }
     }
@@ -460,8 +414,8 @@ export class ClientControls extends System {
         if (button) {
           button.down = true
           button.pressed = true
-          button.onPress?.()
-          if (button.capture) break
+          const capture = button.onPress?.()
+          if (capture || button.capture) break
         }
       }
     }
@@ -522,6 +476,7 @@ export class ClientControls extends System {
   }
 
   onScroll = e => {
+    if (e.isCoreUI) return
     e.preventDefault()
     let delta = e.shiftKey ? e.deltaX : e.deltaY
     if (!this.isMac) delta = -delta
@@ -665,16 +620,18 @@ function createScreen(controls, control) {
 }
 
 function createCamera(controls, control) {
-  const position = new THREE.Vector3()
-  const quaternion = new THREE.Quaternion()
-  const rotation = new THREE.Euler(0, 0, 0, 'YXZ')
+  const world = controls.world
+  const position = new THREE.Vector3().copy(world.rig.position)
+  const quaternion = new THREE.Quaternion().copy(world.rig.quaternion)
+  const rotation = new THREE.Euler(0, 0, 0, 'YXZ').copy(world.rig.rotation)
   bindRotations(quaternion, rotation)
+  const zoom = world.camera.position.z
   return {
     $camera: true,
     position,
     quaternion,
     rotation,
-    zoom: 0,
+    zoom,
     write: false,
   }
 }

@@ -111,7 +111,7 @@ function AppsPaneContent({ world, query, refresh }) {
   let items = useMemo(() => {
     const itemMap = new Map() // id -> { blueprint, count }
     let items = []
-    for (const [_, entity] of this.world.entities.items) {
+    for (const [_, entity] of world.entities.items) {
       if (!entity.isApp) continue
       const blueprint = entity.blueprint
       if (!blueprint) continue // still loading?
@@ -170,7 +170,7 @@ function AppsPaneContent({ world, query, refresh }) {
     const playerPosition = world.rig.position
     let closestEntity
     let closestDistance = null
-    for (const [_, entity] of this.world.entities.items) {
+    for (const [_, entity] of world.entities.items) {
       if (entity.blueprint === item.blueprint) {
         const distance = playerPosition.distanceTo(entity.root.position)
         if (closestDistance === null || closestDistance > distance) {

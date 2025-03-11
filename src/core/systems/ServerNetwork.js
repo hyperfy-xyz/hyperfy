@@ -11,6 +11,8 @@ const SAVE_INTERVAL = parseInt(process.env.SAVE_INTERVAL || '60') // seconds
 const PING_RATE = 1 // seconds
 const defaultSpawn = '{ "position": [0, 0, 0], "quaternion": [0, 0, 0, 1] }'
 
+const HEALTH_MAX = 100
+
 /**
  * Server Network System
  *
@@ -203,6 +205,14 @@ export class ServerNetwork extends System {
       }
       user.roles = user.roles.split(',')
 
+      // disconnect if user already in this world
+      if (this.sockets.has(user.id)) {
+        const packet = writePacket('kick', 'duplicate_user')
+        ws.send(packet)
+        ws.disconnect()
+        return
+      }
+
       // if there is no admin code, everyone is a temporary admin (eg for local dev)
       // all roles prefixed with `~` are temporary and not persisted to db
       if (!process.env.ADMIN_CODE) {
@@ -210,18 +220,19 @@ export class ServerNetwork extends System {
       }
 
       // create socket
-      const socket = new Socket({ ws, network: this })
+      const socket = new Socket({ id: user.id, ws, network: this })
 
       // spawn player
       socket.player = this.world.entities.add(
         {
-          id: uuid(),
+          id: user.id,
           type: 'player',
           position: this.spawn.position.slice(),
           quaternion: this.spawn.quaternion.slice(),
-          owner: socket.id,
-          userId: user.id,
+          owner: socket.id, // deprecated, same as userId
+          userId: user.id, // deprecated, same as userId
           name: user.name,
+          health: HEALTH_MAX,
           avatar: user.avatar,
           roles: user.roles,
         },
@@ -232,6 +243,9 @@ export class ServerNetwork extends System {
       socket.send('snapshot', {
         id: socket.id,
         serverTime: performance.now(),
+        assetsUrl: process.env.PUBLIC_ASSETS_URL,
+        apiUrl: process.env.PUBLIC_API_URL,
+        maxUploadSize: process.env.PUBLIC_MAX_UPLOAD_SIZE,
         chat: this.world.chat.serialize(),
         blueprints: this.world.blueprints.serialize(),
         entities: this.world.entities.serialize(),
@@ -239,6 +253,10 @@ export class ServerNetwork extends System {
       })
 
       this.sockets.set(socket.id, socket)
+
+      // enter events on the server are sent after the snapshot.
+      // on the client these are sent during PlayerRemote.js entity instantiation!
+      this.world.events.emit('enter', { playerId: socket.player.data.id })
     } catch (err) {
       console.error(err)
     }
@@ -316,6 +334,16 @@ export class ServerNetwork extends System {
           .merge({
             value: data,
           })
+      }
+      if (cmd === 'chat') {
+        const code = arg1
+        if (code !== 'clear') return
+        const player = socket.player
+        if (!hasRole(player.data.roles, 'admin')) {
+          return
+        }
+        this.world.chat.clear(true)
+        return
       }
       return
     }
@@ -395,6 +423,10 @@ export class ServerNetwork extends System {
 
   onPlayerTeleport = (socket, data) => {
     this.sendTo(data.networkId, 'playerTeleport', data)
+  }
+
+  onPlayerPush = (socket, data) => {
+    this.sendTo(data.networkId, 'playerPush', data)
   }
 
   onPlayerSessionAvatar = (socket, data) => {

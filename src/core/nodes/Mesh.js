@@ -226,7 +226,7 @@ export class Mesh extends Node {
   }
 
   get material() {
-    return self.handle.material
+    return this.handle?.material
   }
 
   set material(value = defaults.material) {
@@ -345,7 +345,7 @@ export class Mesh extends Node {
           throw new Error('[mesh] set geometry not supported')
         },
         get material() {
-          return self.handle.material
+          return self.material
         },
         set material(value) {
           throw new Error('[mesh] set material not supported')

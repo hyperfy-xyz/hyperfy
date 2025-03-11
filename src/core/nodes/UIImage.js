@@ -1,6 +1,8 @@
+import Yoga from 'yoga-layout'
 import { isNumber, isString } from 'lodash-es'
 import { Node } from './Node'
 import { Display, isDisplay } from '../extras/yoga'
+import { fillRoundRect, imageRoundRect } from '../extras/roundRect'
 
 const objectFits = ['contain', 'cover', 'fill']
 
@@ -11,6 +13,7 @@ const defaults = {
   height: null,
   objectFit: 'contain',
   backgroundColor: null,
+  borderRadius: 0,
 }
 
 export class UIImage extends Node {
@@ -24,6 +27,7 @@ export class UIImage extends Node {
     this.height = data.height
     this.objectFit = data.objectFit
     this.backgroundColor = data.backgroundColor
+    this.borderRadius = data.borderRadius
 
     this.img = null
   }
@@ -34,19 +38,21 @@ export class UIImage extends Node {
     const top = offsetTop + this.yogaNode.getComputedTop()
     const width = this.yogaNode.getComputedWidth()
     const height = this.yogaNode.getComputedHeight()
-    ctx.save()
-    ctx.beginPath()
-    ctx.rect(left, top, width, height)
-    ctx.clip()
     if (this._backgroundColor) {
-      ctx.fillStyle = this._backgroundColor
-      ctx.fillRect(left, top, width, height)
+      fillRoundRect(ctx, left, top, width, height, this._borderRadius * this.ui._res, this._backgroundColor)
     }
     if (this.img) {
       const drawParams = this.calculateDrawParameters(this.img.width, this.img.height, width, height)
-      ctx.drawImage(this.img, left + drawParams.x, top + drawParams.y, drawParams.width, drawParams.height)
+      imageRoundRect(
+        ctx,
+        left + drawParams.x,
+        top + drawParams.y,
+        drawParams.width,
+        drawParams.height,
+        this._borderRadius * this.ui._res,
+        this.img
+      )
     }
-    ctx.restore()
     this.box = { left, top, width, height }
   }
 
@@ -153,7 +159,7 @@ export class UIImage extends Node {
         console.error('uiimage: failed to load:', error)
         reject(error)
       }
-      img.src = src
+      img.src = this.ctx?.world.resolveURL(src)
     })
   }
 
@@ -302,6 +308,19 @@ export class UIImage extends Node {
     this.ui?.redraw()
   }
 
+  get borderRadius() {
+    return this._borderRadius
+  }
+
+  set borderRadius(value = defaults.borderRadius) {
+    if (!isNumber(value)) {
+      throw new Error('[uiimage] borderRadius not a number')
+    }
+    if (this._borderRadius === value) return
+    this._borderRadius = value
+    this.ui?.redraw()
+  }
+
   getProxy() {
     if (!this.proxy) {
       const self = this
@@ -341,6 +360,12 @@ export class UIImage extends Node {
         },
         set backgroundColor(value) {
           self.backgroundColor = value
+        },
+        get borderRadius() {
+          return self.borderRadius
+        },
+        set borderRadius(value) {
+          self.borderRadius = value
         },
       }
       proxy = Object.defineProperties(proxy, Object.getOwnPropertyDescriptors(super.getProxy())) // inherit Node properties

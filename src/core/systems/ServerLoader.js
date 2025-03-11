@@ -54,7 +54,7 @@ export class ServerLoader extends System {
     if (this.promises.has(key)) {
       return this.promises.get(key)
     }
-    url = this.resolveURL(url)
+    url = this.resolvePath(url)
     let promise
     if (type === 'hdr') {
       // promise = this.rgbeLoader.loadAsync(url).then(texture => {
@@ -147,7 +147,7 @@ export class ServerLoader extends System {
     return promise
   }
 
-  resolveURL(url) {
+  resolvePath(url) {
     if (url.startsWith('asset://')) {
       return url.replace('asset:/', this.assetsDir)
     }

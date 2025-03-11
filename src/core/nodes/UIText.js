@@ -1,8 +1,9 @@
+import Yoga from 'yoga-layout'
 import { isNumber, isString } from 'lodash-es'
 
 import { Node } from './Node'
 import { Display, isDisplay } from '../extras/yoga'
-import { fillRoundRect } from '../extras/fillRoundRect'
+import { fillRoundRect } from '../extras/roundRect'
 
 const textAligns = ['left', 'center', 'right']
 
@@ -56,12 +57,7 @@ export class UIText extends Node {
     const width = this.yogaNode.getComputedWidth()
     const height = this.yogaNode.getComputedHeight()
     if (this._backgroundColor) {
-      ctx.fillStyle = this._backgroundColor
-      if (this.borderRadius) {
-        fillRoundRect(ctx, left, top, width, height, this._borderRadius * this.ui._res)
-      } else {
-        ctx.fillRect(left, top, width, height)
-      }
+      fillRoundRect(ctx, left, top, width, height, this._borderRadius * this.ui._res, this._backgroundColor)
     }
     ctx.font = `${this._fontWeight} ${this._fontSize * this.ui._res}px ${this._fontFamily}`
     ctx.textBaseline = 'alphabetic'

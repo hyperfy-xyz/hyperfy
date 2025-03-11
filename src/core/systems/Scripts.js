@@ -20,12 +20,16 @@ export class Scripts extends System {
     this.compartment = new Compartment({
       console: {
         log: (...args) => console.log(...args),
+        warn: (...args) => console.warn(...args),
         error: (...args) => console.error(...args),
         time: (...args) => console.time(...args),
         timeEnd: (...args) => console.timeEnd(...args),
       },
       Date: {
         now: () => Date.now(),
+      },
+      URL: {
+        createObjectURL: blob => URL.createObjectURL(blob),
       },
       eval: undefined,
       harden: undefined,

@@ -34,6 +34,10 @@ The world matrix of this node in global space.
 
 The parent node, if any.
 
+### `.children`: [Node]
+
+The child nodes.
+
 ## Methods
 
 ### `.add(otherNode)`: Self

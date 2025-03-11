@@ -397,6 +397,11 @@ export class Node {
         set parent(value) {
           throw new Error('Cannot set parent directly')
         },
+        get children() {
+          return self.children.map(child => {
+            return child.getProxy()
+          })
+        },
         add(pNode) {
           const node = getRef(pNode)
           self.add(node)

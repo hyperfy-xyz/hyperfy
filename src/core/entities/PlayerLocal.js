@@ -8,7 +8,6 @@ import { bindRotations } from '../extras/bindRotations'
 import { simpleCamLerp } from '../extras/simpleCamLerp'
 import { Emotes } from '../extras/playerEmotes'
 import { ControlPriorities } from '../extras/ControlPriorities'
-import { createPlayerProxy } from '../extras/createPlayerProxy'
 import { isNumber } from 'lodash-es'
 
 const UP = new THREE.Vector3(0, 1, 0)
@@ -50,6 +49,7 @@ export class PlayerLocal extends Entity {
     if (this.world.loader.preloader) {
       await this.world.loader.preloader
     }
+
     this.mass = 1
     this.gravity = 20
     this.effectiveGravity = this.gravity * this.mass
@@ -63,6 +63,9 @@ export class PlayerLocal extends Entity {
     this.groundNormal = new THREE.Vector3().copy(UP)
     this.groundSweepRadius = this.capsuleRadius - 0.01 // slighty smaller than player
     this.groundSweepGeometry = new PHYSX.PxSphereGeometry(this.groundSweepRadius)
+
+    this.pushForce = null
+    this.pushForceInit = false
 
     this.slipping = false
 
@@ -93,10 +96,10 @@ export class PlayerLocal extends Entity {
     this.base.position.fromArray(this.data.position)
     this.base.quaternion.fromArray(this.data.quaternion)
 
-    // this.nametag = createNode({ name: 'nametag', label: this.data.name, active: false })
-    // this.base.add(this.nametag)
-
     this.aura = createNode('group')
+
+    this.nametag = createNode('nametag', { label: '', health: this.data.health, active: false })
+    this.aura.add(this.nametag)
 
     this.bubble = createNode('ui', {
       width: 300,
@@ -138,7 +141,7 @@ export class PlayerLocal extends Entity {
     bindRotations(this.cam.quaternion, this.cam.rotation)
     this.cam.quaternion.copy(this.base.quaternion)
     this.cam.rotation.x += -15 * DEG2RAD
-    this.cam.zoom = 3
+    this.cam.zoom = 2
 
     this.initCapsule()
     this.initControl()
@@ -146,8 +149,12 @@ export class PlayerLocal extends Entity {
     this.world.setHot(this, true)
   }
 
+  getAvatarUrl() {
+    return this.data.sessionAvatar || this.data.avatar || 'asset://avatar.vrm'
+  }
+
   applyAvatar() {
-    const avatarUrl = this.data.sessionAvatar || this.data.avatar || 'asset://avatar.vrm'
+    const avatarUrl = this.getAvatarUrl()
     if (this.avatarUrl === avatarUrl) return
     this.world.loader
       .load('avatar', avatarUrl)
@@ -155,11 +162,11 @@ export class PlayerLocal extends Entity {
         if (this.avatar) this.avatar.deactivate()
         this.avatar = src.toNodes().get('avatar')
         this.base.add(this.avatar)
-        // this.nametag.position.y = this.avatar.height + 0.2
+        this.nametag.position.y = this.avatar.getHeadToHeight() + 0.2
         this.bubble.position.y = this.avatar.getHeadToHeight() + 0.2
-        // if (!this.bubble.active) {
-        //   this.nametag.active = true
-        // }
+        if (!this.bubble.active) {
+          this.nametag.active = true
+        }
         this.avatarUrl = avatarUrl
         this.camHeight = this.avatar.height * 0.95
       })
@@ -223,18 +230,18 @@ export class PlayerLocal extends Entity {
     // For now the best solution is to just add a sphere right in the center of our capsule to keep that problem at bay.
     let shape2
     {
-      const geometry = new PHYSX.PxSphereGeometry(radius)
-      shape2 = this.world.physics.physics.createShape(geometry, this.material, true, flags)
-      shape2.setQueryFilterData(filterData)
-      shape2.setSimulationFilterData(filterData)
-      const pose = new PHYSX.PxTransform(PHYSX.PxIDENTITYEnum.PxIdentity)
-      v1.set(0, halfHeight + radius, 0).toPxTransform(pose)
-      shape2.setLocalPose(pose)
-      this.capsule.attachShape(shape2)
+      // const geometry = new PHYSX.PxSphereGeometry(radius)
+      // shape2 = this.world.physics.physics.createShape(geometry, this.material, true, flags)
+      // shape2.setQueryFilterData(filterData)
+      // shape2.setSimulationFilterData(filterData)
+      // const pose = new PHYSX.PxTransform(PHYSX.PxIDENTITYEnum.PxIdentity)
+      // v1.set(0, halfHeight + radius, 0).toPxTransform(pose)
+      // shape2.setLocalPose(pose)
+      // this.capsule.attachShape(shape2)
     }
     this.capsuleHandle = this.world.physics.addActor(this.capsule, {
       tag: null,
-      player: this.getProxy(),
+      playerId: this.data.id,
       onInterpolate: position => {
         this.base.position.copy(position)
       },
@@ -286,16 +293,16 @@ export class PlayerLocal extends Entity {
   }
 
   getAnchorMatrix() {
-    if (this.effect?.anchorId) {
-      return this.world.anchors.get(this.effect.anchorId)
+    if (this.data.effect?.anchorId) {
+      return this.world.anchors.get(this.data.effect.anchorId)
     }
     return null
   }
 
   fixedUpdate(delta) {
-    const freeze = this.effect?.freeze
+    const freeze = this.data.effect?.freeze
     const anchor = this.getAnchorMatrix()
-    const snare = this.effect?.snare || 0
+    const snare = this.data.effect?.snare || 0
     if (anchor) {
       /**
        *
@@ -315,7 +322,7 @@ export class PlayerLocal extends Entity {
         const pose = this.capsule.getGlobalPose()
         const origin = v1.copy(pose.p)
         origin.y += 0.2
-        const hitMask = Layers.environment.group | Layers.prop.group | Layers.tool.group
+        const hitMask = Layers.environment.group | Layers.prop.group
         const hit = this.world.physics.raycast(origin, DOWN, 2, hitMask)
         let actor = hit?.handle?.actor || null
         // if we found a new platform, set it up for tracking
@@ -380,7 +387,7 @@ export class PlayerLocal extends Entity {
         origin.y += this.groundSweepRadius + 0.12 // move up inside player + a bit
         const direction = DOWN
         const maxDistance = 0.12 + 0.1 // outside player + a bit more
-        const hitMask = Layers.environment.group | Layers.prop.group | Layers.tool.group
+        const hitMask = Layers.environment.group | Layers.prop.group
         sweepHit = this.world.physics.sweep(geometry, origin, direction, maxDistance, hitMask)
       }
 
@@ -460,6 +467,8 @@ export class PlayerLocal extends Entity {
       if (this.jumping && this.grounded) {
         this.jumping = false
       }
+
+      // if airJumping and we're now on the ground, clear it
       if (this.airJumped && this.grounded) {
         this.airJumped = false
         this.airJumping = false
@@ -518,6 +527,35 @@ export class PlayerLocal extends Entity {
         // increase downward velocity to prevent sliding upward when walking at a slope
         velocity.y -= 0.5
       }
+
+      // apply additional push force
+      if (this.pushForce) {
+        if (!this.pushForceInit) {
+          this.pushForceInit = true
+          // if we're pushing up, act like a jump so we don't stick to the ground
+          if (this.pushForce.y) {
+            this.jumped = true
+            // ensure other stuff is reset
+            this.jumping = false
+            this.falling = false
+            this.airJumped = false
+            this.airJumping = false
+          }
+        }
+        velocity.add(this.pushForce)
+        const drag = 20
+        const decayFactor = 1 - drag * delta
+        if (decayFactor < 0) {
+          // if drag * delta > 1, just set to zero
+          this.pushForce.set(0, 0, 0)
+        } else {
+          this.pushForce.multiplyScalar(Math.max(decayFactor, 0))
+        }
+        if (this.pushForce.length() < 0.01) {
+          this.pushForce = null
+        }
+      }
+
       this.capsule.setLinearVelocity(velocity.toPxVec3())
 
       // apply move force, projected onto ground normal
@@ -535,7 +573,8 @@ export class PlayerLocal extends Entity {
       }
 
       // ground/air jump
-      const shouldJump = this.grounded && !this.jumping && this.jumpDown && !this.effect?.snare
+      const shouldJump =
+        this.grounded && !this.jumping && this.jumpDown && !this.data.effect?.snare && !this.data.effect?.freeze
       const shouldAirJump = !this.grounded && !this.airJumped && this.jumpPressed && !this.world.builder.enabled
       if (shouldJump || shouldAirJump) {
         // calc velocity needed to reach jump height
@@ -607,7 +646,7 @@ export class PlayerLocal extends Entity {
 
   update(delta) {
     const isXR = this.world.xr.session
-    const freeze = this.effect?.freeze
+    const freeze = this.data.effect?.freeze
     const anchor = this.getAnchorMatrix()
 
     // update cam look direction
@@ -678,7 +717,7 @@ export class PlayerLocal extends Entity {
     this.moving = this.moveDir.length() > 0
 
     // check effect cancel
-    if (this.effect?.cancellable && (this.moving || this.jumpDown)) {
+    if (this.data.effect?.cancellable && (this.moving || this.jumpDown)) {
       this.setEffect(null)
     }
 
@@ -720,7 +759,7 @@ export class PlayerLocal extends Entity {
     }
 
     // if our effect has turn enabled, face the camera direction
-    if (this.effect?.turn) {
+    if (this.data.effect?.turn) {
       let cameraY = 0
       if (isXR) {
         e1.copy(this.world.xr.camera.rotation).reorder('YXZ')
@@ -740,15 +779,6 @@ export class PlayerLocal extends Entity {
       this.base.quaternion.slerp(q1, alpha)
     }
 
-    // if we're anchored, force into that pose
-    if (anchor) {
-      this.base.position.setFromMatrixPosition(anchor)
-      this.base.quaternion.setFromRotationMatrix(anchor)
-      const pose = this.capsule.getGlobalPose()
-      this.base.position.toPxTransform(pose)
-      this.capsuleHandle.snap(pose)
-    }
-
     // make camera follow our position horizontally
     this.cam.position.copy(this.base.position)
     if (isXR) {
@@ -764,8 +794,8 @@ export class PlayerLocal extends Entity {
 
     // emote
     let emote
-    if (this.effect?.emote) {
-      emote = this.effect.emote
+    if (this.data.effect?.emote) {
+      emote = this.data.effect.emote
     } else if (this.flying) {
       emote = Emotes.FLOAT
     } else if (this.airJumping) {
@@ -794,7 +824,6 @@ export class PlayerLocal extends Entity {
           p: this.base.position.clone(),
           q: this.base.quaternion.clone(),
           e: this.emote,
-          ef: this.effect,
         }
       }
       const data = {
@@ -816,40 +845,31 @@ export class PlayerLocal extends Entity {
         this.lastState.e = this.emote
         hasChanges = true
       }
-      if (this.lastState.ef !== this.effect) {
-        data.ef = this.effect
-        this.lastState.ef = this.effect
-        hasChanges = true
-      }
       if (hasChanges) {
         this.world.network.send('entityModified', data)
       }
       this.lastSendAt = 0
     }
 
-    // TODO: this feels like ClientEditor stuff not PlayerLocal
-    // handle node hover enter/leave
-    if (!this.pointerState) this.pointerState = new PointerState()
-    // console.time('pointer')
-    const hit = this.control.pointer.locked ? this.world.stage.raycastReticle()[0] : null
-    this.pointerState.update(hit, this.control.mouseLeft.pressed, this.control.mouseLeft.released)
-    // console.timeEnd('pointer')
-
-    // left-click lock pointer
-    if (!this.control.pointer.locked && this.control.mouseLeft.pressed) {
-      this.control.pointer.lock()
-    }
-
     // effect duration
-    if (this.effect?.duration) {
-      this.effect.duration -= delta
-      if (this.effect.duration <= 0) {
+    if (this.data.effect?.duration) {
+      this.data.effect.duration -= delta
+      if (this.data.effect.duration <= 0) {
         this.setEffect(null)
       }
     }
   }
 
   lateUpdate(delta) {
+    const anchor = this.getAnchorMatrix()
+    // if we're anchored, force into that pose
+    if (anchor) {
+      this.base.position.setFromMatrixPosition(anchor)
+      this.base.quaternion.setFromRotationMatrix(anchor)
+      const pose = this.capsule.getGlobalPose()
+      this.base.position.toPxTransform(pose)
+      this.capsuleHandle.snap(pose)
+    }
     if (this.world.xr.session) {
       // in vr snap camera
       this.control.camera.position.copy(this.cam.position)
@@ -860,7 +880,7 @@ export class PlayerLocal extends Entity {
     }
     if (this.avatar) {
       const matrix = this.avatar.getBoneTransform('head')
-      this.aura.position.setFromMatrixPosition(matrix)
+      if (matrix) this.aura.position.setFromMatrixPosition(matrix)
     }
   }
 
@@ -888,32 +908,35 @@ export class PlayerLocal extends Entity {
     this.control.camera.quaternion.copy(this.cam.quaternion)
   }
 
-  setEffect(config, onEnd) {
-    if (this.effect === config) return
-    if (this.effect) {
-      this.effect = null
-      this.onEffectEnd()
+  setEffect(effect, onEnd) {
+    if (this.data.effect === effect) return
+    if (this.data.effect) {
+      this.data.effect = null
+      this.onEffectEnd?.()
       this.onEffectEnd = null
     }
-    this.effect = config
+    this.data.effect = effect
     this.onEffectEnd = onEnd
+    // send network update
     this.world.network.send('entityModified', {
       id: this.data.id,
-      ef: config,
+      ef: effect,
     })
   }
 
-  cancelEffect(config) {
-    // specifically only cancel the passed in effect,
-    // and ignore if effect is different
-    if (this.effect !== config) return
-    this.effect = null
-    this.onEffectEnd?.()
-    this.onEffectEnd = null
-    this.world.network.send('entityModified', {
-      id: this.data.id,
-      ef: null,
-    })
+  push(force) {
+    force = v1.fromArray(force)
+    // squash vertical to emulate what our huge horizontal drag coefficient does
+    // force.y *= 0.1
+    // add to any existing push
+    if (this.pushForce) {
+      this.pushForce.add(force)
+    }
+    // otherwise start push
+    else {
+      this.pushForce = force.clone()
+      this.pushForceInit = false
+    }
   }
 
   setSessionAvatar(avatar) {
@@ -926,13 +949,13 @@ export class PlayerLocal extends Entity {
   }
 
   chat(msg) {
-    // this.nametag.active = false
+    this.nametag.active = false
     this.bubbleText.value = msg
     this.bubble.active = true
     clearTimeout(this.chatTimer)
     this.chatTimer = setTimeout(() => {
       this.bubble.active = false
-      // this.nametag.active = true
+      this.nametag.active = true
     }, 5000)
   }
 
@@ -943,6 +966,13 @@ export class PlayerLocal extends Entity {
       this.data.name = data.name
       changed = true
     }
+    if (data.hasOwnProperty('health')) {
+      this.data.health = data.health
+      this.nametag.health = data.health
+      this.world.events.emit('health', { playerId: this.data.id, health: data.health })
+      console.log('modify', data.health)
+      // changed = true
+    }
     if (data.hasOwnProperty('avatar')) {
       this.data.avatar = data.avatar
       avatarChanged = true
@@ -951,6 +981,14 @@ export class PlayerLocal extends Entity {
     if (data.hasOwnProperty('sessionAvatar')) {
       this.data.sessionAvatar = data.sessionAvatar
       avatarChanged = true
+    }
+    if (data.hasOwnProperty('ef')) {
+      if (this.data.effect) {
+        this.data.effect = null
+        this.onEffectEnd?.()
+        this.onEffectEnd = null
+      }
+      this.data.effect = data.ef
     }
     if (data.hasOwnProperty('roles')) {
       this.data.roles = data.roles
@@ -962,141 +1000,5 @@ export class PlayerLocal extends Entity {
     if (changed) {
       this.world.emit('player', this)
     }
-  }
-
-  getProxy() {
-    if (!this.proxy) {
-      this.proxy = createPlayerProxy(this)
-    }
-    return this.proxy
-  }
-}
-
-const PointerEvents = {
-  ENTER: 'pointerenter',
-  LEAVE: 'pointerleave',
-  DOWN: 'pointerdown',
-  UP: 'pointerup',
-}
-
-const CURSOR_DEFAULT = 'default'
-
-class PointerEvent {
-  constructor() {
-    this.type = null
-    this._propagationStopped = false
-  }
-
-  set(type) {
-    this.type = type
-    this._propagationStopped = false
-  }
-
-  stopPropagation() {
-    this._propagationStopped = true
-  }
-}
-
-class PointerState {
-  constructor() {
-    this.activePath = new Set()
-    this.event = new PointerEvent()
-    this.cursor = CURSOR_DEFAULT
-    this.pressedNodes = new Set()
-  }
-
-  update(hit, pointerPressed, pointerReleased) {
-    const newPath = hit ? this.getAncestorPath(hit) : []
-    const oldPath = Array.from(this.activePath)
-
-    // find divergence point
-    let i = 0
-    while (i < newPath.length && i < oldPath.length && newPath[i] === oldPath[i]) i++
-
-    // pointer leave events bubble up from leaf
-    for (let j = oldPath.length - 1; j >= i; j--) {
-      if (oldPath[j].onPointerLeave) {
-        this.event.set(PointerEvents.LEAVE)
-        try {
-          oldPath[j].onPointerLeave?.(this.event)
-        } catch (err) {
-          console.error(err)
-        }
-        // if (this.event._propagationStopped) break
-      }
-      this.activePath.delete(oldPath[j])
-    }
-
-    // pointer enter events bubble down from divergence
-    for (let j = i; j < newPath.length; j++) {
-      if (newPath[j].onPointerEnter) {
-        this.event.set(PointerEvents.ENTER)
-        try {
-          newPath[j].onPointerEnter?.(this.event)
-        } catch (err) {
-          console.error(err)
-        }
-        if (this.event._propagationStopped) break
-      }
-      this.activePath.add(newPath[j])
-    }
-
-    // set cursor - check from leaf to root for first defined cursor
-    let cursor = CURSOR_DEFAULT
-    if (newPath.length > 0) {
-      for (let i = newPath.length - 1; i >= 0; i--) {
-        if (newPath[i].cursor) {
-          cursor = newPath[i].cursor
-          break
-        }
-      }
-    }
-    if (cursor !== this.cursor) {
-      document.body.style.cursor = cursor
-      this.cursor = cursor
-    }
-
-    // handle pointer down events
-    if (pointerPressed) {
-      for (let i = newPath.length - 1; i >= 0; i--) {
-        const node = newPath[i]
-        if (node.onPointerDown) {
-          this.event.set(PointerEvents.DOWN)
-          try {
-            node.onPointerDown(this.event)
-          } catch (err) {
-            console.error(err)
-          }
-          this.pressedNodes.add(node)
-          if (this.event._propagationStopped) break
-        }
-      }
-    }
-
-    // handle pointer up events
-    if (pointerReleased) {
-      for (const node of this.pressedNodes) {
-        if (node.onPointerUp) {
-          this.event.set(PointerEvents.UP)
-          try {
-            node.onPointerUp(this.event)
-          } catch (err) {
-            console.error(err)
-          }
-          if (this.event._propagationStopped) break
-        }
-      }
-      this.pressedNodes.clear()
-    }
-  }
-
-  getAncestorPath(hit) {
-    const path = []
-    let node = hit.node?.resolveHit?.(hit) || hit.node
-    while (node) {
-      path.unshift(node)
-      node = node.parent
-    }
-    return path
   }
 }

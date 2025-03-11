@@ -17,14 +17,17 @@ function ensure(group) {
 function add(group, hits) {
   ensure(group)
   for (const otherGroup of hits) {
+    if (!otherGroup) continue
     ensure(otherGroup)
     Masks[group] |= Groups[otherGroup]
     // Masks[otherGroup] |= Groups[group]
   }
 }
 
+const playerCollision = process.env.PUBLIC_PLAYER_COLLISION === 'true'
+
 add('camera', ['environment'])
-add('player', ['environment', 'prop'])
+add('player', ['environment', 'prop', playerCollision ? 'player' : null])
 add('environment', ['camera', 'player', 'environment', 'prop', 'tool'])
 add('prop', ['environment', 'prop'])
 add('tool', ['environment', 'prop'])

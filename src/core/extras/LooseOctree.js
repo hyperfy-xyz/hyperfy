@@ -54,7 +54,7 @@ export class LooseOctree {
   }
 
   remove(item) {
-    item._node.remove(item)
+    item._node?.remove(item)
   }
 
   expand() {

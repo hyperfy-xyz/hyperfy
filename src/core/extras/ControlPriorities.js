@@ -10,9 +10,10 @@
  */
 export const ControlPriorities = {
   PLAYER: 0,
-  BUILDER: 1,
-  ENTITY: 2,
-  APP: 3,
+  ENTITY: 1,
+  APP: 2,
+  BUILDER: 3,
   ACTION: 4,
-  GUI: 5,
+  CORE_UI: 5,
+  POINTER: 6,
 }

@@ -170,3 +170,18 @@ A simple section header to help group fields together
   label: String,         // the label for the section header
 }
 ```
+
+### Buttons
+
+Displays one or more buttons that when clicked, execute something in the running app.
+
+```jsx
+{
+  type: 'buttons',
+  key: String,           // a unique `key` for this button
+  label: String,         // the label for the button
+  buttons: [
+    ...{ label: String, onClick: Function },
+  ]
+}
+```

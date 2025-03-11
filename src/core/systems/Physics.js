@@ -25,6 +25,9 @@ const triggerResult = {
   tag: null,
 }
 
+const overlapHitPool = []
+const overlapHits = []
+
 /**
  * Physics System
  *
@@ -75,7 +78,7 @@ export class Physics extends System {
           const e = this.contactEvent.get()
           if (!handle0.contactedHandles.has(handle1)) {
             e.tag = handle1.tag
-            e.player = handle1.player
+            e.playerId = handle1.playerId
             // e.isAuthority = handle1.isAuthority
             try {
               handle0.onContactStart?.(e)
@@ -86,7 +89,7 @@ export class Physics extends System {
           }
           if (!handle1.contactedHandles.has(handle0)) {
             e.tag = handle0.tag
-            e.player = handle0.player
+            e.playerId = handle0.playerId
             // e.isAuthority = handle0.isAuthority
             try {
               handle1.onContactStart?.(e)
@@ -99,7 +102,7 @@ export class Physics extends System {
           const e = this.contactEvent.get()
           if (handle0.contactedHandles.has(handle1)) {
             e.tag = handle1.tag
-            e.player = handle1.player
+            e.playerId = handle1.playerId
             // e.isAuthority = handle1.isAuthority
             try {
               handle0.onContactEnd?.(e)
@@ -110,7 +113,7 @@ export class Physics extends System {
           }
           if (handle1.contactedHandles.has(handle0)) {
             e.tag = handle0.tag
-            e.player = handle0.player
+            e.playerId = handle0.playerId
             // e.isAuthority = handle0.isAuthority
             try {
               handle1.onContactEnd?.(e)
@@ -138,7 +141,7 @@ export class Physics extends System {
         const otherHandle = this.handles.get(pair.otherShape.getActor().ptr)
         if (!triggerHandle || !otherHandle) continue
         triggerResult.tag = otherHandle.tag
-        triggerResult.player = otherHandle.player
+        triggerResult.playerId = otherHandle.playerId
         if (pair.status === PHYSX.PxPairFlagEnum.eNOTIFY_TOUCH_FOUND) {
           if (!otherHandle.triggeredHandles.has(triggerHandle)) {
             try {
@@ -294,7 +297,7 @@ export class Physics extends System {
           const e = this.contactEvent.get()
           for (const otherHandle of handle.contactedHandles) {
             e.tag = handle.tag
-            e.player = handle.player
+            e.playerId = handle.playerId
             try {
               otherHandle.onContactEnd?.(e)
             } catch (err) {
@@ -307,7 +310,7 @@ export class Physics extends System {
         if (handle.triggeredHandles.size) {
           for (const triggerHandle of handle.triggeredHandles) {
             triggerResult.tag = handle.tag
-            triggerResult.player = handle.player
+            triggerResult.playerId = handle.playerId
             try {
               triggerHandle.onTriggerLeave?.(triggerResult)
             } catch (err) {
@@ -371,7 +374,7 @@ export class Physics extends System {
     this.ignoreSetGlobalPose = false
   }
 
-  raycast(origin, direction, maxDistance, layerMask) {
+  raycast(origin, direction, maxDistance = Infinity, layerMask) {
     origin = origin.toPxVec3(this._pv1)
     direction = direction.toPxVec3(this._pv2)
     // this.queryFilterData.flags |= PHYSX.PxQueryFlagEnum.ePREFILTER | PHYSX.PxQueryFlagEnum.ePOSTFILTER // prettier-ignore
@@ -435,17 +438,36 @@ export class Physics extends System {
     // TODO: this.sweepResult.destroy() on this.destroy()
   }
 
-  overlap(geometry, origin, layerMask) {
+  // overlap(geometry, origin, layerMask) {
+  //   origin.toPxVec3(this.overlapPose.p)
+  //   this.queryFilterData.data.word0 = layerMask
+  //   this.queryFilterData.data.word1 = 0
+  //   const didHit = this.scene.overlap(geometry, this.overlapPose, this.overlapResult, this.queryFilterData)
+  //   if (didHit) {
+  //     // const hit = this.overlapResult.getAnyHit(0)
+  //     _overlapHit.actor = hit.actor
+  //     return _overlapHit
+  //   }
+  //   // TODO: this.overlapResult.destroy() on this.destroy()
+  // }
+
+  overlapSphere(radius, origin, layerMask) {
     origin.toPxVec3(this.overlapPose.p)
-    this.queryFilterData.data.word0 = layerMask
+    const geometry = getSphereGeometry(radius)
+    this.queryFilterData.data.word0 = layerMask // what to hit, eg Layers.player.group | Layers.environment.group
     this.queryFilterData.data.word1 = 0
     const didHit = this.scene.overlap(geometry, this.overlapPose, this.overlapResult, this.queryFilterData)
-    if (didHit) {
-      // const hit = this.overlapResult.getAnyHit(0)
-      _overlapHit.actor = hit.actor
-      return _overlapHit
+    if (!didHit) return []
+    overlapHits.length = 0
+    const numHits = this.overlapResult.getNbAnyHits()
+    for (let n = 0; n < numHits; n++) {
+      const nHit = this.overlapResult.getAnyHit(n)
+      const hit = getOrCreateOverlapHit(n)
+      hit.actor = nHit.actor
+      hit.handle = this.handles.get(nHit.actor.ptr)
+      overlapHits.push(hit)
     }
-    // TODO: this.overlapResult.destroy() on this.destroy()
+    return overlapHits
   }
 }
 
@@ -483,4 +505,34 @@ class ContactEvent {
   get() {
     return this.result
   }
+}
+
+const spheres = new Map()
+function getSphereGeometry(radius) {
+  let sphere = spheres.get(radius)
+  if (!sphere) {
+    sphere = new PHYSX.PxSphereGeometry(radius)
+    spheres.set(radius, sphere)
+  }
+  return sphere
+}
+
+function getOrCreateOverlapHit(idx) {
+  let hit = overlapHitPool[idx]
+  if (!hit) {
+    hit = {
+      actor: null,
+      handle: null,
+      proxy: {
+        get tag() {
+          return hit.handle?.tag || null
+        },
+        get playerId() {
+          return hit.handle?.playerId || null
+        },
+      },
+    }
+    overlapHitPool.push(hit)
+  }
+  return hit
 }

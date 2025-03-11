@@ -3,8 +3,6 @@ import { Entity } from './Entity'
 import { createNode } from '../extras/createNode'
 import { LerpQuaternion } from '../extras/LerpQuaternion'
 import { LerpVector3 } from '../extras/LerpVector3'
-import { createPlayerProxy } from '../extras/createPlayerProxy'
-import { Emotes } from '../extras/playerEmotes'
 
 let capsuleGeometry
 {
@@ -45,7 +43,7 @@ export class PlayerRemote extends Entity {
     // this.base.add(this.caps)
 
     this.aura = createNode('group')
-    this.nametag = createNode('nametag', { label: this.data.name, active: false })
+    this.nametag = createNode('nametag', { label: this.data.name, health: this.data.health, active: false })
     this.aura.add(this.nametag)
 
     this.bubble = createNode('ui', {
@@ -83,7 +81,14 @@ export class PlayerRemote extends Entity {
     this.teleport = 0
 
     this.world.setHot(this, true)
-    this.world.events.emit('enter', { player: this.getProxy() })
+
+    // on the client remote players emit enter events here.
+    // but on the server, enter events is delayed for players entering until after their snapshot is sent
+    // that way they can actually respond correctly to follow-through events.
+    // see ServerNetwork.js -> onConnection
+    if (this.world.network.isClient) {
+      this.world.events.emit('enter', { playerId: this.data.id })
+    }
   }
 
   applyAvatar() {
@@ -133,6 +138,16 @@ export class PlayerRemote extends Entity {
     }
   }
 
+  setEffect(effect, onEnd) {
+    if (this.data.effect) {
+      this.data.effect = null
+      this.onEffectEnd?.()
+      this.onEffectEnd = null
+    }
+    this.data.effect = effect
+    this.onEffectEnd = onEnd
+  }
+
   modify(data) {
     let avatarChanged
     if (data.hasOwnProperty('t')) {
@@ -150,11 +165,21 @@ export class PlayerRemote extends Entity {
       this.data.emote = data.e
     }
     if (data.hasOwnProperty('ef')) {
+      if (this.data.effect) {
+        this.data.effect = null
+        this.onEffectEnd?.()
+        this.onEffectEnd = null
+      }
       this.data.effect = data.ef
     }
     if (data.hasOwnProperty('name')) {
       this.data.name = data.name
       this.nametag.label = data.name
+    }
+    if (data.hasOwnProperty('health')) {
+      this.data.health = data.health
+      this.nametag.health = data.health
+      this.world.events.emit('health', { playerId: this.data.id, health: data.health })
     }
     if (data.hasOwnProperty('avatar')) {
       this.data.avatar = data.avatar
@@ -184,14 +209,14 @@ export class PlayerRemote extends Entity {
   }
 
   destroy(local) {
-    if (this.dead) return
-    this.dead = true
+    if (this.destroyed) return
+    this.destroyed = true
 
     clearTimeout(this.chatTimer)
     this.base.deactivate()
     this.avatar = null
     this.world.setHot(this, false)
-    this.world.events.emit('leave', { player: this.getProxy() })
+    this.world.events.emit('leave', { playerId: this.data.id })
     this.aura.deactivate()
     this.aura = null
 
@@ -200,12 +225,5 @@ export class PlayerRemote extends Entity {
     if (local) {
       this.world.network.send('entityRemoved', this.data.id)
     }
-  }
-
-  getProxy() {
-    if (!this.proxy) {
-      this.proxy = createPlayerProxy(this)
-    }
-    return this.proxy
   }
 }

@@ -57,7 +57,7 @@ export async function exportApp(blueprint, resolveFile) {
   }
 
   // convert header to Uint8Array
-  const headerBytes = str2ab(JSON.stringify(header))
+  const headerBytes = new TextEncoder().encode(JSON.stringify(header))
 
   // create header size prefix (4 bytes)
   const headerSize = new Uint8Array(4)
@@ -84,7 +84,7 @@ export async function importApp(file) {
 
   // read header
   const bytes = new Uint8Array(buffer.slice(4, 4 + headerSize))
-  const header = JSON.parse(ab2str(bytes))
+  const header = JSON.parse(new TextDecoder().decode(bytes))
 
   // extract files
   let position = 4 + headerSize
@@ -107,18 +107,4 @@ export async function importApp(file) {
     blueprint: header.blueprint,
     assets,
   }
-}
-
-function str2ab(str) {
-  // convert string to Uint8Array
-  const buf = new Uint8Array(str.length)
-  for (let i = 0; i < str.length; i++) {
-    buf[i] = str.charCodeAt(i)
-  }
-  return buf
-}
-
-function ab2str(buf) {
-  // convert Uint8Array to string
-  return String.fromCharCode.apply(null, buf)
 }

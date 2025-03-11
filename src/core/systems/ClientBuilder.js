@@ -11,7 +11,6 @@ import { importApp } from '../extras/appTools'
 import { DEG2RAD, RAD2DEG } from '../extras/general'
 
 const FORWARD = new THREE.Vector3(0, 0, -1)
-const MAX_UPLOAD_SIZE = parseInt(process.env.PUBLIC_MAX_UPLOAD_SIZE || '100')
 const SNAP_DISTANCE = 1
 const SNAP_DEGREES = 5
 const PROJECT_SPEED = 10
@@ -40,6 +39,8 @@ export class ClientBuilder extends System {
     this.target.rotation.reorder('YXZ')
     this.lastMoveSendTime = 0
 
+    this.undos = []
+
     this.dropTarget = null
     this.file = null
   }
@@ -55,6 +56,15 @@ export class ClientBuilder extends System {
 
   start() {
     this.control = this.world.controls.bind({ priority: ControlPriorities.BUILDER })
+    this.control.mouseLeft.onPress = () => {
+      // pointer lock requires user-gesture in safari
+      // so this can't be done during update cycle
+      if (!this.control.pointer.locked) {
+        this.control.pointer.lock()
+        this.justPointerLocked = true
+        return true // capture
+      }
+    }
     this.updateActions()
   }
 
@@ -102,7 +112,7 @@ export class ClientBuilder extends System {
       this.toggle()
     }
     // deselect if dead
-    if (this.selected?.dead) {
+    if (this.selected?.destroyed) {
       this.select(null)
     }
     // deselect if stolen
@@ -113,9 +123,18 @@ export class ClientBuilder extends System {
     if (!this.enabled) {
       return
     }
-    // inspect
+    // inspect in pointer-lock
     if (!this.selected && this.control.keyR.pressed) {
       const entity = this.getEntityAtReticle()
+      if (entity) {
+        this.select(null)
+        this.control.pointer.unlock()
+        this.world.emit('inspect', entity)
+      }
+    }
+    // inspect out of pointer-lock
+    if (!this.selected && !this.control.pointer.locked && this.control.mouseRight.pressed) {
+      const entity = this.getEntityAtPointer()
       if (entity) {
         this.select(null)
         this.control.pointer.unlock()
@@ -166,18 +185,26 @@ export class ClientBuilder extends System {
       }
     }
     // grab
-    if (this.control.pointer.locked && this.control.mouseLeft.pressed && !this.selected) {
+    if (!this.justPointerLocked && this.control.pointer.locked && this.control.mouseLeft.pressed && !this.selected) {
       const entity = this.getEntityAtReticle()
       if (entity?.isApp && !entity.data.pinned) {
+        this.addUndo({
+          name: 'move-entity',
+          entityId: entity.data.id,
+          position: entity.data.position.slice(),
+        })
         this.select(entity)
       }
     }
     // place
-    else if (this.control.pointer.locked && this.control.mouseLeft.pressed && this.selected) {
+    else if (
+      (!this.control.pointer.locked && this.selected) ||
+      (this.control.pointer.locked && this.control.mouseLeft.pressed && this.selected)
+    ) {
       this.select(null)
     }
     // duplicate
-    if (this.control.pointer.locked && this.control.mouseRight.pressed) {
+    if (!this.justPointerLocked && this.control.pointer.locked && this.control.mouseRight.pressed) {
       const entity = this.selected || this.getEntityAtReticle()
       if (entity?.isApp) {
         let blueprintId = entity.data.blueprint
@@ -216,6 +243,10 @@ export class ClientBuilder extends System {
         }
         const dup = this.world.entities.add(data, true)
         this.select(dup)
+        this.addUndo({
+          name: 'remove-entity',
+          entityId: data.id,
+        })
       }
     }
     // destroy
@@ -223,8 +254,16 @@ export class ClientBuilder extends System {
       const entity = this.selected || this.getEntityAtReticle()
       if (entity?.isApp && !entity.data.pinned) {
         this.select(null)
+        this.addUndo({
+          name: 'add-entity',
+          data: cloneDeep(entity.data),
+        })
         entity?.destroy(true)
       }
+    }
+    // undo
+    if (this.control.keyZ.pressed && (this.control.metaLeft.down || this.control.controlLeft.down)) {
+      this.undo()
     }
     // TODO: move up/down
     // this.selected.position.y -= this.control.pointer.delta.y * delta * 0.5
@@ -287,6 +326,44 @@ export class ClientBuilder extends System {
         this.lastMoveSendTime = 0
       }
     }
+
+    if (this.justPointerLocked) {
+      this.justPointerLocked = false
+    }
+  }
+
+  addUndo(action) {
+    this.undos.push(action)
+    if (this.undos.length > 50) {
+      this.undos.shift()
+    }
+  }
+
+  undo() {
+    const undo = this.undos.pop()
+    if (!undo) return
+    if (this.selected) this.select(null)
+    if (undo.name === 'add-entity') {
+      this.world.entities.add(undo.data, true)
+      return
+    }
+    if (undo.name === 'move-entity') {
+      const entity = this.world.entities.get(undo.entityId)
+      if (!entity) return
+      entity.data.position = undo.position
+      this.world.network.send('entityModified', {
+        id: undo.entityId,
+        position: entity.data.position,
+      })
+      entity.build()
+      return
+    }
+    if (undo.name === 'remove-entity') {
+      const entity = this.world.entities.get(undo.entityId)
+      if (!entity) return
+      entity.destroy(true)
+      return
+    }
   }
 
   toggle(enabled) {
@@ -296,6 +373,7 @@ export class ClientBuilder extends System {
     this.enabled = enabled
     if (!this.enabled) this.select(null)
     this.updateActions()
+    this.world.emit('build-mode', enabled)
   }
 
   select(app) {
@@ -342,6 +420,16 @@ export class ClientBuilder extends System {
 
   getEntityAtReticle() {
     const hits = this.world.stage.raycastReticle()
+    let entity
+    for (const hit of hits) {
+      entity = hit.getEntity?.()
+      if (entity) break
+    }
+    return entity
+  }
+
+  getEntityAtPointer() {
+    const hits = this.world.stage.raycastPointer(this.control.pointer.position)
     let entity
     for (const hit of hits) {
       entity = hit.getEntity?.()
@@ -420,13 +508,13 @@ export class ClientBuilder extends System {
     // ensure we in build mode
     this.toggle(true)
     // add it!
-    const maxSize = MAX_UPLOAD_SIZE * 1024 * 1024
+    const maxSize = this.world.network.maxUploadSize * 1024 * 1024
     if (file.size > maxSize) {
       this.world.chat.add({
         id: uuid(),
         from: null,
         fromId: null,
-        body: `File size too large (>${MAX_UPLOAD_SIZE}mb)`,
+        body: `File size too large (>${this.world.network.maxUploadSize}mb)`,
         createdAt: moment().toISOString(),
       })
       console.error(`File too large. Maximum size is ${maxSize / (1024 * 1024)}MB`)

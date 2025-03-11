@@ -9,6 +9,29 @@ ui.backgroundColor = 'rgba(0, 0, 0, 0.5)'
 
 ## Properties
 
+### `.space`: String
+
+Whether this UI should be rendered in `world` space or `screen` space.
+When `world`, a plane geometry is physically placed in the world.
+When `screen`, the canvas is drawn directly on the screen.
+Defaults to `world`.
+
+NOTE: when using `screen`, the `.position` value now represents a ratio from 0 to 1 on each axis. For example `position.x = 1` is the far right of the screen and `position.x = 0` is the far left. Use this in combination with the `pivot` and `offset` values.
+
+```jsx
+/**
+ * Example:
+ * The following screen-space UI is rendered in the top left of the 
+ * screen, 20px away from both edges.
+*/
+const ui = app.create('ui', {
+  space: 'screen',
+  pivot: 'top-right',
+  position: [1, 0, 0] // far right
+  offset: [-20, 20, 0] // 20px left, 20px down
+})
+```
+
 ### `.width`: Number
 
 The width of the UI canvas in pixels. Defaults to `100`.
@@ -41,6 +64,16 @@ Makes the UI face the camera. Can be `null`, `full` or `y-axis`. Default to `nul
 Determines where the "center" of the UI is.
 Options are: `top-left`, `top-center`, `top-right`, `center-left`, `center`, `center-right`, `bottom-left`, `bottom-center`, `bottom-right`.
 Defaults to `center`.
+
+### `.offset`: Vector3
+
+Only applicable when using screen-space.
+The offset in pixels applied after the `position` value.
+
+### `.pointerEvents`: Boolean
+
+Whether the UI should receive or ignore pointer events. Defaults to `true`.
+If you are building informational screen-space UI that does not need to respond to pointer events, this should be set to `false` for an improved user experience.
 
 ### `.backgroundColor`: String
 

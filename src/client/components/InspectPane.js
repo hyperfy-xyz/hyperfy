@@ -46,6 +46,7 @@ import {
   InputText,
   InputTextarea,
 } from './Inputs'
+import { isArray } from 'lodash-es'
 
 export function InspectPane({ world, entity }) {
   if (entity.isApp) {
@@ -401,7 +402,7 @@ function AppPaneMain({ world, app, blueprint, canEdit }) {
         <div
           className='amain-image'
           css={css`
-            background-image: ${blueprint.image ? `url(${resolveURL(blueprint.image.url)})` : 'none'};
+            background-image: ${blueprint.image ? `url(${world.resolveURL(blueprint.image.url)})` : 'none'};
           `}
         />
       )}
@@ -410,7 +411,7 @@ function AppPaneMain({ world, app, blueprint, canEdit }) {
         <div className='amain-author'>
           <span>by </span>
           {blueprint.url && (
-            <a href={resolveURL(blueprint.url)} target='_blank'>
+            <a href={world.resolveURL(blueprint.url)} target='_blank'>
               {blueprint.author || 'Unknown'}
             </a>
           )}
@@ -785,10 +786,15 @@ const fieldTypes = {
   switch: FieldSwitch,
   dropdown: FieldDropdown,
   range: FieldRange,
+  button: FieldButton,
+  buttons: FieldButtons,
 }
 
 function Field({ world, props, field, value, modify }) {
-  if (field.when) {
+  if (field.hidden) {
+    return null
+  }
+  if (field.when && isArray(field.when)) {
     for (const rule of field.when) {
       if (rule.op === 'eq' && props[rule.key] !== rule.value) {
         return null
@@ -864,6 +870,7 @@ function FieldNumber({ world, field, value, modify }) {
   return (
     <FieldWithLabel label={field.label}>
       <InputNumber
+        placeholder={field.placeholder}
         value={value}
         onChange={value => modify(field.key, value)}
         dp={field.dp}
@@ -915,16 +922,61 @@ function FieldDropdown({ world, field, value, modify }) {
   )
 }
 
-function resolveURL(url) {
-  url = url.trim()
-  if (url.startsWith('asset://')) {
-    return url.replace('asset:/', process.env.PUBLIC_ASSETS_URL)
-  }
-  if (url.match(/^https?:\/\//i)) {
-    return url
-  }
-  if (url.startsWith('//')) {
-    return `https:${url}`
-  }
-  return `https://${url}`
+function FieldButton({ world, field, value, modify }) {
+  return (
+    <FieldWithLabel label={''}>
+      <div
+        css={css`
+          background: #252630;
+          border-radius: 10px;
+          height: 34px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          font-size: 14px;
+          &:hover {
+            cursor: pointer;
+            background: #30323e;
+          }
+        `}
+        onClick={field.onClick}
+      >
+        <span>{field.label}</span>
+      </div>
+    </FieldWithLabel>
+  )
+}
+
+function FieldButtons({ world, field, value, modify }) {
+  return (
+    <FieldWithLabel label={field.label}>
+      <div
+        css={css`
+          height: 34px;
+          display: flex;
+          gap: 5px;
+          .fieldbuttons-button {
+            flex: 1;
+            background: #252630;
+            border-radius: 10px;
+            height: 34px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 14px;
+            &:hover {
+              cursor: pointer;
+              background: #30323e;
+            }
+          }
+        `}
+      >
+        {field.buttons.map(button => (
+          <div key={button.label} className='fieldbuttons-button' onClick={button.onClick}>
+            <span>{button.label}</span>
+          </div>
+        ))}
+      </div>
+    </FieldWithLabel>
+  )
 }
