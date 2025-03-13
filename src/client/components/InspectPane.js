@@ -789,7 +789,10 @@ const fieldTypes = {
   button: FieldButton,
   buttons: FieldButtons,
   array: FieldArray,
-  arrayfile: FieldArrayFile
+  arrayFile: FieldArrayFile,
+  arrayNumber: FieldArrayNumber,
+  vector3: FieldVector3,
+  arrayRange: FieldArrayRange,
 }
 
 function Field({ world, props, field, value, modify }) {
@@ -886,7 +889,7 @@ function FieldArray({ world, field, value, modify }) {
                 }
               `}
             >
-              Remove
+              ➖
             </div>
           </div>
         ))}
@@ -907,6 +910,214 @@ function FieldArray({ world, field, value, modify }) {
           `}
         >
           ➖
+        </div>
+      </div>
+    </FieldWithLabel>
+  );
+}
+
+// FieldArrayNumber: for editing an array of numbers using InputNumber.
+function FieldArrayNumber({ world, field, value, modify }) {
+  const items = Array.isArray(value) ? value : [];
+  
+  const handleChange = (index, newValue) => {
+    const newArray = [...items];
+    newArray[index] = newValue;
+    modify(field.key, newArray);
+  };
+
+  const addItem = () => {
+    modify(field.key, [...items, 0]); // Default new number value: 0.
+  };
+
+  const removeItem = (index) => {
+    modify(field.key, items.filter((_, i) => i !== index));
+  };
+
+  return (
+    <FieldWithLabel label={field.label}>
+      <div>
+        {items.map((item, index) => (
+          <div
+            key={index}
+            css={css`
+              display: flex;
+              align-items: center;
+              margin-bottom: 8px;
+            `}
+          >
+            <InputNumber
+              value={item}
+              onChange={(newVal) => handleChange(index, newVal)}
+              placeholder={field.placeholder || 'Enter number'}
+              dp={field.dp}
+              min={field.min}
+              max={field.max}
+              step={field.step}
+            />
+            <div
+              onClick={() => removeItem(index)}
+              css={css`
+                margin-left: 8px;
+                background: #252630;
+                border-radius: 5px;
+                padding: 4px 8px;
+                font-size: 12px;
+                cursor: pointer;
+                &:hover {
+                  background: #30323e;
+                }
+              `}
+            >
+              ➖
+            </div>
+          </div>
+        ))}
+        <div
+          onClick={addItem}
+          css={css`
+            background: #252630;
+            border-radius: 5px;
+            padding: 6px 10px;
+            font-size: 14px;
+            cursor: pointer;
+            text-align: center;
+            &:hover {
+              background: #30323e;
+            }
+            width: fit-content;
+            margin-top: 8px;
+          `}
+        >
+          Add Number
+        </div>
+      </div>
+    </FieldWithLabel>
+  );
+}
+
+// FieldVector3: for editing a 3D vector using three InputNumber fields.
+function FieldVector3({ world, field, value, modify }) {
+  // Ensure value is an object with x, y, and z. Default to { x: 0, y: 0, z: 0 }.
+  const vector = value && typeof value === 'object' ? value : { x: 0, y: 0, z: 0 };
+
+  const handleChange = (axis, newValue) => {
+    modify(field.key, { ...vector, [axis]: newValue });
+  };
+
+  return (
+    <FieldWithLabel label={field.label}>
+      <div
+        css={css`
+          display: flex;
+          gap: 8px;
+        `}
+      >
+        <InputNumber
+          value={vector.x}
+          onChange={(newVal) => handleChange('x', newVal)}
+          placeholder="x"
+          dp={field.dp}
+          min={field.min}
+          max={field.max}
+          step={field.step}
+        />
+        <InputNumber
+          value={vector.y}
+          onChange={(newVal) => handleChange('y', newVal)}
+          placeholder="y"
+          dp={field.dp}
+          min={field.min}
+          max={field.max}
+          step={field.step}
+        />
+        <InputNumber
+          value={vector.z}
+          onChange={(newVal) => handleChange('z', newVal)}
+          placeholder="z"
+          dp={field.dp}
+          min={field.min}
+          max={field.max}
+          step={field.step}
+        />
+      </div>
+    </FieldWithLabel>
+  );
+}
+
+// FieldArrayRange: for editing an array of range values using InputRange.
+function FieldArrayRange({ world, field, value, modify }) {
+  const items = Array.isArray(value) ? value : [];
+
+  const handleChange = (index, newValue) => {
+    const newArray = [...items];
+    newArray[index] = newValue;
+    modify(field.key, newArray);
+  };
+
+  const addItem = () => {
+    // Default new value is the minimum, or 0 if not provided.
+    modify(field.key, [...items, field.min !== undefined ? field.min : 0]);
+  };
+
+  const removeItem = (index) => {
+    modify(field.key, items.filter((_, i) => i !== index));
+  };
+
+  return (
+    <FieldWithLabel label={field.label}>
+      <div>
+        {items.map((item, index) => (
+          <div
+            key={index}
+            css={css`
+              display: flex;
+              align-items: center;
+              margin-bottom: 8px;
+            `}
+          >
+            <InputRange
+              value={item}
+              onChange={(newVal) => handleChange(index, newVal)}
+              min={field.min}
+              max={field.max}
+              step={field.step}
+            />
+            <div
+              onClick={() => removeItem(index)}
+              css={css`
+                margin-left: 8px;
+                background: #252630;
+                border-radius: 5px;
+                padding: 4px 8px;
+                font-size: 12px;
+                cursor: pointer;
+                &:hover {
+                  background: #30323e;
+                }
+              `}
+            >
+              ➖
+            </div>
+          </div>
+        ))}
+        <div
+          onClick={addItem}
+          css={css`
+            background: #252630;
+            border-radius: 5px;
+            padding: 6px 10px;
+            font-size: 14px;
+            cursor: pointer;
+            text-align: center;
+            &:hover {
+              background: #30323e;
+            }
+            width: fit-content;
+            margin-top: 8px;
+          `}
+        >
+          Add Range
         </div>
       </div>
     </FieldWithLabel>
