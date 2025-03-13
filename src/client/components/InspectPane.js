@@ -788,6 +788,8 @@ const fieldTypes = {
   range: FieldRange,
   button: FieldButton,
   buttons: FieldButtons,
+  array: FieldArray,
+  arrayfile: FieldArrayFile
 }
 
 function Field({ world, props, field, value, modify }) {
@@ -829,6 +831,171 @@ function FieldWithLabel({ label, children }) {
     </div>
   )
 }
+
+function FieldArray({ world, field, value, modify }) {
+  // Ensure we have an array value; if not, default to an empty array.
+  const items = Array.isArray(value) ? value : [];
+
+  // Update a specific item.
+  const handleChange = (index, newValue) => {
+    const newArray = [...items];
+    newArray[index] = newValue;
+    modify(field.key, newArray);
+  };
+
+  // Add a new empty item.
+  const addItem = () => {
+    const newArray = [...items, ''];
+    modify(field.key, newArray);
+  };
+
+  // Remove an item.
+  const removeItem = (index) => {
+    const newArray = items.filter((_, i) => i !== index);
+    modify(field.key, newArray);
+  };
+
+  return (
+    <FieldWithLabel label={field.label}>
+      <div>
+        {items.map((item, index) => (
+          <div
+            key={index}
+            css={css`
+              display: flex;
+              align-items: center;
+              margin-bottom: 8px;
+            `}
+          >
+            <InputText
+              value={item}
+              onChange={(newVal) => handleChange(index, newVal)}
+              placeholder={field.placeholder || 'Enter value'}
+            />
+            <div
+              onClick={() => removeItem(index)}
+              css={css`
+                margin-left: 8px;
+                background: #252630;
+                border-radius: 5px;
+                padding: 4px 8px;
+                font-size: 12px;
+                cursor: pointer;
+                &:hover {
+                  background: #30323e;
+                }
+              `}
+            >
+              Remove
+            </div>
+          </div>
+        ))}
+        <div
+          onClick={addItem}
+          css={css`
+            background: #252630;
+            border-radius: 5px;
+            padding: 6px 10px;
+            font-size: 14px;
+            cursor: pointer;
+            text-align: center;
+            &:hover {
+              background: #30323e;
+            }
+            width: fit-content;
+            margin-top: 8px;
+          `}
+        >
+          ➖
+        </div>
+      </div>
+    </FieldWithLabel>
+  );
+}
+
+// FieldArrayFile: for editing an array of file inputs using InputFile.
+function FieldArrayFile({ world, field, value, modify }) {
+  // Ensure we have an array value; if not, default to an empty array.
+  const items = Array.isArray(value) ? value : [];
+
+  // Update a specific file.
+  const handleChange = (index, newValue) => {
+    const newArray = [...items];
+    newArray[index] = newValue;
+    modify(field.key, newArray);
+  };
+
+  // Add a new file input (initially null).
+  const addItem = () => {
+    const newArray = [...items, null];
+    modify(field.key, newArray);
+  };
+
+  // Remove a file input.
+  const removeItem = (index) => {
+    const newArray = items.filter((_, i) => i !== index);
+    modify(field.key, newArray);
+  };
+
+  return (
+    <FieldWithLabel label={field.label}>
+      <div>
+        {items.map((item, index) => (
+          <div
+            key={index}
+            css={css`
+              display: flex;
+              align-items: center;
+              margin-bottom: 8px;
+            `}
+          >
+            <InputFile
+              world={world}
+              kind={field.kind}
+              value={item}
+              onChange={(newVal) => handleChange(index, newVal)}
+            />
+            <div
+              onClick={() => removeItem(index)}
+              css={css`
+                margin-left: 8px;
+                background: #252630;
+                border-radius: 5px;
+                padding: 4px 8px;
+                font-size: 12px;
+                cursor: pointer;
+                &:hover {
+                  background: #30323e;
+                }
+              `}
+            >
+              ➖
+            </div>
+          </div>
+        ))}
+        <div
+          onClick={addItem}
+          css={css`
+            background: #252630;
+            border-radius: 5px;
+            padding: 6px 10px;
+            font-size: 14px;
+            cursor: pointer;
+            text-align: center;
+            &:hover {
+              background: #30323e;
+            }
+            width: fit-content;
+            margin-top: 8px;
+          `}
+        >
+          Add File
+        </div>
+      </div>
+    </FieldWithLabel>
+  );
+}
+
 
 function FieldSection({ world, field, value, modify }) {
   return (
