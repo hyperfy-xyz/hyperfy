@@ -909,7 +909,7 @@ function FieldArray({ world, field, value, modify }) {
             margin-top: 8px;
           `}
         >
-          ➖
+          Add Item
         </div>
       </div>
     </FieldWithLabel>
