@@ -1,5 +1,12 @@
 # Hyperfy ⚡️
 
+Give [this Hyperfy v2 repo](https://github.com/hyperfy-xyz/hyperfy) a ⭐Star⭐.
+
+For updates during development, follow on X [@hyperfy_io](https://x.com/hyperfy_io).
+
+For docs, resources, and tutorial videos... check out [Hyperfy.how](https://hyperfy.how/)
+
+
 ## Overview
 
 <div align="center">
