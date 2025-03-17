@@ -6,6 +6,7 @@ For updates during development, follow on X [@hyperfy_io](https://x.com/hyperfy_
 
 For docs, resources, and tutorial videos... check out [Hyperfy.how](https://hyperfy.how/)
 
+Visit the v2 sandbox at [play.hyperfy.xyz](https://play.hyperfy.xyz/).
 
 ## Overview
 
