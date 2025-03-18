@@ -1,0 +1,852 @@
+{
+  "Action": {
+    "title": "Action",
+    "description": "An action is something that can be performed in the world.",
+    "properties": {
+      ".label": {
+        "type": "String",
+        "description": "The label shown to the user when they are nearby. Defaults to 'Interact'."
+      },
+      ".distance": {
+        "type": "Number",
+        "description": "The distance in meters that action should be displayed. The engine will only ever show this if they are nearby AND there is no other action that is closer. Defaults to 3."
+      },
+      ".duration": {
+        "type": "Number",
+        "description": "How long the player must hold down the interact button to trigger it, in seconds. Defaults to 0.5."
+      },
+      ".onStart": {
+        "type": "Function",
+        "description": "The function to call when the interact button is first pressed."
+      },
+      ".onTrigger": {
+        "type": "Function",
+        "description": "The function to call when the interact button has been held down for the full duration."
+      },
+      ".onCancel": {
+        "type": "Function",
+        "description": "The function to call if the interact button is released before the full duration."
+      },
+      ".{...Node}": {
+        "description": "Inherits all [Node](/ref/Node) properties"
+      }
+    }
+  },
+  "Anchor": {
+    "title": "Anchor",
+    "description": "An anchor can be used to attach players to them, eg for seating or vehicles.",
+    "details": "For the most part, an anchor acts just like a group node. But more importantly they can be used to attach players to them, eg for seating or vehicles.\n\nWhen creating an anchor, be sure to give it a unique ID to ensure that every client has the same ID for the player to be anchored to:\n\n```jsx\nconst seat = app.create('anchor', { id: 'seat' })\ncar.add(seat)\n\n// later...\nplayer.setEffect({ anchor: seat })\n```\n\nFor more information about effects, see [Player](/ref/player).",
+    "properties": {
+      ".{...Node}": {
+        "description": "Inherits all [Node](/ref/node) properties"
+      }
+    }
+  },
+  "App": {
+    "title": "App",
+    "description": "Global app variable.",
+    "properties": {
+      ".instanceId": {
+        "type": "String",
+        "description": "The instance ID of the current app. Every app has its own unique ID that is shared across all clients and the server."
+      },
+      ".version": {
+        "type": "String",
+        "description": "The version of the app instance. This number is incremented whenever the app is modified, which includes but is not limited to updating scripts and models."
+      },
+      ".state": {
+        "type": "Object",
+        "description": "A plain old JavaScript object that you can use to store state in. The server's state object is sent to all new clients that connect in their initial snapshot, allowing clients to initialize correctly, e.g., in the right position/mode."
+      },
+      ".{...Node}": {
+        "description": "Inherits all [Node](/ref/node) properties"
+      }
+    },
+    "methods": {
+      ".on(name, callback)": {
+        "description": "Subscribes to custom networked app events and engine update events like `update`, `fixedUpdate`, `lateUpdate`. Custom network events are received when a different client/server sends an event with `app.send(event, data)`.\n\n**IMPORTANT:** Only subscribe to update events when they are needed. The engine is optimized to completely skip over large amounts of apps that don't need to receive update events."
+      },
+      ".off(name, callback)": {
+        "description": "Unsubscribes from custom events and engine update events.\n\n**IMPORTANT:** Be sure to unsubscribe from update events when they are not needed. The engine is optimized to completely skip over large amounts of apps that don't need to receive update events."
+      },
+      ".send(name, data, skipNetworkId)": {
+        "description": "Sends an event across the network. If the caller is on the client, the event is sent to the server. The third argument `skipNetworkId` is a no-op here. If the caller is on the server, the event is sent to all clients, with the `skipNetworkId` argument allowing you to skip sending to one specific client."
+      },
+      ".get(nodeId)": {
+        "type": "Node",
+        "description": "Finds and returns any node with the matching ID from the model the app is using. If the model is made with Blender, this is the object 'name'.\n\n**NOTE:** Blender GLTF exporter renames objects in some cases, e.g., by removing spaces. Best practice is to simply name everything in UpperCamelCase with no other characters."
+      },
+      ".create(nodeName)": {
+        "type": "Node",
+        "description": "Creates and returns a node of the specified name."
+      },
+      ".control(options)": {
+        "type": "Control",
+        "description": "Provides control to a client to respond to inputs and move the camera, etc."
+      },
+      ".configure(fields)": {
+        "description": "Configures custom UI for the app. See [Props](/ref/Props) for more info."
+      }
+    }
+  },
+  "Audio": {
+    "title": "Audio",
+    "description": "Represents a single audio clip that can be played in the world.",
+    "properties": {
+      ".src": {
+        "type": "String",
+        "description": "An asset URL (e.g., from props) or an absolute URL to an audio file, currently only `mp3` files are supported."
+      },
+      ".volume": {
+        "type": "Number",
+        "description": "The audio volume. Defaults to `1`."
+      },
+      ".loop": {
+        "type": "Boolean",
+        "description": "Whether audio should loop. Defaults to `false`."
+      },
+      ".group": {
+        "type": "Enum('music', 'sfx')",
+        "description": "The type of audio being played. Choose `music` for ambient sounds or live event music, etc. Choose `sfx` for short sound effects that happen throughout the world. Users are able to adjust the global audio volume for these groups independently. Defaults to `music`."
+      },
+      ".spatial": {
+        "type": "Boolean",
+        "description": "Whether music should be played spatially and heard by people nearby. Defaults to `true`."
+      },
+      ".distanceModel": {
+        "type": "Enum('linear', 'inverse', 'exponential')",
+        "description": "When spatial is enabled, the distance model to use. Defaults to `inverse`."
+      },
+      ".refDistance": {
+        "type": "Number",
+        "description": "When spatial is enabled, the reference distance to use. Defaults to `1`."
+      },
+      ".maxDistance": {
+        "type": "Number",
+        "description": "When spatial is enabled, the max distance to use. Defaults to `40`."
+      },
+      ".rolloffFactor": {
+        "type": "Number",
+        "description": "When spatial is enabled, the rolloff factor to use. Defaults to `3`."
+      },
+      ".coneInnerAngle": {
+        "type": "Number",
+        "description": "When spatial is enabled, the cone inner angle to use. Defaults to `360`."
+      },
+      ".coneOuterAngle": {
+        "type": "Number",
+        "description": "When spatial is enabled, the cone outer angle to use. Defaults to `360`."
+      },
+      ".coneOuterGain": {
+        "type": "Number",
+        "description": "When spatial is enabled, the cone outer gain to use. Defaults to `0`."
+      },
+      ".currentTime": {
+        "type": "Number",
+        "description": "Gets and sets the current playback time, in seconds."
+      },
+      ".{...Node}": {
+        "description": "Inherits all [Node](/ref/Node) properties"
+      }
+    },
+    "methods": {
+      ".play()": {
+        "description": "Plays the audio.\n**NOTE:** If no click gesture has ever happened within the world, playback won't begin until it has."
+      },
+      ".pause()": {
+        "description": "Pauses the audio, retaining the current time."
+      },
+      ".stop()": {
+        "type": "void",
+        "description": "Stops the audio and resets the time back to zero."
+      }
+    }
+  },
+  "Avatar": {
+    "title": "Avatar",
+    "description": "Renders a VRM avatar.",
+    "properties": {
+      ".src": {
+        "type": "String",
+        "description": "An asset URL (e.g., from props) or an absolute URL to a `.vrm` file."
+      },
+      ".emote": {
+        "type": "String",
+        "description": "An emote URL (e.g., from props) or an absolute URL to a `.glb` file with an emote animation."
+      },
+      ".{...Node}": {
+        "description": "Inherits all [Node](/docs/ref/Node.md) properties"
+      }
+    },
+    "methods": {
+      ".getHeight()": {
+        "type": "Number",
+        "description": "Gets the height of the avatar in meters. This might be `null` if the avatar hasn't loaded. Read-only."
+      },
+      ".getBoneTransform(boneName)": {
+        "type": "Matrix4",
+        "description": "Returns a matrix of the bone transform in world space.\n\n```jsx\nconst matrix = avatar.getBoneTransform('rightShoulder')\nweapon.position.setFromMatrixPosition(matrix)\nweapon.quaternion.setFromRotationMatrix(matrix)\n```\n\nNote that VRM avatars have required and optional bones, and in some cases including avatars are loading this method may return null.\n\nThe VRM spec defines the following bones as required:\n\n```\nhips, spine, chest, neck, head, leftShoulder, leftUpperArm, leftLowerArm, leftHand, rightShoulder, rightUpperArm, rightLowerArm, rightHand, leftUpperLeg, leftLowerLeg, leftFoot, leftToes, rightUpperLeg, rightLowerLeg, rightFoot, rightToes\n```"
+      }
+    }
+  },
+  "Collider": {
+    "title": "Collider",
+    "description": "A collider connects to its parent rigidbody to simulate under physics.",
+    "properties": {
+      ".type": {
+        "type": "String",
+        "description": "The type of collider, must be `box`, `sphere` or `geometry`. Defaults to `box`."
+      },
+      ".radius": {
+        "type": "Number",
+        "description": "When type is `sphere`, sets the radius of the sphere. Defaults to `0.5`."
+      },
+      ".convex": {
+        "type": "Boolean",
+        "description": "Whether the geometry should be considered 'convex'. If disabled, the mesh will act as a trimesh. Defaults to `false`.\n\nConvex meshes are not only more performant, but also allow two convex dynamic rigidbodies to collide. This is the same behavior that engines like Unity use."
+      },
+      ".trigger": {
+        "type": "Boolean",
+        "description": "Whether the collider is a trigger. Defaults to `false`.\n\nA trigger will not collide with anything, and instead will trigger the `onTriggerEnter` and `onTriggerLeave` functions on the parent rigidbody.\n\nNOTE: Triggers are forced to act like convex shapes. This is a limitation in the physics engine."
+      },
+      ".{...Node}": {
+        "description": "Inherits all [Node](/docs/ref/Node.md) properties"
+      }
+    },
+    "methods": {
+      ".setSize(width, height, depth)": {
+        "description": "When type is `box`, sets the size of the box. Defaults to `1, 1, 1`."
+      }
+    }
+  },
+  "Group": {
+    "title": "Group",
+    "description": "A regular old node with no other behavior. Useful for grouping things together under one parent.",
+    "properties": {
+      ".{...Node}": {
+        "description": "Inherits all [Node](/docs/ref/Node.md) properties"
+      }
+    }
+  },
+  "LOD": {
+    "title": "LOD",
+    "description": "A LOD can hold multiple child nodes and automatically activate/deactivate them based on their distance from the camera.",
+    "properties": {
+      ".{...Node}": {
+        "description": "Inherits all [Node](/docs/ref/Node.md) properties"
+      }
+    },
+    "methods": {
+      ".insert(node, maxDistance)": {
+        "description": "Adds `node` as a child of this node and also registers it to be activated/deactivated based on the `maxDistance` value."
+      }
+    }
+  },
+
+  "Material": {
+    "title": "Material",
+    "description": "A material on a Mesh node.",
+    "properties": {
+      "textureX": {
+        "type": "Number",
+        "description": "The offset of the texture on the x axis. Useful for UV scrolling."
+      },
+      "textureY": {
+        "type": "Number",
+        "description": "The offset of the texture on the y axis. Useful for UV scrolling."
+      },
+      "emissiveIntensity": {
+        "type": "Number",
+        "description": "The emissive intensity of the material. Values greater than 1 will activate HDR Bloom, as long as the emissive color is not black."
+      }
+    }
+  },
+  "Mesh": {
+    "title": "Mesh",
+    "description": "Represents a mesh to be rendered. Internally the mesh is automatically instanced for performance.",
+    "note": "Setting/modifying the geometry or materials are not currently supported, and only be configured within a GLTF (eg via blender).",
+    "properties": {
+      "castShadow": {
+        "type": "Boolean",
+        "description": "Whether this mesh should cast a shadow. Defaults to true."
+      },
+      "receiveShadow": {
+        "type": "Boolean",
+        "description": "Whether this mesh should receive a shadow. Defaults to true."
+      }
+    },
+    "inherits": "Node"
+  },
+  "Node": {
+    "title": "Node",
+    "description": "The base class for all other nodes.",
+    "properties": {
+      "id": {
+        "type": "String",
+        "description": "The ID of the node. This is auto generated when creating nodes via script. For GLTF models converted to nodes, it uses the same object name you would see in blender. NOTE: Blender GLTF exporter does rename objects in some cases, eg by removing spaces. Best practice is to simply name everything in UpperCamelCase with no other characters."
+      },
+      "position": {
+        "type": "Vector3",
+        "description": "The local position of the node."
+      },
+      "quaternion": {
+        "type": "Quaternion",
+        "description": "The local quaternion rotation of the node. Updating this automatically updates the rotation property."
+      },
+      "rotation": {
+        "type": "Euler",
+        "description": "The local euler rotation of the node. Updating this automatically updates the quaternion property."
+      },
+      "scale": {
+        "type": "Vector3",
+        "description": "The local scale of the node."
+      },
+      "matrixWorld": {
+        "type": "Matrix4",
+        "description": "The world matrix of this node in global space."
+      },
+      "parent": {
+        "type": "Node",
+        "description": "The parent node, if any."
+      }
+    },
+    "methods": {
+      "add": {
+        "parameters": [
+          {
+            "name": "otherNode",
+            "type": "Node"
+          }
+        ],
+        "returns": "Self",
+        "description": "Adds otherNode as a child of this node."
+      },
+      "remove": {
+        "parameters": [
+          {
+            "name": "otherNode",
+            "type": "Node"
+          }
+        ],
+        "returns": "Self",
+        "description": "Removes otherNode if it is a child of this node."
+      },
+      "traverse": {
+        "parameters": [
+          {
+            "name": "callback",
+            "type": "Function"
+          }
+        ],
+        "description": "Traverses this and all descendents calling callback with the node in the first argument."
+      }
+    }
+  },
+  "Num": {
+    "title": "Num",
+    "description": "This is a global method that can be used to generate random numbers, since Math.random() is not allowed inside the app script runtime.",
+    "function": {
+      "name": "num",
+      "parameters": [
+        {
+          "name": "min",
+          "type": "Number"
+        },
+        {
+          "name": "max",
+          "type": "Number"
+        },
+        {
+          "name": "dp",
+          "type": "Number",
+          "optional": true,
+          "default": 0
+        }
+      ],
+      "examples": [
+        "random integer between 0 and 10: num(0, 10)",
+        "random float between 100 and 1000 with 2 decimal places: num(100, 1000, 2)"
+      ]
+    }
+  },
+  "Player": {
+    "title": "Player",
+    "description": "Represents a player. An instance of Player can be retrived from events or via World.getPlayer",
+    "note": "Setting/modifying the geometry are not currently supported, and only be configured within a GLTF (eg via blender).",
+    "properties": {
+      "networkId": {
+        "type": "String",
+        "description": "A completely unique ID that is given to every player each time they connect."
+      },
+      "entityId": {
+        "type": "String",
+        "description": "The entity's ID."
+      },
+      "id": {
+        "type": "String",
+        "description": "The player ID. This ID is the same each time the player enters the world."
+      },
+      "name": {
+        "type": "String",
+        "description": "The players name."
+      },
+      "position": {
+        "type": "Vector3",
+        "description": "The players position in the world."
+      },
+      "quaternion": {
+        "type": "Quaternion",
+        "description": "The players rotation in the world."
+      },
+      "rotation": {
+        "type": "Euler",
+        "description": "The players rotation in the world."
+      }
+    },
+    "methods": {
+      "teleport": {
+        "parameters": [
+          {
+            "name": "position",
+            "type": "Vector3"
+          },
+          {
+            "name": "rotationY",
+            "type": "Number",
+            "optional": true
+          }
+        ],
+        "description": "Teleports the player instantly to the new position. The rotationY value is in radians, and if omitted the player will continue facing their current direction."
+      },
+      "getBoneTransform": {
+        "parameters": [
+          {
+            "name": "boneName",
+            "type": "String"
+          }
+        ],
+        "returns": "Matrix4",
+        "description": "Returns a matrix of the bone transform in world space. See Avatar for full details."
+      }
+    }
+  },
+  "Props": {
+    "title": "Props",
+    "description": "Apps can expose a list of custom UI fields allowing non-technical people to configure or change the way your apps work.",
+    "configure": {
+      "description": "To generate custom UI for your app, configure the fields at the top of your app's script like this:"
+    },
+    "props": {
+      "description": "Apps have a global props variable for you to read back the values entered in custom fields."
+    },
+    "fields": {
+      "Text": {
+        "type": "text",
+        "properties": {
+          "key": "String",
+          "label": "String",
+          "placeholder": "String",
+          "initial": "String"
+        }
+      },
+      "Textarea": {
+        "type": "textarea",
+        "properties": {
+          "key": "String",
+          "label": "String",
+          "placeholder": "String",
+          "initial": "String"
+        }
+      },
+      "Number": {
+        "type": "number",
+        "properties": {
+          "key": "String",
+          "label": "String",
+          "dp": "Number",
+          "min": "Number",
+          "max": "Number",
+          "step": "Number",
+          "initial": "Number"
+        }
+      },
+      "Range": {
+        "type": "range",
+        "properties": {
+          "key": "String",
+          "label": "String",
+          "min": "Number",
+          "max": "Number",
+          "step": "Number",
+          "initial": "Number"
+        }
+      },
+      "Switch": {
+        "type": "switch",
+        "properties": {
+          "key": "String",
+          "label": "String",
+          "options": [
+            {
+              "label": "String",
+              "value": "String"
+            }
+          ],
+          "initial": "String"
+        }
+      },
+      "Dropdown": {
+        "type": "dropdown",
+        "properties": {
+          "key": "String",
+          "label": "String",
+          "options": [
+            {
+              "label": "String",
+              "value": "String"
+            }
+          ],
+          "initial": "String"
+        }
+      },
+      "File": {
+        "type": "file",
+        "properties": {
+          "key": "String",
+          "label": "String",
+          "kind": "String"
+        },
+        "note": "The value set on props is an object that looks like this:"
+      },
+      "Section": {
+        "type": "section",
+        "properties": {
+          "key": "String",
+          "label": "String"
+        }
+      }
+    }
+  },
+  "RigidBody": {
+    "title": "RigidBody",
+    "description": "A rigidbody that has colliders as children will act under physics.",
+    "note": "contacts, triggers, forces, etc are left out of the docs until they are ratified.",
+    "properties": {
+      "type": {
+        "type": "String",
+        "description": "The type of rigidbody, either static, kinematic or dynamic. Defaults to static. NOTE: if you plan to move the rigidbody with code without being dynamic, use kinematic for performance reasons."
+      },
+      "onContactStart": {
+        "type": "Function",
+        "description": "The function to call when a child collider generates contacts with another rigidbody. (Experimental)"
+      },
+      "onContactEnd": {
+        "type": "Function",
+        "description": "The function to call when a child collider ends contacts with another rigidbody. (Experimental)"
+      },
+      "onTriggerEnter": {
+        "type": "Function",
+        "description": "The function to call when a child trigger collider is entered. (Experimental)"
+      },
+      "onTriggerLeave": {
+        "type": "Function",
+        "description": "The function to call when a child trigger collider is left. (Experimental)"
+      }
+    },
+    "inherits": "Node"
+  },
+  "UI": {
+    "title": "UI",
+    "description": "Displays a UI plane in-world",
+    "properties": {
+      "width": {
+        "type": "Number",
+        "description": "The width of the UI canvas in pixels. Defaults to 100."
+      },
+      "height": {
+        "type": "Number",
+        "description": "The height of the UI canvas in pixels. Defaults to 100."
+      },
+      "size": {
+        "type": "Number",
+        "description": "This value converts pixels to meters. For example if you set width = 100 and size = 0.01 your UI will have a width of one meter. This allows you to build UI while thinking in pixels instead of meters, and makes it easier to resize things later. Defaults to 0.01."
+      },
+      "lit": {
+        "type": "Boolean",
+        "description": "Whether the canvas is affected by lighting. Defaults to false."
+      },
+      "doubleside": {
+        "type": "Boolean",
+        "description": "Whether the canvas is doublesided. Defaults to false."
+      },
+      "billboard": {
+        "type": "String",
+        "description": "Makes the UI face the camera. Can be null, full or y-axis. Default to null."
+      },
+      "pivot": {
+        "type": "String",
+        "description": "Determines where the center of the UI is. Options are: top-left, top-center, top-right, center-left, center, center-right, bottom-left, bottom-center, bottom-right. Defaults to center."
+      },
+      "backgroundColor": {
+        "type": "String",
+        "description": "The background color of the UI. Can be hex (eg #000000) or rgba (eg rgba(0, 0, 0, 0.5)). Defaults to null."
+      },
+      "borderWidth": {
+        "type": "Number",
+        "description": "The width of the border in pixels."
+      },
+      "borderColor": {
+        "type": "String",
+        "description": "The color of the border."
+      },
+      "borderRadius": {
+        "type": "Number",
+        "description": "The radius of the border in pixels."
+      },
+      "padding": {
+        "type": "Number",
+        "description": "The inner padding of the UI in pixels. Defaults to 0."
+      },
+      "flexDirection": {
+        "type": "String",
+        "description": "The flex direction. column, column-reverse, row or row-reverse. Defaults to column."
+      },
+      "justifyContent": {
+        "type": "String",
+        "description": "Options: flex-start, flex-end, center. Defaults to flex-start."
+      },
+      "alignItems": {
+        "type": "String",
+        "description": "Options: stretch, flex-start, flex-end, center, baseline. Defaults to stretch."
+      },
+      "alignContent": {
+        "type": "String",
+        "description": "Options: flex-start, flex-end, stretch, center, space-between, space-around, space-evenly. Defaults to flex-start."
+      },
+      "flexWrap": {
+        "type": "String",
+        "description": "Options: no-wrap, wrap. Defaults to no-wrap."
+      },
+      "gap": {
+        "type": "Number",
+        "description": "Defaults to 0."
+      }
+    },
+    "inherits": "Node"
+  },
+    "UIText": {
+      "title": "UIText",
+      "description": "Represents text inside a UI.",
+      "properties": {
+        "display": {
+          "type": "String",
+          "description": "Either `none` or `flex`. Defaults to `flex`.",
+          "default": "flex"
+        },
+        "backgroundColor": {
+          "type": "String",
+          "description": "The background color of the view. Can be hex (eg `#000000`) or rgba (eg `rgba(0, 0, 0, 0.5)`). Defaults to `null`.",
+          "default": null
+        },
+        "borderRadius": {
+          "type": "Number",
+          "description": "The radius of the border in pixels."
+        },
+        "margin": {
+          "type": "Number",
+          "description": "The outer margin of the view in pixels. Defaults to `0`.",
+          "default": 0
+        },
+        "padding": {
+          "type": "Number",
+          "description": "The inner padding of the view in pixels. Defaults to `0`.",
+          "default": 0
+        },
+        "value": {
+          "type": "String",
+          "description": "The text to display."
+        },
+        "fontSize": {
+          "type": "Number",
+          "description": "The font size in pixels. Defaults to `16`.",
+          "default": 16
+        },
+        "color": {
+          "type": "String",
+          "description": "The font color. Defaults to `#000000`.",
+          "default": "#000000"
+        },
+        "lineHeight": {
+          "type": "Number",
+          "description": "The line height. Defaults to `1.2`.",
+          "default": 1.2
+        },
+        "textAlign": {
+          "type": "String",
+          "description": "Options: `left`, `center`, `right`. Defaults to `left`.",
+          "default": "left"
+        },
+        "fontFamily": {
+          "type": "String",
+          "description": "Defaults to `Rubik`.",
+          "default": "Rubik"
+        },
+        "fontWeight": {
+          "type": "String",
+          "description": "Defaults to `normal`, can also be a number like `100` or string like `bold`.",
+          "default": "normal"
+        },
+        "Node": {
+          "description": "Inherits all [Node](/docs/ref/Node.md) properties"
+        }
+      }
+    },
+    "UIView": {
+      "title": "UIView",
+      "description": "Represents a single view inside a UI, similar to a `div`.",
+      "properties": {
+        "display": {
+          "type": "String",
+          "description": "Either `none` or `flex`. Defaults to `flex`.",
+          "default": "flex"
+        },
+        "width": {
+          "type": "Number",
+          "description": "The width of the view in pixels. Defaults to `100`.",
+          "default": 100
+        },
+        "height": {
+          "type": "Number",
+          "description": "The height of the view in pixels. Defaults to `100`.",
+          "default": 100
+        },
+        "backgroundColor": {
+          "type": "String",
+          "description": "The background color of the view. Can be hex (eg `#000000`) or rgba (eg `rgba(0, 0, 0, 0.5)`). Defaults to `null`.",
+          "default": null
+        },
+        "borderWidth": {
+          "type": "Number",
+          "description": "The width of the border in pixels."
+        },
+        "borderColor": {
+          "type": "String",
+          "description": "The color of the border."
+        },
+        "borderRadius": {
+          "type": "Number",
+          "description": "The radius of the border in pixels."
+        },
+        "margin": {
+          "type": "Number",
+          "description": "The outer margin of the view in pixels. Defaults to `0`.",
+          "default": 0
+        },
+        "padding": {
+          "type": "Number",
+          "description": "The inner padding of the view in pixels. Defaults to `0`.",
+          "default": 0
+        },
+        "flexDirection": {
+          "type": "String",
+          "description": "The flex direction. `column`, `column-reverse`, `row` or `row-reverse`. Defaults to `column`.",
+          "default": "column"
+        },
+        "justifyContent": {
+          "type": "String",
+          "description": "Options `flex-start`, `flex-end`, `center`. Defaults to `flex-start`.",
+          "default": "flex-start"
+        },
+        "alignItems": {
+          "type": "String",
+          "description": "Options: `stretch`, `flex-start`, `flex-end`, `center`, `baseline`. Defaults to `stretch`.",
+          "default": "stretch"
+        },
+        "alignContent": {
+          "type": "String",
+          "description": "Options: `flex-start`, `flex-end`, `stretch`, `center`, `space-between`, `space-around`, `space-evenly`. Defaults to `flex-start`.",
+          "default": "flex-start"
+        },
+        "flexBasis": {
+          "type": "Number",
+          "description": "Defaults to `null`.",
+          "default": null
+        },
+        "flexGrow": {
+          "type": "Number",
+          "description": "Defaults to `null`.",
+          "default": null
+        },
+        "flexShrink": {
+          "type": "Number",
+          "description": "Defaults to `null`.",
+          "default": null
+        },
+        "flexWrap": {
+          "type": "String",
+          "description": "Options: `no-wrap`, `wrap`. Defaults to `no-wrap`.",
+          "default": "no-wrap"
+        },
+        "gap": {
+          "type": "Number",
+          "description": "Defaults to `0`.",
+          "default": 0
+        },
+        "Node": {
+          "description": "Inherits all [Node](/docs/ref/Node.md) properties"
+        }
+      }
+    },
+    "World": {
+      "title": "World",
+      "description": "The global `world` variable is always available within the app scripting runtime.",
+      "properties": {
+        "networkId": {
+          "type": "String",
+          "description": "A unique ID for the current server or client."
+        },
+        "isServer": {
+          "type": "Boolean",
+          "description": "Whether the script is currently executing on the server."
+        },
+        "isClient": {
+          "type": "Boolean",
+          "description": "Whether the script is currently executing on the client."
+        }
+      },
+      "methods": {
+        "add": {
+          "description": "Adds a node into world-space, outside of the apps local hierarchy.",
+          "parameters": ["node"]
+        },
+        "remove": {
+          "description": "Removes a node from world-space, outside of the apps local hierarchy.",
+          "parameters": ["node"]
+        },
+        "attach": {
+          "description": "Adds a node into world-space, maintaining its current world transform.",
+          "parameters": ["node"]
+        },
+        "on": {
+          "description": "Subscribes to world events. Currently only `enter` and `leave` are available which let you know when a player enters or leaves the world.",
+          "parameters": ["event", "callback"]
+        },
+        "off": {
+          "description": "Unsubscribes from world events.",
+          "parameters": ["event", "callback"]
+        },
+        "raycast": {
+          "description": "Raycasts the physics scene. If `maxDistance` is not specified, max distance is infinite. If `layerMask` is not specified, it will hit anything.",
+          "parameters": ["origin: Vector3", "direction: Vector3", "maxDistance: ?Number", "layerMask: ?Number"]
+        },
+        "createLayerMask": {
+          "description": "Creates a bitmask to be used in `world.raycast()`. Currently the only groups available are `environment` and `player`.",
+          "parameters": ["groups"]
+        },
+        "getPlayer": {
+          "description": "Returns a player. If no `playerId` is provided it returns the local player.",
+          "parameters": ["playerId"]
+        }
+      }
+    }
+  }
