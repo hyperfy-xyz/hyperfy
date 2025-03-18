@@ -1,0 +1,7 @@
+{
+    "mcpServers": {
+      "hyperfy-mcp-server": {
+        "url": "http://localhost:3000/sse"
+      }
+    }
+  }

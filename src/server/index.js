@@ -19,6 +19,14 @@ import { hashFile } from '../core/utils-server'
 import { getDB } from './db'
 import { Storage } from './Storage'
 
+// Import MCP dependencies
+import { fileURLToPath } from 'url'
+import { registerMCPServer } from './tools/registerMCPServer.js'
+
+// Get current file's directory (ESM equivalent of __dirname)
+const __filename = fileURLToPath(import.meta.url)
+const __dirname = path.dirname(__filename)
+
 const rootDir = path.join(__dirname, '../')
 const worldDir = path.join(rootDir, process.env.WORLD)
 const assetsDir = path.join(worldDir, '/assets')
@@ -171,18 +179,24 @@ fastify.setErrorHandler((err, req, reply) => {
   reply.status(500).send()
 })
 
+async function worldNetwork(fastify) {
+  fastify.get('/ws', { websocket: true }, (ws, req) => {
+    world.network.onConnection(ws, req.query.authToken)
+  })
+}
+
+if (process.env.MCP_SERVER === 'true') {
+  // Create the MCP server instance
+  registerMCPServer(world, fastify)
+}
+
+// Start the server
 try {
   await fastify.listen({ port, host: '0.0.0.0' })
 } catch (err) {
   console.error(err)
   console.error(`failed to launch on port ${port}`)
   process.exit(1)
-}
-
-async function worldNetwork(fastify) {
-  fastify.get('/ws', { websocket: true }, (ws, req) => {
-    world.network.onConnection(ws, req.query.authToken)
-  })
 }
 
 console.log(`running on port ${port}`)
