@@ -155,6 +155,32 @@ export class Apps extends System {
       set(entity, key, value) {
         world.storage?.set(key, value)
       },
+      open(entity, url, newWindow = false) {
+        if (!url) {
+          console.error('[world.open] URL is required');
+          return;
+        }
+        
+        if (world.network.isClient) {
+          try {
+            const resolvedUrl = world.resolveURL(url);
+            
+            setTimeout(() => {
+              if (newWindow) {
+                window.open(resolvedUrl, '_blank');
+              } else {
+                window.location.href = resolvedUrl;
+              }
+            }, 0);
+            
+            console.log(`[world.open] Redirecting to: ${resolvedUrl} ${newWindow ? '(new window)' : ''}`);
+          } catch (e) {
+            console.error('[world.open] Failed to open URL:', e);
+          }
+        } else {
+          console.warn('[world.open] URL redirection only works on client side');
+        }
+      },
     }
   }
 
