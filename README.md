@@ -59,7 +59,7 @@ For containerized deployment, check [DOCKER.md](DOCKER.md) for detailed instruct
 
 ## 📚 Documentation & Resources
 
-- **[Official Documentation](https://hyperfy.how)** - Comprehensive guides and reference
+- **[Community Documentation](https://hyperfy.how)** - Comprehensive guides and reference
 - **[Website](https://hyperfy.io/)** - Official Hyperfy website
 - **[Sandbox](https://play.hyperfy.xyz/)** - Try Hyperfy in your browser
 - **[Twitter/X](https://x.com/hyperfy_io)** - Latest updates and announcements
