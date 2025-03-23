@@ -176,6 +176,10 @@ export class ClientNetwork extends System {
     this.world.entities.player?.setSessionAvatar(data.avatar)
   }
 
+  onPong = time => {
+    this.world.stats?.onPong(time)
+  }
+
   onKick = code => {
     this.world.emit('kick', code)
   }

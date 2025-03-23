@@ -1,7 +1,7 @@
 import * as THREE from '../extras/three'
 import { isBoolean, isNumber } from 'lodash-es'
 
-import { Node } from './Node'
+import { getRef, Node, secureRef } from './Node'
 
 import { Layers } from '../extras/Layers'
 import { geometryToPxMesh } from '../extras/geometryToPxMesh'
@@ -224,11 +224,13 @@ export class Collider extends Node {
   }
 
   get geometry() {
-    return this._geometry
+    return secureRef({}, () => this._geometry)
   }
 
-  set geometry(value) {
-    this._geometry = value // TODO: validate THREE.BufferGeometry?
+  set geometry(value = defaults.geometry) {
+    this._geometry = getRef(value)
+    this.needsRebuild = true
+    this.setDirty()
   }
 
   get convex() {
@@ -368,12 +370,12 @@ export class Collider extends Node {
         set radius(value) {
           self.radius = value
         },
-        // get geometry() {
-        //   return null // TODO: handle?
-        // },
-        // set geometry(value) {
-        //   throw new Error('[collider] cannot set geometry')
-        // },
+        get geometry() {
+          return self.geometry
+        },
+        set geometry(value) {
+          self.geometry = value
+        },
         get convex() {
           return self.convex
         },

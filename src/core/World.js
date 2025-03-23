@@ -217,6 +217,10 @@ export class World extends EventEmitter {
     return `https://${url}`
   }
 
+  inject(runtime) {
+    this.apps.inject(runtime)
+  }
+
   destroy() {
     for (const system of this.systems) {
       system.destroy()

@@ -113,8 +113,6 @@ Contributions are welcome! Please check out our [contributing guidelines](CONTRI
 
 ## 🌱 Project Status
 
-This project is currently in alpha as we transition all of our [reference platform](https://github.com/hyperfy-xyz/hyperfy-ref) code into fully self-hostable worlds. Most features are already available in this repository but some still need to be connected for self-hosting. APIs are likely to change during this development phase.
-
-## 📄 License
-
-This project is licensed under the GPL-3.0 License - see the LICENSE file for details.
+This project is still in alpha as we transition all of our [reference platform](https://github.com/hyperfy-xyz/hyperfy-ref) code into fully self hostable worlds.
+Most features are already here in this repo but still need to be connected up to work with self hosting in mind.
+Note that APIs are highly likely to change during this time.

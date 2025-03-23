@@ -433,6 +433,10 @@ export class ServerNetwork extends System {
     this.sendTo(data.networkId, 'playerSessionAvatar', data.avatar)
   }
 
+  onPing = (socket, time) => {
+    socket.send('pong', time)
+  }
+
   onDisconnect = (socket, code) => {
     socket.player.destroy(true)
     this.sockets.delete(socket.id)
