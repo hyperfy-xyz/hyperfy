@@ -425,22 +425,22 @@ export class UI extends Node {
         }
 
         void main() {
-          if (uBillboard == 1) { 
+          if (uBillboard == 1) {
              // full billboard
              csm_Position = applyQuaternion(position, uOrientation);
-          } 
-          else if (uBillboard == 2) { 
+          }
+          else if (uBillboard == 2) {
             // y-axis billboard
             vec3 objToCam = normalize(cameraPosition - modelMatrix[3].xyz);
             objToCam.y = 0.0; // Project onto XZ plane
-            objToCam = normalize(objToCam);            
+            objToCam = normalize(objToCam);
             float cosAngle = objToCam.z;
-            float sinAngle = objToCam.x;            
+            float sinAngle = objToCam.x;
             mat3 rotY = mat3(
               cosAngle, 0.0, -sinAngle,
               0.0, 1.0, 0.0,
               sinAngle, 0.0, cosAngle
-            );            
+            );
             csm_Position = rotY * position;
           }
         }

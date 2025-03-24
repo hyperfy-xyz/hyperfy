@@ -231,9 +231,6 @@ export class Apps extends System {
         if (internalEvents.includes(name)) {
           return console.error(`apps cannot send internal events (${name})`)
         }
-        if (!world.network.isServer) {
-          throw new Error('sendTo can only be called on the server')
-        }
         const player = world.entities.get(playerId)
         if (!player) return
         const event = [entity.data.id, entity.blueprint.version, name, data]
