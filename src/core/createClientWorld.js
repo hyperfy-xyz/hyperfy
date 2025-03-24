@@ -16,6 +16,7 @@ import { ClientTarget } from './systems/ClientTarget'
 import { LODs } from './systems/LODs'
 import { Nametags } from './systems/Nametags'
 import { Snaps } from './systems/Snaps'
+import { Wind } from './systems/Wind'
 import { XR } from './systems/XR'
 
 export function createClientWorld() {
@@ -36,6 +37,7 @@ export function createClientWorld() {
   world.register('lods', LODs)
   world.register('nametags', Nametags)
   world.register('snaps', Snaps)
+  world.register('wind', Wind)
   world.register('xr', XR)
   return world
 }

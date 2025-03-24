@@ -8,6 +8,8 @@ const _m1 = new THREE.Matrix4()
 const _intersects = []
 const _mesh = new THREE.Mesh()
 
+const MIN_RADIUS = 0.2
+
 // https://anteru.net/blog/2008/loose-octrees/
 
 export class LooseOctree {
@@ -21,6 +23,7 @@ export class LooseOctree {
     if (!item.sphere) item.sphere = new THREE.Sphere()
     if (!item.geometry.boundingSphere) item.geometry.computeBoundingSphere()
     item.sphere.copy(item.geometry.boundingSphere).applyMatrix4(item.matrix)
+    if (item.sphere.radius < MIN_RADIUS) item.sphere.radius = MIN_RADIUS // prevent huge subdivisions
     let added = this.root.insert(item)
     if (!added) {
       while (!this.root.canContain(item)) {
@@ -183,7 +186,7 @@ class LooseOctreeNode {
     console.error('octree insert fail')
     // this.items.push(item)
     // item._node = this
-    // return true
+    return false
   }
 
   remove(item) {

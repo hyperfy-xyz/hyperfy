@@ -1,3 +1,4 @@
+import * as THREE from './three'
 import * as BufferGeometryUtils from 'three/examples/jsm/utils/BufferGeometryUtils.js'
 
 const cache = new Map() // id -> { id, pmesh, refs }
@@ -41,20 +42,22 @@ export function geometryToPxMesh(world, geometry, convex) {
   // console.log('geometry', geometry)
   // console.log('convex', convex)
 
-  const position = geometry.attributes.position
+  let position = geometry.attributes.position
   const index = geometry.index
 
   // const is16Bit = index?.array instanceof Uint16Array
   // console.log('is16Bit', is16Bit)
 
   if (position.isInterleavedBufferAttribute) {
-    console.error('TODO: collider needs deinterleaveAttribute')
+    // deinterleave!
+    position = BufferGeometryUtils.deinterleaveAttribute(position)
+    position = new THREE.BufferAttribute(new Float32Array(position.array), position.itemSize, false)
   }
 
   // console.log('position', position)
   // console.log('index', index)
 
-  const positions = geometry.attributes.position.array
+  const positions = position.array
   const floatBytes = positions.length * positions.BYTES_PER_ELEMENT
   const pointsPtr = PHYSX._webidl_malloc(floatBytes)
   PHYSX.HEAPF32.set(positions, pointsPtr >> 2)

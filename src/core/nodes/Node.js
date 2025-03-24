@@ -25,10 +25,23 @@ const EPSILON = 0.000000001
 
 const secure = { allowRef: false }
 export function getRef(pNode) {
+  if (!pNode || !pNode._isRef) return pNode
   secure.allowRef = true
   const node = pNode._ref
   secure.allowRef = false
   return node
+}
+
+export function secureRef(obj = {}, getRef) {
+  const tpl = {
+    get _ref() {
+      if (!secure.allowRef) return null
+      return getRef()
+    },
+  }
+  obj._isRef = true
+  Object.defineProperty(obj, '_ref', Object.getOwnPropertyDescriptor(tpl, '_ref'))
+  return obj
 }
 
 export class Node {
@@ -284,10 +297,15 @@ export class Node {
     return vec3
   }
 
+  getWorldMatrix(mat = _m1) {
+    return mat.copy(this.matrixWorld)
+  }
+
   getStats(recursive, stats) {
     if (!stats) {
       stats = {
         geometries: new Set(),
+        materials: new Set(),
         triangles: 0,
         textureBytes: 0,
       }
@@ -402,6 +420,9 @@ export class Node {
             return child.getProxy()
           })
         },
+        getWorldMatrix(mat) {
+          return self.getWorldMatrix(mat)
+        },
         add(pNode) {
           const node = getRef(pNode)
           self.add(node)
@@ -424,9 +445,15 @@ export class Node {
           const node = self.clone(recursive)
           return node.getProxy()
         },
+        clean() {
+          self.clean()
+        },
         get _ref() {
           if (!secure.allowRef) return null
           return self
+        },
+        get _isRef() {
+          return true
         },
         get onPointerEnter() {
           return self.onPointerEnter

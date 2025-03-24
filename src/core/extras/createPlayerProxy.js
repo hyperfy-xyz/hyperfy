@@ -20,7 +20,14 @@ export function createPlayerProxy(player) {
     get userId() {
       return player.data.userId
     },
+    get local() {
+      return player.data.id === world.network.id
+    },
+    get admin() {
+      return hasRole(player.data.roles, 'admin')
+    },
     get isAdmin() {
+      // deprecated, use .admin
       return hasRole(player.data.roles, 'admin')
     },
     get name() {

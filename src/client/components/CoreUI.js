@@ -88,6 +88,9 @@ function Content({ world, width, height }) {
     elem.addEventListener('pointerdown', onEvent)
     elem.addEventListener('pointermove', onEvent)
     elem.addEventListener('pointerup', onEvent)
+    elem.addEventListener('touchstart', onEvent)
+    // elem.addEventListener('touchmove', onEvent)
+    // elem.addEventListener('touchend', onEvent)
   }, [])
   return (
     <div
@@ -131,6 +134,9 @@ function Side({ world, player, toggleSettings, toggleApps }) {
   }, [player])
   useEffect(() => {
     const control = world.controls.bind({ priority: ControlPriorities.CORE_UI })
+    control.slash.onPress = () => {
+      if (!chat) setChat(true)
+    }
     control.enter.onPress = () => {
       if (!chat) setChat(true)
     }
@@ -308,7 +314,9 @@ function Side({ world, player, toggleSettings, toggleApps }) {
               if (e.code === 'Escape') {
                 setChat(false)
               }
-              if (e.code === 'Enter') {
+              // meta quest 3 isn't spec complaint and instead has e.code = '' and e.key = 'Enter'
+              // spec says e.code should be a key code and e.key should be the text output of the key eg 'b', 'B', and '\n'
+              if (e.code === 'Enter' || e.key === 'Enter') {
                 send(e)
               }
             }}

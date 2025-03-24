@@ -118,6 +118,7 @@ export class Stage extends System {
     let raw
     if (options.raw) {
       raw = options.raw.clone()
+      raw.onBeforeCompile = options.raw.onBeforeCompile
     } else if (options.unlit) {
       raw = new THREE.MeshBasicMaterial({
         color: options.color || 'white',

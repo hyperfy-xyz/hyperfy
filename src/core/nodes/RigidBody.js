@@ -16,6 +16,8 @@ const types = ['static', 'kinematic', 'dynamic']
 const defaults = {
   type: 'static',
   mass: 1,
+  linearDamping: 0, // physx default
+  angularDamping: 0.05, // phyx default
   tag: null,
   onContactStart: null,
   onContactEnd: null,
@@ -32,6 +34,8 @@ export class RigidBody extends Node {
 
     this.type = data.type
     this.mass = data.mass
+    this.linearDamping = data.linearDamping
+    this.angularDamping = data.angularDamping
     this.tag = data.tag
     this.onContactStart = data.onContactStart
     this.onContactEnd = data.onContactEnd
@@ -59,6 +63,14 @@ export class RigidBody extends Node {
       // this.actor.setMass(this.mass)
       PHYSX.PxRigidBodyExt.prototype.setMassAndUpdateInertia(this.actor, this._mass)
       // this.untrack = this.ctx.world.physics.track(this.actor, this.onPhysicsMovement)
+      if (this._centerOfMass) {
+        this.actor.setCMassLocalPose({
+          translation: this._centerOfMass,
+          rotation: _q1.set(0, 0, 0, 1),
+        })
+      }
+      this.actor.setLinearDamping(this._linearDamping)
+      this.actor.setAngularDamping(this._angularDamping)
     } else if (this._type === 'dynamic') {
       this.actor = this.ctx.world.physics.physics.createRigidDynamic(this.transform)
       // this.actor.setMass(this.mass)
@@ -190,6 +202,38 @@ export class RigidBody extends Node {
     this.setDirty()
   }
 
+  get linearDamping() {
+    return this._linearDamping
+  }
+
+  set linearDamping(value = defaults.linearDamping) {
+    if (!isNumber(value)) {
+      throw new Error('[rigidbody] linearDamping not a number')
+    }
+    if (value < 0) {
+      throw new Error('[rigidbody] linearDamping cannot be less than zero')
+    }
+    this._linearDamping = value
+    this.needsRebuild = true
+    this.setDirty()
+  }
+
+  get angularDamping() {
+    return this._angularDamping
+  }
+
+  set angularDamping(value = defaults.angularDamping) {
+    if (!isNumber(value)) {
+      throw new Error('[rigidbody] angularDamping not a number')
+    }
+    if (value < 0) {
+      throw new Error('[rigidbody] angularDamping cannot be less than zero')
+    }
+    this._angularDamping = value
+    this.needsRebuild = true
+    this.setDirty()
+  }
+
   get tag() {
     return this._tag
   }
@@ -261,6 +305,36 @@ export class RigidBody extends Node {
     this.actor?.addForce(force.toPxVec3(), PHYSX.PxForceModeEnum.eFORCE, true)
   }
 
+  addForceAtPos(force, pos) {
+    if (!force?.isVector3) throw new Error('[rigidbody] addForceAtPos force must be Vector3')
+    if (!pos?.isVector3) throw new Error('[rigidbody] addForceAtPos force must be Vector3')
+    if (!this.actor) return
+    if (!this._pv1) this._pv1 = new PHYSX.PxVec3()
+    if (!this._pv2) this._pv2 = new PHYSX.PxVec3()
+    PHYSX.PxRigidBodyExt.prototype.addForceAtPos(
+      this.actor,
+      force.toPxExtVec3(this._pv1),
+      pos.toPxExtVec3(this._pv2),
+      PHYSX.PxForceModeEnum.eFORCE,
+      true
+    )
+  }
+
+  addForceAtLocalPos(force, pos) {
+    if (!force?.isVector3) throw new Error('[rigidbody] addForceAtLocalPos force must be Vector3')
+    if (!pos?.isVector3) throw new Error('[rigidbody] addForceAtLocalPos force must be Vector3')
+    if (!this.actor) return
+    if (!this._pv1) this._pv1 = new PHYSX.PxVec3()
+    if (!this._pv2) this._pv2 = new PHYSX.PxVec3()
+    PHYSX.PxRigidBodyExt.prototype.addForceAtLocalPos(
+      this.actor,
+      force.toPxExtVec3(this._pv1),
+      pos.toPxExtVec3(this._pv2),
+      PHYSX.PxForceModeEnum.eFORCE,
+      true
+    )
+  }
+
   addTorque(torque, mode) {
     if (!torque?.isVector3) {
       throw new Error('[rigidbody] addForce torque must be Vector3')
@@ -321,6 +395,25 @@ export class RigidBody extends Node {
     this.actor?.setAngularVelocity?.(vec3.toPxVec3())
   }
 
+  getVelocityAtPos(pos, vec3) {
+    if (!pos?.isVector3) throw new Error('[rigidbody] getVelocityAtPos pos must be Vector3')
+    if (!this.actor) return vec3.set(0, 0, 0)
+    return vec3.copy(PHYSX.PxRigidBodyExt.prototype.getVelocityAtPos(this.actor, pos.toPxVec3()))
+  }
+
+  getLocalVelocityAtLocalPos(pos, vec3) {
+    if (!pos?.isVector3) throw new Error('[rigidbody] getVelocityAtLocalPos pos must be Vector3')
+    if (!this.actor) return vec3.set(0, 0, 0)
+    return vec3.copy(PHYSX.PxRigidBodyExt.prototype.getLocalVelocityAtLocalPos(this.actor, pos.toPxVec3()))
+  }
+
+  setCenterOfMass(pos) {
+    if (!pos?.isVector3) throw new Error('[rigidbody] setCenterOfMass pos must be Vector3')
+    this._centerOfMass = pos.clone()
+    this.needsRebuild = true
+    this.setDirty()
+  }
+
   setKinematicTarget(position, quaternion) {
     if (this._type !== 'kinematic') {
       throw new Error('[rigidbody] setKinematicTarget failed (not kinematic)')
@@ -345,6 +438,12 @@ export class RigidBody extends Node {
         },
         set mass(value) {
           self.mass = value
+        },
+        set linearDamping(value) {
+          self.linearDamping = value
+        },
+        set angularDamping(value) {
+          self.angularDamping = value
         },
         get tag() {
           return self.tag
@@ -382,6 +481,12 @@ export class RigidBody extends Node {
         addForce(force, mode) {
           self.addForce(force, mode)
         },
+        addForceAtPos(force, pos) {
+          self.addForceAtPos(force, pos)
+        },
+        addForceAtLocalPos(force, pos) {
+          self.addForceAtLocalPos(force, pos)
+        },
         addTorque(torque, mode) {
           self.addTorque(torque, mode)
         },
@@ -408,6 +513,15 @@ export class RigidBody extends Node {
         },
         setAngularVelocity(vec3) {
           self.setAngularVelocity(vec3)
+        },
+        getVelocityAtPos(pos, vec3) {
+          return self.getVelocityAtPos(pos, vec3)
+        },
+        getLocalVelocityAtLocalPos(pos, vec3) {
+          return self.getLocalVelocityAtLocalPos(pos, vec3)
+        },
+        setCenterOfMass(pos) {
+          self.setCenterOfMass(pos)
         },
         setKinematicTarget(position, quaternion) {
           self.setKinematicTarget(position, quaternion)

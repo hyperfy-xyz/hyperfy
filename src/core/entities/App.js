@@ -38,6 +38,7 @@ export class App extends Entity {
     this.playerProxies = new Map()
     this.hitResultsPool = []
     this.hitResults = []
+    this.deadHook = { dead: false }
     this.build()
   }
 
@@ -110,7 +111,7 @@ export class App extends Entity {
       this.abortController = new AbortController()
       this.script = script
       try {
-        this.script.exec(this.getWorldProxy(), this.getAppProxy(), this.fetch, blueprint.props)
+        this.script.exec(this.getWorldProxy(), this.getAppProxy(), this.fetch, blueprint.props, this.setTimeout)
       } catch (err) {
         console.error('script crashed')
         console.error(err)
@@ -167,6 +168,9 @@ export class App extends Entity {
     // abort fetch's etc
     this.abortController?.abort()
     this.abortController = null
+    // mark dead and re-create hook (timers, async etc)
+    this.deadHook.dead = true
+    this.deadHook = { dead: false }
     // clear fields
     this.onFields?.([])
   }
@@ -357,6 +361,19 @@ export class App extends Entity {
     }
   }
 
+  setTimeout = (fn, ms) => {
+    const hook = this.getDeadHook()
+    const timerId = setTimeout(() => {
+      if (hook.dead) return
+      fn()
+    }, ms)
+    return timerId
+  }
+
+  getDeadHook = () => {
+    return this.deadHook
+  }
+
   getNodes() {
     // note: this is currently just used in the nodes tab in the app inspector
     // to get a clean hierarchy
@@ -382,28 +399,33 @@ export class App extends Entity {
   getWorldProxy() {
     if (!this.worldProxy) {
       const entity = this
-      const getterFns = {
-        networkId: 'getNetworkId',
-        isServer: 'getIsServer',
-        isClient: 'getIsClient',
-      }
-      const worldApi = this.world.apps.worldApi
+      const getters = this.world.apps.worldGetters
+      const setters = this.world.apps.worldSetters
+      const methods = this.world.apps.worldMethods
       this.worldProxy = new Proxy(
         {},
         {
           get: (target, prop) => {
-            // handle getters
-            if (prop in getterFns) {
-              return worldApi[getterFns[prop]](entity)
+            // getters
+            if (prop in getters) {
+              return getters[prop](entity)
             }
-            // handle methods
-            if (prop in worldApi) {
-              const method = worldApi[prop]
+            // methods
+            if (prop in methods) {
+              const method = methods[prop]
               return (...args) => {
                 return method(entity, ...args)
               }
             }
             return undefined
+          },
+          set: (target, prop, value) => {
+            // setters
+            if (prop in setters) {
+              setters[prop](entity, value)
+              return true
+            }
+            return true
           },
         }
       )
@@ -414,43 +436,34 @@ export class App extends Entity {
   getAppProxy() {
     if (!this.appProxy) {
       const entity = this
-      const getterFns = {
-        instanceId: 'getInstanceId',
-        version: 'getVersion',
-        modelUrl: 'getModelUrl',
-        state: 'getState',
-        props: 'getProps',
-        config: 'getConfig',
-      }
-      const setterFns = {
-        state: 'setState',
-      }
-      const appApi = this.world.apps.appApi
+      const getters = this.world.apps.appGetters
+      const setters = this.world.apps.appSetters
+      const methods = this.world.apps.appMethods
       this.appProxy = new Proxy(
         {},
         {
           get: (target, prop) => {
-            // handle getters
-            if (prop in getterFns) {
-              return appApi[getterFns[prop]](entity)
+            // getters
+            if (prop in getters) {
+              return getters[prop](entity)
             }
-            // handle methods
-            if (prop in appApi) {
-              const method = appApi[prop]
+            // methods
+            if (prop in methods) {
+              const method = methods[prop]
               return (...args) => {
                 return method(entity, ...args)
               }
             }
-            // handle root node
+            // root node props
             return entity.root.getProxy()[prop]
           },
           set: (target, prop, value) => {
-            // handle setter fns
-            if (prop in setterFns) {
-              appApi[setterFns[prop]](entity, value)
+            // setters
+            if (prop in setters) {
+              setters[prop](entity, value)
               return true
             }
-            // also inherit app root node
+            // root node props
             if (prop in entity.root.getProxy()) {
               entity.root.getProxy()[prop] = value
               return true

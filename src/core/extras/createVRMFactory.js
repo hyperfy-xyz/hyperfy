@@ -105,11 +105,12 @@ export function createVRMFactory(glb, setupMaterial) {
     create,
     applyStats(stats) {
       glb.scene.traverse(obj => {
-        if (obj.geometry && !stats.geometries.has(obj.geometry)) {
+        if (obj.geometry && !stats.geometries.has(obj.geometry.uuid)) {
           stats.geometries.add(obj.geometry.uuid)
           stats.triangles += getTrianglesFromGeometry(obj.geometry)
         }
-        if (obj.material) {
+        if (obj.material && !stats.materials.has(obj.material.uuid)) {
+          stats.materials.add(obj.material.uuid)
           stats.textureBytes += getTextureBytesFromMaterial(obj.material)
         }
       })

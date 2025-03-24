@@ -111,6 +111,17 @@ export class ClientLoader extends System {
         this.results.set(key, texture)
         return texture
       }
+      if (type === 'image') {
+        return new Promise(resolve => {
+          const img = new Image()
+          img.onload = () => {
+            this.results.set(key, img)
+            resolve(img)
+            // URL.revokeObjectURL(img.src)
+          }
+          img.src = URL.createObjectURL(file)
+        })
+      }
       if (type === 'texture') {
         return new Promise(resolve => {
           const img = new Image()
@@ -206,6 +217,16 @@ export class ClientLoader extends System {
       promise = this.rgbeLoader.loadAsync(localUrl).then(texture => {
         this.results.set(key, texture)
         return texture
+      })
+    }
+    if (type === 'image') {
+      promise = new Promise(resolve => {
+        const img = new Image()
+        img.onload = () => {
+          this.results.set(key, img)
+          resolve(img)
+        }
+        img.src = localUrl
       })
     }
     if (type === 'texture') {

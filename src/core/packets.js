@@ -16,6 +16,8 @@ const names = [
   'playerTeleport',
   'playerPush',
   'kick',
+  'ping',
+  'pong',
 ]
 
 const byName = {}

@@ -61,6 +61,9 @@ export class ServerLoader extends System {
       //   return texture
       // })
     }
+    if (type === 'image') {
+      // ...
+    }
     if (type === 'texture') {
       // ...
     }

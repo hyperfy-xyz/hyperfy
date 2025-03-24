@@ -12,6 +12,14 @@ The players unique ID. This is always the same for the same player, even when th
 
 The players name.
 
+### `.local`: Boolean
+
+Whether the player is local to this client.
+
+### `.admin`: Boolean
+
+Whether the player is an admin in this world.
+
 ### `.position`: Vector3
 
 The players position in the world.

@@ -13,6 +13,47 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+## [v0.9.0]
+
+### Added
+- core: standalone viewer/clients
+- apps: add world.getPlayers() to list all players in the world
+- apps: screen-space UI 
+- core: add player health
+- apps: support world.overlapSphere queries
+- core: player to player collision (optional, disabled by default)
+- apps: player.push(force)
+- core: support ctrl+z to undo added, moved and removed apps
+- core: build mode right click with mouse to inspect
+- apps: new "buttons" prop
+- apps: app.sendTo(playerId, name, data) available on server
+- apps: node.children array of all child nodes
+- apps: uiimage.src support asset urls from props
+- apps: emit an app.on('destroy', cb) event that is run right before an app is destroyed/restarted
+- apps: add player.isAdmin for securely checking if a player is an admin
+
+### Changed
+- apps: support webp image props
+- infra: pipe all client variables through initial server snapshot
+- core: preload local avatar and movement emotes before entering the world
+- apps: ui borderRadius use arcs instead of quadratic curves
+- apps: player effects moved to player.applyEffect (BREAKING CHANGE)
+- core: use more memory efficient app proxies
+- core: support custom app runtime method injection
+- core: show red reticle when in build mode for clarity
+- apps: unify player.id/userId/networkId etc as player.id
+
+### Fixed
+- core: avatar feet too far above ground
+- core: fix esm module bundling
+- apps: anchors positions behind by one frame
+- apps: ui canvas using incorrect color space
+- apps: ensure control.camera initial values are accurate
+- apps: exporting app with emojis in props broken
+- apps: ui pointer events were not accurate
+- apps: ensure player enter event is emitted after they receive snapshot
+- apps: ui gap value not correctly multiplied by resolution
+
 ## [v0.8.1]
 
 ### Fixed
@@ -248,7 +289,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Basic project structure
 - Core functionality from original project
 
-[Unreleased]: https://github.com/hyperfy-xyz/hyperfy/compare/v0.8.1...HEAD
+[Unreleased]: https://github.com/hyperfy-xyz/hyperfy/compare/v0.9.0...HEAD
+[0.9.0]: https://github.com/hyperfy-xyz/hyperfy/compare/v0.8.1...v0.9.0
 [0.8.1]: https://github.com/hyperfy-xyz/hyperfy/compare/v0.8.0...v0.8.1
 [0.8.0]: https://github.com/hyperfy-xyz/hyperfy/compare/v0.7.1...v0.8.0
 [0.7.1]: https://github.com/hyperfy-xyz/hyperfy/compare/v0.7.0...v0.7.1
