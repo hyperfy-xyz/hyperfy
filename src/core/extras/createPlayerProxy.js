@@ -162,5 +162,8 @@ export function createPlayerProxy(player) {
         player.setZoomEnabled(enabled)
       }
     },
+    isInAir() {
+      return player.isInAir()
+    },
   }
 }

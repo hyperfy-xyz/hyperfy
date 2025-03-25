@@ -645,6 +645,10 @@ export class PlayerLocal extends Entity {
     this.jumpPressed = false
   }
 
+  isInAir() {
+    return this.jumped || this.jumping || this.airJumping || this.falling
+  }
+
   update(delta) {
     const isXR = this.world.xr.session
     const freeze = this.data.effect?.freeze
