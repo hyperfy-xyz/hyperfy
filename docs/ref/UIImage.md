@@ -136,3 +136,24 @@ In this example:
 
 You can also make the image configurable using app.configure to allow users to change properties like the source URL or dimensions.
 
+```jsx
+// Configure the app with a file input for images
+app.configure([
+  {
+    type: 'file',
+    key: 'selectedImage',
+    label: 'Upload Image',
+    kind: 'image' // Specify the kind as 'image' to restrict file types
+  }
+]);
+
+// Create the image element using the selected file
+const image = app.create('uiimage', {
+  src: props.selectedImage?.url, // Use the URL of the selected image
+  width: 300,
+  height: 200,
+  objectFit: 'cover',
+  backgroundColor: 'rgba(255, 255, 255, 0.2)',
+  borderRadius: 10
+});
+```
