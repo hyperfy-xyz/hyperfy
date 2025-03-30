@@ -178,6 +178,22 @@ export class Stage extends System {
         }
         raw.needsUpdate = true
       },
+      get color() {
+        if (!(raw instanceof THREE.MeshStandardMaterial)) {
+          throw new Error('[material] color property only available on MeshStandardMaterial (Principled BSDF)')
+        }
+        return raw.color
+      },
+      set color(val) {
+        if (!(raw instanceof THREE.MeshStandardMaterial)) {
+          throw new Error('[material] color property only available on MeshStandardMaterial (Principled BSDF)')
+        }
+        if (typeof val !== 'string') {
+          throw new Error('[material] color must be a string (e.g. "red", "#ff0000", "rgb(255,0,0)")')
+        }
+        raw.color.set(val)
+        raw.needsUpdate = true
+      },
       get emissiveIntensity() {
         return raw.emissiveIntensity
       },

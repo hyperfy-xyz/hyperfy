@@ -4,6 +4,10 @@ A material on a [Mesh](/docs/ref/Mesh.md) node.
 
 ## Properties
 
+### `.color`: String
+
+The base color of the material. Only available on MeshStandardMaterial (Principled BSDF). Can be set using any valid CSS color string (e.g. "red", "#ff0000", "rgb(255,0,0)").
+
 ### `.textureX`: Number
 
 The offset of the texture on the `x` axis. Useful for UV scrolling.
