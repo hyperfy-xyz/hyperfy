@@ -155,5 +155,10 @@ export function createPlayerProxy(player) {
         world.network.sendTo(player.data.owner, 'playerPush', { force })
       }
     },
+    setDoubleJumpEnabled(enabled) {
+      if (player.data.owner === world.network.id) {
+        player.setDoubleJumpEnabled(enabled)
+      }
+    },
   }
 }

@@ -42,6 +42,7 @@ export class PlayerLocal extends Entity {
   constructor(world, data, local) {
     super(world, data, local)
     this.isPlayer = true
+    this.doubleJumpEnabled = true
     this.init()
   }
 
@@ -576,7 +577,8 @@ export class PlayerLocal extends Entity {
       // ground/air jump
       const shouldJump =
         this.grounded && !this.jumping && this.jumpDown && !this.data.effect?.snare && !this.data.effect?.freeze
-      const shouldAirJump = !this.grounded && !this.airJumped && this.jumpPressed && !this.world.builder.enabled
+      const shouldAirJump =
+        !this.grounded && !this.airJumped && this.jumpPressed && !this.world.builder.enabled && this.doubleJumpEnabled
       if (shouldJump || shouldAirJump) {
         // calc velocity needed to reach jump height
         let jumpVelocity = Math.sqrt(2 * this.effectiveGravity * this.jumpHeight)
@@ -1001,5 +1003,10 @@ export class PlayerLocal extends Entity {
     if (changed) {
       this.world.emit('player', this)
     }
+  }
+
+  setDoubleJumpEnabled(enabled) {
+    this.doubleJumpEnabled = !!enabled
+    return this.doubleJumpEnabled
   }
 }
