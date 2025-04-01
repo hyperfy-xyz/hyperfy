@@ -949,6 +949,10 @@ export class PlayerLocal extends Entity {
     })
   }
 
+  isInAir() {
+    return this.jumped || this.jumping || this.airJumping || this.falling
+  }
+
   chat(msg) {
     this.nametag.active = false
     this.bubbleText.value = msg

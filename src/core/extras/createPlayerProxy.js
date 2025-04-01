@@ -155,5 +155,8 @@ export function createPlayerProxy(player) {
         world.network.sendTo(player.data.owner, 'playerPush', { force })
       }
     },
+    isInAir() {
+      return player.isInAir()
+    },
   }
 }
