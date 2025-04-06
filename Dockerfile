@@ -1,7 +1,7 @@
 FROM node:22-alpine
 
 # Install curl, Python and build tools
-RUN apk add --no-cache curl python3 make g++
+RUN apk add --no-cache curl python3 make g++ linux-headers
 
 # Set the working directory
 WORKDIR /app
