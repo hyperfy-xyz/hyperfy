@@ -7,6 +7,8 @@ import {
   getAssociatedTokenAddress,
   TOKEN_PROGRAM_ID,
 } from '@solana/spl-token'
+import nacl from 'tweetnacl'
+import bs58 from 'bs58'
 import { uuid } from '../utils'
 import { System } from './System'
 
@@ -15,6 +17,8 @@ const connection = new Connection(process.env.RPC_URL)
 const worldTokenMintAddress = process.env.WORLD_TOKEN_MINT_ADDRESS
 const worldAddress = process.env.WORLD_PUBLIC_KEY
 const worldPrivateKey = process.env.WORLD_PRIVATE_KEY
+
+const template = 'Connect to world:\n{address}'
 
 let worldKeypair
 if (worldPrivateKey) {
@@ -28,12 +32,43 @@ export class ServerSolana extends System {
     this.callbacks = {}
   }
 
-  connect() {
-    throw new Error('[solana] connect can only be called on the client')
+  connect(player) {
+    this.world.network.sendTo(player.data.id, 'walletConnect')
   }
 
-  disconnect() {
-    throw new Error('[solana] disconnect can only be called on the client')
+  disconnect(player) {
+    player.modify({ wallet: null })
+    this.world.network.sendTo(player.data.id, 'walletDisconnect')
+    this.world.network.send('entityModified', {
+      id: player.data.id,
+      wallet: null,
+    })
+  }
+
+  onWalletConnect(playerId, { address, signature }) {
+    const player = this.world.entities.getPlayer(playerId)
+    if (!player) return
+    const publicKey = new PublicKey(address)
+    const decodedSignature = bs58.decode(signature)
+    const text = template.replace('{address}', address)
+    const message = new TextEncoder().encode(text)
+    const isValid = nacl.sign.detached.verify(message, decodedSignature, publicKey.toBytes())
+    if (!isValid) return
+    player.modify({ wallet: address })
+    this.world.network.send('entityModified', {
+      id: player.data.id,
+      wallet: address,
+    })
+  }
+
+  onWalletDisconnect(playerId) {
+    const player = this.world.entities.getPlayer(playerId)
+    if (!player) return
+    player.modify({ wallet: null })
+    this.world.network.send('entityModified', {
+      id: player.data.id,
+      wallet: null,
+    })
   }
 
   deposit(entity, player, amount) {

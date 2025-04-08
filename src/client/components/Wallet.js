@@ -27,8 +27,7 @@ export function Logic({ world }) {
   const modal = useWalletModal()
   const { connecting, connected, publicKey } = wallet
   useEffect(() => {
-    wallet.openModal = () => modal.setVisible(true)
-    world.entities.player.setWallet(wallet)
+    world.solana.bind({ wallet, modal })
   }, [connecting, connected, publicKey])
   return null
 }

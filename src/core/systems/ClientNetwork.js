@@ -203,6 +203,14 @@ export class ClientNetwork extends System {
     this.world.emit('kick', code)
   }
 
+  onWalletConnect = () => {
+    this.world.solana.connect()
+  }
+
+  onWalletDisconnect = () => {
+    this.world.solana.disconnect()
+  }
+
   onDepositRequest = data => {
     this.world.solana.onDepositRequest(data)
   }

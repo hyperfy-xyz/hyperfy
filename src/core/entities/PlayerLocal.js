@@ -1062,20 +1062,6 @@ export class PlayerLocal extends Entity {
     })
   }
 
-  setWallet(wallet) {
-    this.wallet = wallet
-    this.data.wallet = {
-      connecting: wallet.connecting,
-      connected: wallet.connected,
-      address: wallet.publicKey?.toString() || null,
-    }
-    this.world.events.emit('wallet', { playerId: this.data.id, wallet: this.data.wallet })
-    this.world.network.send('entityModified', {
-      id: this.data.id,
-      wallet: this.data.wallet,
-    })
-  }
-
   chat(msg) {
     this.nametag.active = false
     this.bubbleText.value = msg
@@ -1121,6 +1107,11 @@ export class PlayerLocal extends Entity {
     if (data.hasOwnProperty('roles')) {
       this.data.roles = data.roles
       changed = true
+    }
+    if (data.hasOwnProperty('wallet')) {
+      console.log('yo')
+      this.data.wallet = data.wallet
+      this.world.events.emit('wallet', { playerId: this.data.id, wallet: data.wallet })
     }
     if (avatarChanged) {
       this.applyAvatar()
