@@ -1109,7 +1109,6 @@ export class PlayerLocal extends Entity {
       changed = true
     }
     if (data.hasOwnProperty('wallet')) {
-      console.log('yo')
       this.data.wallet = data.wallet
       this.world.events.emit('wallet', { playerId: this.data.id, wallet: data.wallet })
     }

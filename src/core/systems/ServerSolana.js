@@ -75,7 +75,7 @@ export class ServerSolana extends System {
     return new Promise(async (resolve, reject) => {
       const hook = entity.getDeadHook()
       try {
-        const playerAddress = player.data.wallet.address
+        const playerAddress = player.data.wallet
         if (!playerAddress) return reject('not_connected')
         if (!isNumber(amount)) return reject('amount_invalid')
         // make public keys
@@ -178,7 +178,7 @@ export class ServerSolana extends System {
     return new Promise(async (resolve, reject) => {
       const hook = entity.getDeadHook()
       try {
-        const playerAddress = player.data.wallet.address
+        const playerAddress = player.data.wallet
         if (!playerAddress) return reject('not_connected')
         if (!isNumber(amount)) return onError('amount_invalid')
         if (!worldKeypair) return onError('wallet_not_configured')
