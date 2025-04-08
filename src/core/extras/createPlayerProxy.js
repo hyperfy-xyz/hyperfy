@@ -168,10 +168,10 @@ export function createPlayerProxy(entity, player) {
       return player.data.wallet
     },
     connect() {
-      return world.solana.connect()
+      return world.solana.connect(player)
     },
     disconnect() {
-      return world.solana.disconnect()
+      return world.solana.disconnect(player)
     },
     deposit(amount) {
       return world.solana.deposit(entity, player, amount)
