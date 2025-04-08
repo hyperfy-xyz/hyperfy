@@ -12,13 +12,7 @@ You can generate a new wallet by running `node ./scripts/gen-wallet.js` and past
 
 ## player.wallet
 
-Wallet information is automatically synchronized and can be accessed by apps on both the server and client.
-
-**player.wallet.connecting**: A boolean that determines whether their wallet is in the process of connecting.
-
-**player.wallet.connected**: A boolean that determines whether their wallet is connected.
-
-**player.wallet.address**: The players wallet address, when connected.
+Either a `String` wallet address or `null`. This is automatically synchronized and accessable by apps on both the client and server.
 
 ## world.on('wallet', callback)
 
@@ -27,23 +21,19 @@ Apps can also subscribe to global player wallet changes on both the client and s
 ```jsx
 world.on('wallet', e => {
   // e.playerId
-  // e.wallet.connecting
-  // e.wallet.connected
-  // e.wallet.address
+  // e.wallet
 })
 ```
 
 ## player.connect()
 
-Client only.
+On the client this invokes a connect and sign flow, which is then verified on the server before updating the `player.wallet` value and emitting the `wallet` change event above.
 
-Displays a modal for the player to select a wallet provider and then connect.
+On the server this sends a network event to the client to invoke the above.
 
 ## player.disconnect()
 
-Client only.
-
-Disconnects the players current wallet.
+Disconnects the players current wallet. Can be used on the client or server, and clears the `player.wallet` value. Also emits a `wallet` change event.
 
 ## player.deposit(amount)
 
@@ -60,7 +50,3 @@ Server only.
 Generates an unsigned transaction for the player to receive `amoutn` from the world wallet, sends it to the client to be signed, and is then signed and confirmed back on the server.
 
 Returns a promise that resolves with the signature, or rejects with an error code.
-
-
-
-
