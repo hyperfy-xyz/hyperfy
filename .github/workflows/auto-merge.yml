@@ -1,0 +1,37 @@
+name: Auto Merge Main and Dev to Solana Branches
+
+on:
+  push:
+    branches:
+      - main
+      - dev
+
+jobs:
+  merge-branch:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4.1.4
+        with:
+          fetch-depth: 0
+      
+      - name: Configure Git
+        run: |
+          git config --global user.name 'GitHub Actions'
+          git config --global user.email 'actions@github.com'
+      
+      - name: Merge Main into Solana-Main
+        if: github.ref == 'refs/heads/main'
+        run: |
+          git checkout Solana-Main
+          git pull origin Solana-Main
+          git merge --no-ff origin/main -m "Auto-merge main into Solana-Main" || (echo "Merge conflict occurred" && exit 1)
+          git push origin Solana-Main
+      
+      - name: Merge Dev into Solana-Dev
+        if: github.ref == 'refs/heads/dev'
+        run: |
+          git checkout Solana-Dev
+          git pull origin Solana-Dev
+          git merge --no-ff origin/dev -m "Auto-merge dev into Solana-Dev" || (echo "Merge conflict occurred" && exit 1)
+          git push origin Solana-Dev
