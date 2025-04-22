@@ -13,7 +13,7 @@ import { uuid } from '../../core/utils'
 const rootDir = path.join(__dirname, '../')
 const worldDir = path.join(rootDir, process.env.WORLD)
 const assetsDir = path.join(worldDir, '/assets')
-const docsDir = path.join(rootDir, '../docs')
+const docsDir = path.join(rootDir, './docs')
 
 // =====================================
 // MCP Server Implementation Below
