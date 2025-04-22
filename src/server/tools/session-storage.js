@@ -36,4 +36,8 @@ export class Sessions extends EventEmitter {
   get count() {
     return this.sessions.size
   }
+
+  [Symbol.iterator]() {
+    return this.sessions.values()
+  }
 }
