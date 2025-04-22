@@ -78,15 +78,15 @@ export class McpClient extends EventEmitter {
     }
   }
 
-  async processQueryStream(query, onProgress) {
+  async processQueryStream(query, userId = null) {
     /**
      * Process a query using Claude and available tools with streaming updates
      *
      * @param query - The user's input query
-     * @param onProgress - Optional callback for progress updates
+     * @param userId - Optional user ID for context and permission checking
      * @returns Processed response as a string
      */
-    console.log(`Processing query: "${query}"`)
+    console.log(`Processing query: "${query}" for user: ${userId || 'anonymous'}`)
     this.emit('start', { query })
     
     const messages = [
@@ -96,9 +96,15 @@ export class McpClient extends EventEmitter {
       },
     ]
 
+    // Add user context if available
+    if (userId) {
+      this.emit('status', { status: `Processing request for user ${userId.substring(0, 8)}...` })
+    } else {
+      this.emit('status', { status: 'Thinking...' })
+    }
+    
     // Initial Claude API call
     console.log('Sending request to Claude API...')
-    this.emit('status', { status: 'Thinking...' })
     
     const initialResponse = await this.anthropic.messages.create({
       model: 'claude-3-5-sonnet-20241022',
@@ -133,9 +139,13 @@ export class McpClient extends EventEmitter {
           })
 
           try {
+            // Store userId in metadata for tool context
+            const contextData = userId ? { userId } : undefined
+            
             const result = await this.mcp.callTool({
               name: toolName,
               arguments: toolArgs,
+              metadata: contextData
             })
             console.log(`Tool execution result:`, JSON.stringify(result))
             toolResults.push(result)

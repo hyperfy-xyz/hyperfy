@@ -28,6 +28,7 @@ import {
   SettingsIcon,
   VRIcon,
 } from './Icons'
+import { storage } from '../../core/storage'
 
 export function CoreUI({ world }) {
   const [ref, width, height] = useElemSize()
@@ -53,6 +54,7 @@ function AIButton({ world }) {
   const [response, setResponse] = useState('')
   const [streamOpen, setStreamOpen] = useState(false)
   const [showResponse, setShowResponse] = useState(false)
+  const [authError, setAuthError] = useState(null)
   const inputRef = useRef(null)
   const eventSourceRef = useRef(null)
   const responseAreaRef = useRef(null)
@@ -66,6 +68,7 @@ function AIButton({ world }) {
       inputBg: 'rgba(0, 0, 0, 0.15)',
       statusBg: 'rgba(0, 0, 0, 0.25)',
       toolUseBg: 'rgba(60, 60, 80, 0.4)',
+      errorBg: 'rgba(180, 30, 30, 0.4)',
     },
     radius: {
       button: '50%',
@@ -110,21 +113,32 @@ function AIButton({ world }) {
   }, [])
 
   const handleStreamResponse = async (query) => {
+    // Get auth token from localStorage
+    const authToken = storage.get('authToken')
+    
+    if (!authToken) {
+      setAuthError('Not authenticated. Please refresh the page or log in again.')
+      setStatus('Authentication error')
+      setIsLoading(false)
+      return
+    }
+    
     // Clear previous response and set loading state
     setResponse('')
     setStatus('Connecting...')
     setIsLoading(true)
     setShowResponse(true)
     setShowPrompt(false)
+    setAuthError(null)
     
     // Close any existing connection
     if (eventSourceRef.current) {
       eventSourceRef.current.close()
     }
 
-    // Create a new SSE connection
+    // Create a new SSE connection with auth token
     const encodedQuery = encodeURIComponent(query)
-    const eventSource = new EventSource(`/mcp/stream?query=${encodedQuery}`)
+    const eventSource = new EventSource(`/mcp/stream?query=${encodedQuery}&authToken=${authToken}`)
     eventSourceRef.current = eventSource
     setStreamOpen(true)
 
@@ -140,6 +154,11 @@ function AIButton({ world }) {
       setIsLoading(false)
       eventSource.close()
       setStreamOpen(false)
+      
+      // Check if this might be an auth error (no specific error info from SSE)
+      if (!response) {
+        setAuthError('Connection failed. You may not have permission to use this feature.')
+      }
     }
 
     // Handle various event types
@@ -195,8 +214,12 @@ function AIButton({ world }) {
     })
 
     eventSource.addEventListener('error', (event) => {
-      const data = JSON.parse(event.data)
-      setStatus(`Error: ${data.error}`)
+      try {
+        const data = JSON.parse(event.data)
+        setStatus(`Error: ${data.error}`)
+      } catch (err) {
+        setStatus('An error occurred')
+      }
       setIsLoading(false)
       eventSource.close()
       setStreamOpen(false)
@@ -227,6 +250,7 @@ function AIButton({ world }) {
     setIsLoading(false)
     setResponse('')
     setStatus('')
+    setAuthError(null)
   }
 
   return (
@@ -477,12 +501,27 @@ function AIButton({ world }) {
               ×
             </button>
           </div>
+          
+          {authError && (
+            <div
+              css={css`
+                margin-bottom: 0.5rem;
+                padding: 0.5rem;
+                background: ${styleConfig.colors.errorBg};
+                border-radius: ${styleConfig.radius.input};
+                font-size: 0.9rem;
+              `}
+            >
+              {authError}
+            </div>
+          )}
+          
           <div
             ref={responseAreaRef}
             css={css`
               flex: 1;
               overflow-y: auto;
-              max-height: calc(60vh - 3rem);
+              max-height: calc(60vh - ${authError ? '6rem' : '3rem'});
               white-space: pre-wrap;
               font-family: monospace;
               line-height: 1.5;

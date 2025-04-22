@@ -23,6 +23,7 @@ import { Storage } from './Storage'
 import { fileURLToPath } from 'url'
 import { registerMCPServer } from './tools/registerMCPServer.js'
 import { McpClient } from './tools/mcp-client.js'
+import { readJWT } from '../core/utils-server'
 
 const mcpClient = new McpClient()
 
@@ -192,75 +193,112 @@ if (process.env.MCP_SERVER === 'true') {
   // Create the MCP server instance
   registerMCPServer(world, fastify)
   
-  fastify.post('/mcp/query', async (req, reply) => {
-    const query = req.body.query
-    const response = await mcpClient.processQuery(query)
-    reply.send(response)
-  })
-  
   // Add new SSE endpoint for streaming AI responses
   fastify.get('/mcp/stream', async (req, reply) => {
-    reply.raw.writeHead(200, {
-      'Content-Type': 'text/event-stream',
-      'Cache-Control': 'no-cache',
-      'Connection': 'keep-alive'
-    })
-
-    const sendEvent = (event, data) => {
-      reply.raw.write(`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`)
-    }
-
-    // Set up event handlers for this request
-    const onStart = (data) => sendEvent('start', data)
-    const onStatus = (data) => sendEvent('status', data)
-    const onText = (data) => sendEvent('text', data)
-    const onToolStart = (data) => sendEvent('tool_start', data)
-    const onToolResult = (data) => sendEvent('tool_result', data)
-    const onToolError = (data) => sendEvent('tool_error', data)
-    const onComplete = (data) => {
-      sendEvent('complete', data)
-      reply.raw.end()
+    try {
+      // Get auth token from query parameter or header
+      const authToken = req.query.authToken || req.headers.authorization?.replace('Bearer ', '')
       
-      // Clean up event listeners
-      mcpClient.removeListener('start', onStart)
-      mcpClient.removeListener('status', onStatus)
-      mcpClient.removeListener('text', onText)
-      mcpClient.removeListener('tool_start', onToolStart)
-      mcpClient.removeListener('tool_result', onToolResult)
-      mcpClient.removeListener('tool_error', onToolError)
-      mcpClient.removeListener('complete', onComplete)
-    }
+      if (!authToken) {
+        reply.code(401).send({ error: 'Authentication required' })
+        return
+      }
+      
+      // Validate token and get user
+      let userId = null
+      
+      try {
+        // Verify JWT token
+        const { userId: tokenUserId } = await readJWT(authToken)
+        userId = tokenUserId
+        
+        // Get player from world entities
+        const player = world.entities.getPlayer(userId)
+        
+        if (!player) {
+          reply.code(403).send({ error: 'Player not found' })
+          return
+        }
 
-    // Register event listeners
-    mcpClient.on('start', onStart)
-    mcpClient.on('status', onStatus)
-    mcpClient.on('text', onText)
-    mcpClient.on('tool_start', onToolStart)
-    mcpClient.on('tool_result', onToolResult)
-    mcpClient.on('tool_error', onToolError)
-    mcpClient.on('complete', onComplete)
+        // Check if user has admin permissions using ServerNetwork's isAdmin method
+        if (!world.network.isAdmin(player) && !world.settings.public) {
+          reply.code(403).send({ error: 'Unauthorized' })
+          return
+        }
 
-    // Handle client disconnect
-    req.raw.on('close', () => {
-      mcpClient.removeListener('start', onStart)
-      mcpClient.removeListener('status', onStatus)
-      mcpClient.removeListener('text', onText)
-      mcpClient.removeListener('tool_start', onToolStart)
-      mcpClient.removeListener('tool_result', onToolResult)
-      mcpClient.removeListener('tool_error', onToolError)
-      mcpClient.removeListener('complete', onComplete)
-    })
-
-    // Process the query from the URL parameter
-    const query = req.query.query
-    if (query) {
-      mcpClient.processQueryStream(query).catch(error => {
-        sendEvent('error', { error: error.message })
-        reply.raw.end()
+      } catch (err) {
+        console.error('Failed to authenticate user for MCP stream:', err)
+        reply.code(401).send({ error: 'Invalid authentication token' })
+        return
+      }
+      
+      // Set SSE headers
+      reply.raw.writeHead(200, {
+        'Content-Type': 'text/event-stream',
+        'Cache-Control': 'no-cache',
+        'Connection': 'keep-alive'
       })
-    } else {
-      sendEvent('error', { error: 'Missing query parameter' })
-      reply.raw.end()
+
+      const sendEvent = (event, data) => {
+        reply.raw.write(`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`)
+      }
+
+      // Set up event handlers for this request
+      const onStart = (data) => sendEvent('start', data)
+      const onStatus = (data) => sendEvent('status', data)
+      const onText = (data) => sendEvent('text', data)
+      const onToolStart = (data) => sendEvent('tool_start', data)
+      const onToolResult = (data) => sendEvent('tool_result', data)
+      const onToolError = (data) => sendEvent('tool_error', data)
+      const onComplete = (data) => {
+        sendEvent('complete', data)
+        reply.raw.end()
+        
+        // Clean up event listeners
+        mcpClient.removeListener('start', onStart)
+        mcpClient.removeListener('status', onStatus)
+        mcpClient.removeListener('text', onText)
+        mcpClient.removeListener('tool_start', onToolStart)
+        mcpClient.removeListener('tool_result', onToolResult)
+        mcpClient.removeListener('tool_error', onToolError)
+        mcpClient.removeListener('complete', onComplete)
+      }
+
+      // Register event listeners
+      mcpClient.on('start', onStart)
+      mcpClient.on('status', onStatus)
+      mcpClient.on('text', onText)
+      mcpClient.on('tool_start', onToolStart)
+      mcpClient.on('tool_result', onToolResult)
+      mcpClient.on('tool_error', onToolError)
+      mcpClient.on('complete', onComplete)
+
+      // Handle client disconnect
+      req.raw.on('close', () => {
+        mcpClient.removeListener('start', onStart)
+        mcpClient.removeListener('status', onStatus)
+        mcpClient.removeListener('text', onText)
+        mcpClient.removeListener('tool_start', onToolStart)
+        mcpClient.removeListener('tool_result', onToolResult)
+        mcpClient.removeListener('tool_error', onToolError)
+        mcpClient.removeListener('complete', onComplete)
+      })
+
+      // Process the query from the URL parameter
+      const query = req.query.query
+      if (query) {
+        // Add user context to the query processing
+        mcpClient.processQueryStream(query, userId).catch(error => {
+          sendEvent('error', { error: error.message })
+          reply.raw.end()
+        })
+      } else {
+        sendEvent('error', { error: 'Missing query parameter' })
+        reply.raw.end()
+      }
+    } catch (err) {
+      console.error('Error in MCP stream endpoint:', err)
+      reply.code(500).send({ error: 'Internal server error' })
     }
   })
 }
