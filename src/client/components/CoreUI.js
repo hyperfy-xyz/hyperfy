@@ -45,6 +45,226 @@ export function CoreUI({ world }) {
   )
 }
 
+function AIButton({ world }) {
+  const [showPrompt, setShowPrompt] = useState(false)
+  const [input, setInput] = useState('')
+  const [isLoading, setIsLoading] = useState(false)
+  const inputRef = useRef(null)
+
+  // Common styles
+  const styleConfig = {
+    colors: {
+      background: 'rgba(20, 20, 20, 0.85)',
+      border: 'rgba(255, 255, 255, 0.15)',
+      borderActive: 'rgba(255, 255, 255, 0.3)',
+      inputBg: 'rgba(0, 0, 0, 0.15)',
+    },
+    radius: {
+      button: '50%',
+      panel: '1.5rem',
+      input: '1rem',
+    },
+    shadows: {
+      button: '0 2px 8px rgba(0, 0, 0, 0.2)',
+      panel: '0 4px 20px rgba(0, 0, 0, 0.25)',
+    },
+  }
+
+  useEffect(() => {
+    if (showPrompt && inputRef.current) {
+      inputRef.current.focus()
+    }
+  }, [showPrompt])
+
+  // Auto-resize textarea as content changes
+  useEffect(() => {
+    if (inputRef.current) {
+      inputRef.current.style.height = 'auto'
+      const scrollHeight = inputRef.current.scrollHeight
+      inputRef.current.style.height = `${Math.min(scrollHeight, 150)}px`
+    }
+  }, [input, showPrompt])
+
+  const handleSubmit = async e => {
+    e.preventDefault()
+    if (!input.trim()) return
+
+    setIsLoading(true)
+    try {
+      // Here you would send the input to your API
+      // const response = await fetch('your-api-endpoint', {
+      //   method: 'POST',
+      //   headers: { 'Content-Type': 'application/json' },
+      //   body: JSON.stringify({ prompt: input })
+      // })
+      // const data = await response.json()
+
+      // Handle response as needed
+      console.log('AI prompt submitted:', input)
+
+      // Clear input after submission
+      setInput('')
+      setShowPrompt(false)
+    } catch (error) {
+      console.error('Error sending prompt to API:', error)
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  return (
+    <>
+      <div
+        className='ai-button'
+        css={css`
+          position: fixed;
+          bottom: calc(2rem + env(safe-area-inset-bottom));
+          right: calc(50% - 1.25rem);
+          width: 2.5rem;
+          height: 2.5rem;
+          border-radius: ${styleConfig.radius.button};
+          background: ${styleConfig.colors.background};
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          border: 1px solid ${styleConfig.colors.border};
+          box-shadow: ${styleConfig.shadows.button};
+          cursor: pointer;
+          z-index: 100;
+          pointer-events: auto;
+          transition: transform 0.2s ease;
+
+          &:hover {
+            transform: scale(1.05);
+            border-color: ${styleConfig.colors.borderActive};
+          }
+
+          &:active {
+            transform: scale(0.95);
+          }
+        `}
+        onClick={() => setShowPrompt(!showPrompt)}
+      >
+        <img src='/prompt.png' alt='AI Prompt' width='32' height='32' />
+      </div>
+
+      {showPrompt && (
+        <div
+          css={css`
+            position: fixed;
+            bottom: calc(5rem + env(safe-area-inset-bottom));
+            right: calc(50% - 10rem);
+            width: 20rem;
+            z-index: 200;
+            pointer-events: auto;
+          `}
+        >
+          <div
+            css={css`
+              background: ${styleConfig.colors.background};
+              border-radius: ${styleConfig.radius.panel};
+              padding: 0.75rem;
+              box-shadow: ${styleConfig.shadows.panel};
+              backdrop-filter: blur(10px);
+              position: relative;
+              border: 1px solid ${styleConfig.colors.border};
+
+              &:after {
+                content: '';
+                position: absolute;
+                bottom: -10px;
+                left: 50%;
+                margin-left: -10px;
+                border-width: 10px 10px 0;
+                border-style: solid;
+                border-color: ${styleConfig.colors.background} transparent transparent;
+              }
+            `}
+          >
+            <form onSubmit={handleSubmit}>
+              <div
+                css={css`
+                  position: relative;
+                  display: flex;
+                  align-items: flex-start;
+                `}
+              >
+                <textarea
+                  ref={inputRef}
+                  value={input}
+                  onChange={e => setInput(e.target.value)}
+                  css={css`
+                    width: 100%;
+                    background: ${styleConfig.colors.inputBg};
+                    border: 1px solid ${styleConfig.colors.border};
+                    border-radius: ${styleConfig.radius.input};
+                    padding: 0.75rem;
+                    color: white;
+                    font-size: 1rem;
+                    outline: none;
+                    min-height: 3rem;
+                    max-height: 150px;
+                    resize: none;
+                    overflow-y: auto;
+                    font-family: inherit;
+                    line-height: 1.4;
+                    padding-right: 2.5rem;
+                    transition: border-color 0.2s ease;
+
+                    &:focus {
+                      border-color: ${styleConfig.colors.borderActive};
+                    }
+                  `}
+                  placeholder='Prompt something...'
+                  onKeyDown={e => {
+                    if (e.key === 'Enter' && !e.shiftKey) {
+                      e.preventDefault()
+                      handleSubmit(e)
+                    }
+                  }}
+                />
+                <button
+                  type='submit'
+                  disabled={isLoading}
+                  css={css`
+                    position: absolute;
+                    right: 0.25rem;
+                    bottom: 0.25rem;
+                    background: none;
+                    border: none;
+                    color: white;
+                    cursor: pointer;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    opacity: ${isLoading ? 0.5 : 1};
+                    padding: 0.4rem;
+                  `}
+                >
+                  {isLoading ? (
+                    <svg width='18' height='18' viewBox='0 0 24 24' fill='none' xmlns='http://www.w3.org/2000/svg'>
+                      <path
+                        d='M12 2C6.48 2 2 6.48 2 12C2 17.52 6.48 22 12 22C17.52 22 22 17.52 22 12C22 6.48 17.52 2 12 2ZM12 20C7.59 20 4 16.41 4 12C4 7.59 7.59 4 12 4C16.41 4 20 7.59 20 12C20 16.41 16.41 20 12 20Z'
+                        fill='white'
+                        opacity='0.3'
+                      />
+                      <path d='M12 4V8' stroke='white' strokeWidth='3' strokeLinecap='round' />
+                    </svg>
+                  ) : (
+                    <svg width='18' height='18' viewBox='0 0 24 24' fill='none' xmlns='http://www.w3.org/2000/svg'>
+                      <path d='M2.01 21L23 12 2.01 3 2 10l15 2-15 2z' fill='white' />
+                    </svg>
+                  )}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+    </>
+  )
+}
+
 function Content({ world, width, height }) {
   const ref = useRef()
   const small = width < 600
@@ -57,6 +277,8 @@ function Content({ world, width, height }) {
   const [disconnected, setDisconnected] = useState(false)
   const [apps, setApps] = useState(false)
   const [kicked, setKicked] = useState(null)
+  const [buildMode, setBuildMode] = useState(world.builder.enabled)
+
   useEffect(() => {
     world.on('ready', setReady)
     world.on('player', setPlayer)
@@ -67,6 +289,7 @@ function Content({ world, width, height }) {
     world.on('avatar', setAvatar)
     world.on('kick', setKicked)
     world.on('disconnect', setDisconnected)
+    world.on('build-mode', setBuildMode)
     return () => {
       world.off('ready', setReady)
       world.off('player', setPlayer)
@@ -77,6 +300,7 @@ function Content({ world, width, height }) {
       world.off('avatar', setAvatar)
       world.off('kick', setKicked)
       world.off('disconnect', setDisconnected)
+      world.off('build-mode', setBuildMode)
     }
   }, [])
 
@@ -129,6 +353,7 @@ function Content({ world, width, height }) {
       {kicked && <KickedOverlay code={kicked} />}
       {ready && isTouch && <TouchBtns world={world} />}
       <div id='core-ui-portal' />
+      {ready && buildMode && <AIButton world={world} />}
     </div>
   )
 }
