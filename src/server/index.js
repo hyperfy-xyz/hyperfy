@@ -197,6 +197,72 @@ if (process.env.MCP_SERVER === 'true') {
     const response = await mcpClient.processQuery(query)
     reply.send(response)
   })
+  
+  // Add new SSE endpoint for streaming AI responses
+  fastify.get('/mcp/stream', async (req, reply) => {
+    reply.raw.writeHead(200, {
+      'Content-Type': 'text/event-stream',
+      'Cache-Control': 'no-cache',
+      'Connection': 'keep-alive'
+    })
+
+    const sendEvent = (event, data) => {
+      reply.raw.write(`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`)
+    }
+
+    // Set up event handlers for this request
+    const onStart = (data) => sendEvent('start', data)
+    const onStatus = (data) => sendEvent('status', data)
+    const onText = (data) => sendEvent('text', data)
+    const onToolStart = (data) => sendEvent('tool_start', data)
+    const onToolResult = (data) => sendEvent('tool_result', data)
+    const onToolError = (data) => sendEvent('tool_error', data)
+    const onComplete = (data) => {
+      sendEvent('complete', data)
+      reply.raw.end()
+      
+      // Clean up event listeners
+      mcpClient.removeListener('start', onStart)
+      mcpClient.removeListener('status', onStatus)
+      mcpClient.removeListener('text', onText)
+      mcpClient.removeListener('tool_start', onToolStart)
+      mcpClient.removeListener('tool_result', onToolResult)
+      mcpClient.removeListener('tool_error', onToolError)
+      mcpClient.removeListener('complete', onComplete)
+    }
+
+    // Register event listeners
+    mcpClient.on('start', onStart)
+    mcpClient.on('status', onStatus)
+    mcpClient.on('text', onText)
+    mcpClient.on('tool_start', onToolStart)
+    mcpClient.on('tool_result', onToolResult)
+    mcpClient.on('tool_error', onToolError)
+    mcpClient.on('complete', onComplete)
+
+    // Handle client disconnect
+    req.raw.on('close', () => {
+      mcpClient.removeListener('start', onStart)
+      mcpClient.removeListener('status', onStatus)
+      mcpClient.removeListener('text', onText)
+      mcpClient.removeListener('tool_start', onToolStart)
+      mcpClient.removeListener('tool_result', onToolResult)
+      mcpClient.removeListener('tool_error', onToolError)
+      mcpClient.removeListener('complete', onComplete)
+    })
+
+    // Process the query from the URL parameter
+    const query = req.query.query
+    if (query) {
+      mcpClient.processQueryStream(query).catch(error => {
+        sendEvent('error', { error: error.message })
+        reply.raw.end()
+      })
+    } else {
+      sendEvent('error', { error: 'Missing query parameter' })
+      reply.raw.end()
+    }
+  })
 }
 
 // Start the server

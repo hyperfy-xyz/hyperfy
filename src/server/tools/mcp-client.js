@@ -1,5 +1,5 @@
 import { Anthropic } from '@anthropic-ai/sdk'
-
+import { EventEmitter } from 'events'
 import { Client } from '@modelcontextprotocol/sdk/client/index.js'
 import { SSEClientTransport } from "@modelcontextprotocol/sdk/client/sse.js"
 
@@ -10,13 +10,14 @@ if (!ANTHROPIC_API_KEY) {
 }
 console.log('ANTHROPIC_API_KEY:', ANTHROPIC_API_KEY)
 
-export class McpClient {
+export class McpClient extends EventEmitter {
   mcp
   anthropic
   transport
   tools
 
   constructor() {
+    super()
     console.log('Initializing MCPClient...')
     // Initialize Anthropic client and MCP client
     this.anthropic = new Anthropic({
@@ -77,14 +78,17 @@ export class McpClient {
     }
   }
 
-  async processQuery(query) {
+  async processQueryStream(query, onProgress) {
     /**
-     * Process a query using Claude and available tools
+     * Process a query using Claude and available tools with streaming updates
      *
      * @param query - The user's input query
+     * @param onProgress - Optional callback for progress updates
      * @returns Processed response as a string
      */
     console.log(`Processing query: "${query}"`)
+    this.emit('start', { query })
+    
     const messages = [
       {
         role: 'user',
@@ -94,6 +98,8 @@ export class McpClient {
 
     // Initial Claude API call
     console.log('Sending request to Claude API...')
+    this.emit('status', { status: 'Thinking...' })
+    
     const initialResponse = await this.anthropic.messages.create({
       model: 'claude-3-5-sonnet-20241022',
       max_tokens: 1000,
@@ -114,59 +120,79 @@ export class McpClient {
         if (content.type === 'text') {
           console.log('Adding text response to output')
           finalText.push(content.text)
+          this.emit('text', { text: content.text })
         } else if (content.type === 'tool_use') {
           // Execute tool call
           const toolName = content.name
           const toolArgs = content.input
           console.log(`Executing tool call: ${toolName} with args:`, JSON.stringify(toolArgs))
-
-          const result = await this.mcp.callTool({
-            name: toolName,
-            arguments: toolArgs,
-          })
-          console.log(`Tool execution result:`, JSON.stringify(result))
-          toolResults.push(result)
-          finalText.push(`[Calling tool ${toolName} with args ${JSON.stringify(toolArgs)}]`)
-
-          // Continue conversation with tool results
-          console.log('Adding tool result to messages for follow-up')
-          const toolId = `tool_${Date.now()}`;
           
-          // Add the assistant's tool use message
-          messages.push({
-            role: 'assistant',
-            content: [{ 
-              type: 'tool_use', 
-              id: toolId, 
-              name: toolName, 
-              input: toolArgs 
-            }]
-          })
-          
-          // Add the tool result message in proper format
-          messages.push({
-            role: 'user',
-            content: [
-              {
-                type: 'tool_result',
-                tool_use_id: toolId,
-                content: result.content
-              }
-            ]
+          this.emit('tool_start', { 
+            tool: toolName,
+            args: toolArgs
           })
 
-          // Get next response from Claude
-          console.log('Sending follow-up request to Claude with tool results...')
-          const followUpResponse = await this.anthropic.messages.create({
-            model: 'claude-3-5-sonnet-20241022',
-            max_tokens: 1000,
-            messages,
-            tools: this.tools,
-          })
-          console.log('Received follow-up response from Claude:', JSON.stringify(followUpResponse.id))
-          
-          // Process the follow-up response recursively
-          await processResponse(followUpResponse)
+          try {
+            const result = await this.mcp.callTool({
+              name: toolName,
+              arguments: toolArgs,
+            })
+            console.log(`Tool execution result:`, JSON.stringify(result))
+            toolResults.push(result)
+            
+            this.emit('tool_result', { 
+              tool: toolName,
+              result: result 
+            })
+
+            // Continue conversation with tool results
+            console.log('Adding tool result to messages for follow-up')
+            const toolId = `tool_${Date.now()}`;
+            
+            // Add the assistant's tool use message
+            messages.push({
+              role: 'assistant',
+              content: [{ 
+                type: 'tool_use', 
+                id: toolId, 
+                name: toolName, 
+                input: toolArgs 
+              }]
+            })
+            
+            // Add the tool result message in proper format
+            messages.push({
+              role: 'user',
+              content: [
+                {
+                  type: 'tool_result',
+                  tool_use_id: toolId,
+                  content: result.content
+                }
+              ]
+            })
+
+            // Get next response from Claude
+            this.emit('status', { status: 'Processing results...' })
+            console.log('Sending follow-up request to Claude with tool results...')
+            const followUpResponse = await this.anthropic.messages.create({
+              model: 'claude-3-5-sonnet-20241022',
+              max_tokens: 1000,
+              messages,
+              tools: this.tools,
+            })
+            console.log('Received follow-up response from Claude:', JSON.stringify(followUpResponse.id))
+            
+            // Process the follow-up response recursively
+            await processResponse(followUpResponse)
+          } catch (error) {
+            console.error(`Error executing tool ${toolName}:`, error)
+            this.emit('tool_error', { 
+              tool: toolName,
+              error: error.message 
+            })
+            finalText.push(`[Error executing tool ${toolName}: ${error.message}]`)
+          }
         }
       }
     }
@@ -174,10 +200,14 @@ export class McpClient {
     // Start processing with the initial response
     await processResponse(initialResponse)
 
+    this.emit('complete', { response: finalText.join('\n') })
     console.log('Query processing complete')
     return finalText.join('\n')
   }
 
+  async processQuery(query) {
+    return this.processQueryStream(query)
+  }
 
   async cleanup() {
     /**

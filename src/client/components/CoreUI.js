@@ -49,7 +49,13 @@ function AIButton({ world }) {
   const [showPrompt, setShowPrompt] = useState(false)
   const [input, setInput] = useState('')
   const [isLoading, setIsLoading] = useState(false)
+  const [status, setStatus] = useState('')
+  const [response, setResponse] = useState('')
+  const [streamOpen, setStreamOpen] = useState(false)
+  const [showResponse, setShowResponse] = useState(false)
   const inputRef = useRef(null)
+  const eventSourceRef = useRef(null)
+  const responseAreaRef = useRef(null)
 
   // Common styles
   const styleConfig = {
@@ -58,6 +64,8 @@ function AIButton({ world }) {
       border: 'rgba(255, 255, 255, 0.15)',
       borderActive: 'rgba(255, 255, 255, 0.3)',
       inputBg: 'rgba(0, 0, 0, 0.15)',
+      statusBg: 'rgba(0, 0, 0, 0.25)',
+      toolUseBg: 'rgba(60, 60, 80, 0.4)',
     },
     radius: {
       button: '50%',
@@ -85,31 +93,140 @@ function AIButton({ world }) {
     }
   }, [input, showPrompt])
 
+  // Scroll response area to bottom when content changes
+  useEffect(() => {
+    if (responseAreaRef.current) {
+      responseAreaRef.current.scrollTop = responseAreaRef.current.scrollHeight
+    }
+  }, [response, status])
+
+  // Clean up event source on unmount
+  useEffect(() => {
+    return () => {
+      if (eventSourceRef.current) {
+        eventSourceRef.current.close()
+      }
+    }
+  }, [])
+
+  const handleStreamResponse = async (query) => {
+    // Clear previous response and set loading state
+    setResponse('')
+    setStatus('Connecting...')
+    setIsLoading(true)
+    setShowResponse(true)
+    setShowPrompt(false)
+    
+    // Close any existing connection
+    if (eventSourceRef.current) {
+      eventSourceRef.current.close()
+    }
+
+    // Create a new SSE connection
+    const encodedQuery = encodeURIComponent(query)
+    const eventSource = new EventSource(`/mcp/stream?query=${encodedQuery}`)
+    eventSourceRef.current = eventSource
+    setStreamOpen(true)
+
+    // Handle connection open
+    eventSource.onopen = () => {
+      console.log('SSE connection opened')
+    }
+
+    // Handle connection errors
+    eventSource.onerror = (error) => {
+      console.error('SSE connection error:', error)
+      setStatus('Connection error. Please try again.')
+      setIsLoading(false)
+      eventSource.close()
+      setStreamOpen(false)
+    }
+
+    // Handle various event types
+    eventSource.addEventListener('start', (event) => {
+      const data = JSON.parse(event.data)
+      console.log('Started processing query:', data)
+    })
+
+    eventSource.addEventListener('status', (event) => {
+      const data = JSON.parse(event.data)
+      setStatus(data.status)
+    })
+
+    eventSource.addEventListener('text', (event) => {
+      const data = JSON.parse(event.data)
+      setResponse(prev => prev + data.text)
+    })
+
+    eventSource.addEventListener('tool_start', (event) => {
+      const data = JSON.parse(event.data)
+      setStatus(`Using tool: ${data.tool}...`)
+      setResponse(prev => 
+        prev + 
+        (prev ? '\n\n' : '') + 
+        `📌 Using tool: ${data.tool}\n` +
+        `${JSON.stringify(data.args, null, 2)}`
+      )
+    })
+
+    eventSource.addEventListener('tool_result', (event) => {
+      const data = JSON.parse(event.data)
+      console.log('Tool result:', data)
+      // We don't add raw tool results to the response as it can be verbose
+      // Just update status that tool completed
+      setStatus(`Tool ${data.tool} completed`)
+    })
+
+    eventSource.addEventListener('tool_error', (event) => {
+      const data = JSON.parse(event.data)
+      setStatus(`Error using tool: ${data.tool}`)
+      setResponse(prev => 
+        prev + 
+        `\n❌ Error using tool ${data.tool}: ${data.error}\n`
+      )
+    })
+
+    eventSource.addEventListener('complete', (event) => {
+      const data = JSON.parse(event.data)
+      setStatus('Done')
+      setIsLoading(false)
+      eventSource.close()
+      setStreamOpen(false)
+    })
+
+    eventSource.addEventListener('error', (event) => {
+      const data = JSON.parse(event.data)
+      setStatus(`Error: ${data.error}`)
+      setIsLoading(false)
+      eventSource.close()
+      setStreamOpen(false)
+    })
+  }
+
   const handleSubmit = async e => {
     e.preventDefault()
     if (!input.trim()) return
 
-    setIsLoading(true)
     try {
-      // Here you would send the input to your API
-      const response = await fetch('http://localhost:3000/mcp/query', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ query: input })
-      })
-      const data = await response.json()
-
-      // Handle response as needed
-      console.log('AI prompt submitted:', input)
-      console.log('AI response:', data)
+      await handleStreamResponse(input)
       // Clear input after submission
       setInput('')
-      setShowPrompt(false)
     } catch (error) {
       console.error('Error sending prompt to API:', error)
-    } finally {
+      setStatus(`Error: ${error.message}`)
       setIsLoading(false)
     }
+  }
+
+  const closeResponse = () => {
+    setShowResponse(false)
+    if (eventSourceRef.current) {
+      eventSourceRef.current.close()
+    }
+    setStreamOpen(false)
+    setIsLoading(false)
+    setResponse('')
+    setStatus('')
   }
 
   return (
@@ -248,7 +365,17 @@ function AIButton({ world }) {
                         fill='white'
                         opacity='0.3'
                       />
-                      <path d='M12 4V8' stroke='white' strokeWidth='3' strokeLinecap='round' />
+                      <path d='M12 4V8' stroke='white' strokeWidth='3' strokeLinecap='round'>
+                        <animateTransform
+                          attributeName='transform'
+                          attributeType='XML'
+                          type='rotate'
+                          from='0 12 12'
+                          to='360 12 12'
+                          dur='1s'
+                          repeatCount='indefinite'
+                        />
+                      </path>
                     </svg>
                   ) : (
                     <svg width='18' height='18' viewBox='0 0 24 24' fill='none' xmlns='http://www.w3.org/2000/svg'>
@@ -258,6 +385,114 @@ function AIButton({ world }) {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {showResponse && (
+        <div
+          css={css`
+            position: fixed;
+            bottom: calc(7rem + env(safe-area-inset-bottom));
+            right: calc(50% - 20rem);
+            width: 40rem;
+            max-height: 60vh;
+            z-index: 150;
+            pointer-events: auto;
+            background: ${styleConfig.colors.background};
+            border-radius: ${styleConfig.radius.panel};
+            padding: 1rem;
+            box-shadow: ${styleConfig.shadows.panel};
+            backdrop-filter: blur(10px);
+            border: 1px solid ${styleConfig.colors.border};
+            display: flex;
+            flex-direction: column;
+            @media (max-width: 768px) {
+              width: 90vw;
+              right: 5vw;
+              left: 5vw;
+            }
+          `}
+        >
+          <div
+            css={css`
+              display: flex;
+              justify-content: space-between;
+              align-items: center;
+              margin-bottom: 0.5rem;
+            `}
+          >
+            <div
+              css={css`
+                font-size: 0.9rem;
+                padding: 0.25rem 0.5rem;
+                background: ${styleConfig.colors.statusBg};
+                border-radius: 0.25rem;
+                display: flex;
+                align-items: center;
+              `}
+            >
+              {isLoading && (
+                <svg 
+                  width='14' 
+                  height='14' 
+                  viewBox='0 0 24 24' 
+                  fill='none' 
+                  xmlns='http://www.w3.org/2000/svg'
+                  css={css`
+                    margin-right: 0.25rem;
+                    @keyframes spin {
+                      from { transform: rotate(0deg); }
+                      to { transform: rotate(360deg); }
+                    }
+                    animation: spin 1s linear infinite;
+                  `}
+                >
+                  <path 
+                    d='M12 2C6.48 2 2 6.48 2 12C2 17.52 6.48 22 12 22C17.52 22 22 17.52 22 12C22 6.48 17.52 2 12 2ZM12 20C7.59 20 4 16.41 4 12C4 7.59 7.59 4 12 4C16.41 4 20 7.59 20 12C20 16.41 16.41 20 12 20Z' 
+                    fill='white' 
+                    opacity='0.3'
+                  />
+                  <path d='M12 4V8' stroke='white' strokeWidth='3' strokeLinecap='round' />
+                </svg>
+              )}
+              {status}
+            </div>
+            <button
+              onClick={closeResponse}
+              css={css`
+                background: none;
+                border: none;
+                color: white;
+                cursor: pointer;
+                font-size: 1.2rem;
+                padding: 0.25rem;
+                opacity: 0.7;
+                transition: opacity 0.2s;
+                &:hover {
+                  opacity: 1;
+                }
+              `}
+            >
+              ×
+            </button>
+          </div>
+          <div
+            ref={responseAreaRef}
+            css={css`
+              flex: 1;
+              overflow-y: auto;
+              max-height: calc(60vh - 3rem);
+              white-space: pre-wrap;
+              font-family: monospace;
+              line-height: 1.5;
+              padding: 0.5rem;
+              background: ${styleConfig.colors.inputBg};
+              border-radius: ${styleConfig.radius.input};
+              border: 1px solid ${styleConfig.colors.border};
+            `}
+          >
+            {response}
           </div>
         </div>
       )}
