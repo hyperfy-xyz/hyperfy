@@ -26,7 +26,6 @@ const getDbPathForMCP = () => {
     return process.env.SQLITE_DB_PATH
   }
 
-  console.log(getDbPathForMCP)
   // Otherwise use the same DB path as the main server
   const dbPath = path.join(worldDir, '/db.sqlite')
   console.log(`Resolved DB path: ${dbPath}`)
@@ -123,8 +122,11 @@ async function updateBlueprintScript(world, blueprint, scriptContent) {
 
 // Common response formatter for consistency
 function formatResponse(data, error = null) {
+  console.log(`[DEBUG] formatResponse: Formatting response with error=${!!error}`);
+  
   if (error) {
-    return {
+    console.log(`[DEBUG] formatResponse: Error details:`, error);
+    const response = {
       content: [{
         type: 'text',
         text: JSON.stringify({
@@ -135,8 +137,11 @@ function formatResponse(data, error = null) {
       }],
       isError: true
     };
+    console.log(`[DEBUG] formatResponse: Returning error response:`, JSON.stringify(response, null, 2));
+    return response;
   }
-  return {
+
+  const response = {
     content: [{
       type: 'text',
       text: JSON.stringify({
@@ -145,6 +150,8 @@ function formatResponse(data, error = null) {
       }, null, 2)
     }]
   };
+  console.log(`[DEBUG] formatResponse: Returning success response with data type=${typeof data}, length=${Array.isArray(data) ? data.length : 'N/A'}`);
+  return response;
 }
 
 /**
@@ -264,34 +271,6 @@ export function registerMCPServer(world, fastify) {
     version: '0.0.1',
   })
 
-  // Enhanced world-query tool with safety checks and better error handling
-  // mcpServer.tool(
-  //   'world-query',
-  //   {
-  //     sql: z.string().describe('SQL query to execute against the world database'),
-  //     params: z.array(z.any()).optional().describe('SQL parameters to safely inject'),
-  //     limit: z.number().optional().default(1000).describe('Maximum number of results to return')
-  //   },
-  //   async ({ sql, params = [], limit = 1000 }) => {
-  //     let db = null;
-  //     try {
-  //       const dbPath = getDbPathForMCP()
-  //       db = new Database(dbPath)
-
-  //       // Add LIMIT clause if not present
-  //       const sqlWithLimit = sql.toLowerCase().includes('limit') ? 
-  //         sql : `${sql} LIMIT ${limit}`;
-
-  //       const results = db.prepare(sqlWithLimit).all(...params);
-  //       return formatResponse(results);
-  //     } catch (err) {
-  //       return formatResponse(null, err);
-  //     } finally {
-  //       if (db) db.close();
-  //     }
-  //   }
-  // )
-
   // Register the get-entity-script tool
   mcpServer.tool(
     'get-entity-script',
@@ -299,9 +278,11 @@ export function registerMCPServer(world, fastify) {
       entityId: z.string().describe('ID of the entity to get script from'),
     },
     async ({ entityId }) => {
+      console.log(`[DEBUG] get-entity-script: Starting for entityId=${entityId}`);
       let db = null;
       try {
         const dbPath = getDbPathForMCP()
+        console.log(`[DEBUG] get-entity-script: Using database at ${dbPath}`);
         db = new Database(dbPath)
 
         // Get entity and blueprint data in a single query
@@ -315,10 +296,11 @@ export function registerMCPServer(world, fastify) {
           LEFT JOIN blueprints b ON json_extract(e.data, '$.blueprint') = b.id
           WHERE e.id = ?
         `;
-
+        console.log(`[DEBUG] get-entity-script: Executing query for entity ${entityId}`);
         const result = db.prepare(query).get(entityId);
 
         if (!result) {
+          console.log(`[DEBUG] get-entity-script: No entity found with ID ${entityId}`);
           return {
             content: [
               {
@@ -330,13 +312,16 @@ export function registerMCPServer(world, fastify) {
           }
         }
 
+        console.log(`[DEBUG] get-entity-script: Found entity and blueprint data`);
         // Parse the JSON data
         const entityData = JSON.parse(result.entityData);
         const blueprintData = JSON.parse(result.blueprintData);
+        console.log(`[DEBUG] get-entity-script: Blueprint ID=${blueprintData.id}`);
 
         // Get the script URL from the blueprint
         const scriptUrl = blueprintData.script;
         if (!scriptUrl) {
+          console.log(`[DEBUG] get-entity-script: No script URL found for app ${result.blueprintId}`);
           return {
             content: [
               {
@@ -351,9 +336,11 @@ export function registerMCPServer(world, fastify) {
         // Extract filename from asset:// URL
         const filename = scriptUrl.replace('asset://', '')
         const scriptPath = path.join(assetsDir, filename)
+        console.log(`[DEBUG] get-entity-script: Reading script from ${scriptPath}`);
 
         // Read the script file
         const scriptContent = await fs.readFile(scriptPath, 'utf8')
+        console.log(`[DEBUG] get-entity-script: Successfully read script file (${scriptContent.length} chars)`);
 
         return {
           content: [
@@ -368,6 +355,7 @@ export function registerMCPServer(world, fastify) {
           }
         }
       } catch (err) {
+        console.error(`[ERROR] get-entity-script: Failed with error:`, err);
         return {
           content: [
             {
@@ -379,6 +367,7 @@ export function registerMCPServer(world, fastify) {
         }
       } finally {
         if (db) {
+          console.log(`[DEBUG] get-entity-script: Closing database connection`);
           db.close()
         }
       }
@@ -393,11 +382,14 @@ export function registerMCPServer(world, fastify) {
       scriptContent: z.string().describe('New script content to apply to the app'),
     },
     async ({ blueprintId, scriptContent }) => {
+      console.log(`[DEBUG] update-app-script: Starting for blueprintId=${blueprintId}`);
       try {
         // Find the blueprint by ID
         const blueprint = world.blueprints.get(blueprintId)
+        console.log(`[DEBUG] update-app-script: Looking up blueprint`);
 
         if (!blueprint) {
+          console.log(`[DEBUG] update-app-script: Blueprint not found with ID ${blueprintId}`);
           return {
             content: [
               {
@@ -409,8 +401,10 @@ export function registerMCPServer(world, fastify) {
           }
         }
 
+        console.log(`[DEBUG] update-app-script: Found blueprint, updating script`);
         // Use the updateBlueprintScript function to update the blueprint
         const result = await updateBlueprintScript(world, blueprint, scriptContent)
+        console.log(`[DEBUG] update-app-script: Script updated successfully, new version=${result.version}`);
 
         return {
           content: [
@@ -428,6 +422,7 @@ export function registerMCPServer(world, fastify) {
           ],
         }
       } catch (err) {
+        console.error(`[ERROR] update-app-script: Failed with error:`, err);
         return {
           content: [
             {
@@ -461,9 +456,11 @@ export function registerMCPServer(world, fastify) {
       limit: z.number().optional().default(100).describe('Maximum number of results')
     },
     async ({ searchQuery, includeEntities = false, includeScripts = true, limit = 100 }) => {
+      console.log(`[DEBUG] get-app-scripts: Starting search with criteria:`, JSON.stringify(searchQuery));
       let db = null;
       try {
         const dbPath = getDbPathForMCP()
+        console.log(`[DEBUG] get-app-scripts: Using database at ${dbPath}`);
         db = new Database(dbPath)
 
         const conditions = [];
@@ -507,6 +504,8 @@ export function registerMCPServer(world, fastify) {
           conditions.push(searchQuery.customQuery);
         }
 
+        console.log(`[DEBUG] get-app-scripts: Built ${conditions.length} search conditions with ${params.length} parameters`);
+
         const whereClause = conditions.length > 0 
           ? 'WHERE ' + conditions.join(' AND ')
           : '';
@@ -545,15 +544,19 @@ export function registerMCPServer(world, fastify) {
           `;
         }
 
+        console.log(`[DEBUG] get-app-scripts: Executing query`);
         const results = db.prepare(query).all(...params);
+        console.log(`[DEBUG] get-app-scripts: Found ${results.length} results`);
         
         if (!results || results.length === 0) {
+          console.log(`[DEBUG] get-app-scripts: No results found`);
           return formatResponse({ 
             message: 'No apps found matching the search criteria',
             searchQuery 
           });
         }
 
+        console.log(`[DEBUG] get-app-scripts: Processing results`);
         const processedResults = await Promise.all(results.map(async (result) => {
           try {
             const blueprintData = typeof result.blueprintData === 'string' 
@@ -571,27 +574,31 @@ export function registerMCPServer(world, fastify) {
               if (scriptUrl) {
                 const filename = scriptUrl.replace('asset://', '');
                 const scriptPath = path.join(assetsDir, filename);
+                console.log(`[DEBUG] get-app-scripts: Reading script for blueprint ${blueprintData.id} from ${scriptPath}`);
                 
                 if (await fs.exists(scriptPath)) {
                   const scriptContent = await fs.readFile(scriptPath, 'utf8');
                   
                   // Filter by script content if requested
                   if (searchQuery.scriptContains && !scriptContent.includes(searchQuery.scriptContains)) {
+                    console.log(`[DEBUG] get-app-scripts: Script content filter did not match for ${blueprintData.id}`);
                     return null;
                   }
                   
                   response.script = scriptContent;
                 } else {
+                  console.log(`[DEBUG] get-app-scripts: Script file not found for ${blueprintData.id}`);
                   response.error = `Script file not found: ${filename}`;
                 }
               } else {
+                console.log(`[DEBUG] get-app-scripts: No script URL in blueprint ${blueprintData.id}`);
                 response.error = 'No script URL in app';
               }
             }
 
             return response;
           } catch (err) {
-            console.error('Error processing blueprint result:', err);
+            console.error(`[ERROR] get-app-scripts: Error processing blueprint result:`, err);
             return {
               app: result.blueprintId,
               error: `Failed to process app: ${err.message}`
@@ -601,12 +608,17 @@ export function registerMCPServer(world, fastify) {
 
         // Filter out null results (from script content filtering)
         const filteredResults = processedResults.filter(r => r !== null);
+        console.log(`[DEBUG] get-app-scripts: Returning ${filteredResults.length} processed results`);
         
         return formatResponse(filteredResults);
       } catch (err) {
+        console.error(`[ERROR] get-app-scripts: Failed with error:`, err);
         return formatResponse(null, err);
       } finally {
-        if (db) db.close();
+        if (db) {
+          console.log(`[DEBUG] get-app-scripts: Closing database connection`);
+          db.close();
+        }
       }
     }
   )
@@ -620,6 +632,7 @@ export function registerMCPServer(world, fastify) {
       blueprintProps: z.record(z.any()).optional().describe('Additional app properties to match')
     },
     async ({ scriptHash, scriptContent, blueprintProps }) => {
+      console.log(`[DEBUG] find-app-script-usage: Starting search with hash=${scriptHash}, hasContent=${!!scriptContent}`);
       let db = null;
       try {
         if (!scriptHash && !scriptContent) {
@@ -627,6 +640,7 @@ export function registerMCPServer(world, fastify) {
         }
 
         const dbPath = getDbPathForMCP()
+        console.log(`[DEBUG] find-app-script-usage: Using database at ${dbPath}`);
         db = new Database(dbPath)
 
         const conditions = [];
@@ -644,6 +658,8 @@ export function registerMCPServer(world, fastify) {
           });
         }
 
+        console.log(`[DEBUG] find-app-script-usage: Built ${conditions.length} search conditions`);
+
         const query = `
           SELECT 
             b.id as blueprintId,
@@ -660,7 +676,9 @@ export function registerMCPServer(world, fastify) {
           GROUP BY b.id
         `;
 
+        console.log(`[DEBUG] find-app-script-usage: Executing query`);
         const results = db.prepare(query).all(...params);
+        console.log(`[DEBUG] find-app-script-usage: Found ${results.length} initial results`);
 
         const processedResults = await Promise.all(results.map(async (result) => {
           try {
@@ -669,17 +687,25 @@ export function registerMCPServer(world, fastify) {
               : result.blueprintData;
 
             const scriptUrl = blueprintData.script;
-            if (!scriptUrl) return null;
+            if (!scriptUrl) {
+              console.log(`[DEBUG] find-app-script-usage: No script URL for blueprint ${blueprintData.id}`);
+              return null;
+            }
 
             const filename = scriptUrl.replace('asset://', '');
             const scriptPath = path.join(assetsDir, filename);
+            console.log(`[DEBUG] find-app-script-usage: Checking script at ${scriptPath}`);
 
-            if (!await fs.exists(scriptPath)) return null;
+            if (!await fs.exists(scriptPath)) {
+              console.log(`[DEBUG] find-app-script-usage: Script file not found for ${blueprintData.id}`);
+              return null;
+            }
 
             const script = await fs.readFile(scriptPath, 'utf8');
             
             // Filter by script content if requested
             if (scriptContent && !script.includes(scriptContent)) {
+              console.log(`[DEBUG] find-app-script-usage: Script content filter did not match for ${blueprintData.id}`);
               return null;
             }
 
@@ -689,17 +715,22 @@ export function registerMCPServer(world, fastify) {
               entities: parseEntities(result.entities)
             };
           } catch (err) {
-            console.error('Error processing result:', err);
+            console.error(`[ERROR] find-app-script-usage: Error processing result:`, err);
             return null;
           }
         }));
 
         const filteredResults = processedResults.filter(r => r !== null);
+        console.log(`[DEBUG] find-app-script-usage: Returning ${filteredResults.length} processed results`);
         return formatResponse(filteredResults);
       } catch (err) {
+        console.error(`[ERROR] find-app-script-usage: Failed with error:`, err);
         return formatResponse(null, err);
       } finally {
-        if (db) db.close();
+        if (db) {
+          console.log(`[DEBUG] find-app-script-usage: Closing database connection`);
+          db.close();
+        }
       }
     }
   )
@@ -712,11 +743,14 @@ export function registerMCPServer(world, fastify) {
       limit: z.number().optional().default(5).describe('Maximum number of results to return')
     },
     async ({ query, limit = 5 }) => {
+      console.log(`[DEBUG] search-docs: Starting search with query="${query}", limit=${limit}`);
       try {
         const results = await searchDocs(query)
+        console.log(`[DEBUG] search-docs: Found ${results.length} total matches`);
         
         // Limit the number of results
         const limitedResults = results.slice(0, limit)
+        console.log(`[DEBUG] search-docs: Returning ${limitedResults.length} results after limit`);
         
         return {
           content: [
@@ -738,6 +772,7 @@ export function registerMCPServer(world, fastify) {
           ],
         }
       } catch (err) {
+        console.error(`[ERROR] search-docs: Failed with error:`, err);
         return {
           content: [
             {
@@ -761,13 +796,17 @@ export function registerMCPServer(world, fastify) {
       creatorId: z.string().optional().describe('ID of the player creating the entity')
     },
     async ({ blueprintId, position, quaternion, creatorId }) => {
+      console.log(`[DEBUG] create-entity: Starting creation for blueprint=${blueprintId}`);
       try {
         // Use default position/rotation if not provided
         const pos = position || [0, 0, 0]
         const rot = quaternion || [0, 0, 0, 1]
+        console.log(`[DEBUG] create-entity: Using position=${pos}, rotation=${rot}`);
         
         // Create the entity
+        console.log(`[DEBUG] create-entity: Creating entity with creatorId=${creatorId}`);
         const entity = await createEntity(world, blueprintId, pos, rot, creatorId)
+        console.log(`[DEBUG] create-entity: Entity created successfully with id=${entity.data.id}`);
         
         return {
           content: [
@@ -783,6 +822,7 @@ export function registerMCPServer(world, fastify) {
           ],
         }
       } catch (err) {
+        console.error(`[ERROR] create-entity: Failed with error:`, err);
         return {
           content: [
             {

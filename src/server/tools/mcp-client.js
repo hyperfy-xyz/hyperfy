@@ -108,7 +108,7 @@ export class McpClient extends EventEmitter {
     
     const initialResponse = await this.anthropic.messages.create({
       model: 'claude-3-5-sonnet-20241022',
-      max_tokens: 1000,
+      max_tokens: 8192,
       messages,
       tools: this.tools,
     })
@@ -145,7 +145,10 @@ export class McpClient extends EventEmitter {
             const result = await this.mcp.callTool({
               name: toolName,
               arguments: toolArgs,
-              metadata: contextData
+              metadata: contextData,
+            }, 
+            undefined, {
+              timeout: 90000
             })
             console.log(`Tool execution result:`, JSON.stringify(result))
             toolResults.push(result)
@@ -187,7 +190,7 @@ export class McpClient extends EventEmitter {
             console.log('Sending follow-up request to Claude with tool results...')
             const followUpResponse = await this.anthropic.messages.create({
               model: 'claude-3-5-sonnet-20241022',
-              max_tokens: 1000,
+              max_tokens: 8192,
               messages,
               tools: this.tools,
             })
