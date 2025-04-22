@@ -92,16 +92,16 @@ function AIButton({ world }) {
     setIsLoading(true)
     try {
       // Here you would send the input to your API
-      // const response = await fetch('your-api-endpoint', {
-      //   method: 'POST',
-      //   headers: { 'Content-Type': 'application/json' },
-      //   body: JSON.stringify({ prompt: input })
-      // })
-      // const data = await response.json()
+      const response = await fetch('http://localhost:3000/mcp/query', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ query: input })
+      })
+      const data = await response.json()
 
       // Handle response as needed
       console.log('AI prompt submitted:', input)
-
+      console.log('AI response:', data)
       // Clear input after submission
       setInput('')
       setShowPrompt(false)

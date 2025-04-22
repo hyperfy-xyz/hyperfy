@@ -22,6 +22,9 @@ import { Storage } from './Storage'
 // Import MCP dependencies
 import { fileURLToPath } from 'url'
 import { registerMCPServer } from './tools/registerMCPServer.js'
+import { McpClient } from './tools/mcp-client.js'
+
+const mcpClient = new McpClient()
 
 // Get current file's directory (ESM equivalent of __dirname)
 const __filename = fileURLToPath(import.meta.url)
@@ -188,6 +191,12 @@ async function worldNetwork(fastify) {
 if (process.env.MCP_SERVER === 'true') {
   // Create the MCP server instance
   registerMCPServer(world, fastify)
+  
+  fastify.post('/mcp/query', async (req, reply) => {
+    const query = req.body.query
+    const response = await mcpClient.processQuery(query)
+    reply.send(response)
+  })
 }
 
 // Start the server
@@ -200,6 +209,9 @@ try {
 }
 
 console.log(`running on port ${port}`)
+
+mcpClient.connectToServer('http://localhost:3000/sse')
+
 
 // Graceful shutdown
 process.on('SIGINT', async () => {
