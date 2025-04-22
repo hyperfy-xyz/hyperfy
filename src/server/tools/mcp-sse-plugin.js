@@ -6,6 +6,7 @@ import { Sessions } from "./session-storage.js";
 //   sessions?: Sessions;
 //   sseEndpoint?: string;
 //   messagesEndpoint?: string;
+//   allowLocalOnly?: boolean;
 // };
 
 
@@ -20,6 +21,7 @@ export const fastifyMCPSSE = (
     sessions = new Sessions(),
     sseEndpoint = "/sse",
     messagesEndpoint = "/messages",
+    allowLocalOnly = true,
   } = options;
 
 
@@ -31,7 +33,20 @@ export const fastifyMCPSSE = (
   //   console.log(`Session ${sessionId} terminated`);
   // });
 
-  fastify.get(sseEndpoint, async (_, reply) => {
+  // Helper function to check if request is from localhost
+  function isLocalhost(req) {
+    const ip = req.ip || req.socket.remoteAddress;
+    return ip === '127.0.0.1' || ip === '::1' || ip === '::ffff:127.0.0.1';
+  }
+
+  fastify.get(sseEndpoint, async (req, reply) => {
+    // Validate request comes from localhost if restriction is enabled
+    if (allowLocalOnly && !isLocalhost(req)) {
+      fastify.log.warn("Rejected non-localhost connection attempt", { ip: req.ip });
+      reply.status(403).send({ error: "Access denied" });
+      return;
+    }
+
     const transport = new SSEServerTransport(messagesEndpoint, reply.raw);
     const sessionId = transport.sessionId;
 
@@ -46,6 +61,13 @@ export const fastifyMCPSSE = (
   });
 
   fastify.post(messagesEndpoint, async (req, reply) => {
+    // Validate request comes from localhost if restriction is enabled
+    if (allowLocalOnly && !isLocalhost(req)) {
+      fastify.log.warn("Rejected non-localhost connection attempt", { ip: req.ip });
+      reply.status(403).send({ error: "Access denied" });
+      return;
+    }
+    
     const sessionId = extractSessionId(req);
     if (!sessionId) {
       reply.status(400).send({ error: "Invalid session" });
