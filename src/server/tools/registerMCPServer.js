@@ -13,6 +13,7 @@ import { uuid } from '../../core/utils'
 const rootDir = path.join(__dirname, '../')
 const worldDir = path.join(rootDir, process.env.WORLD)
 const assetsDir = path.join(worldDir, '/assets')
+const docsDir = path.join(rootDir, '../docs')
 
 // =====================================
 // MCP Server Implementation Below
@@ -146,6 +147,117 @@ function formatResponse(data, error = null) {
   };
 }
 
+/**
+ * Searches for documentation files in the docs directory that match a query
+ * @param {string} query - The search query
+ * @returns {Promise<Array<{file: string, content: string, matchCount: number}>>} Matching documentation files
+ */
+async function searchDocs(query) {
+  try {
+    if (!query) return []
+    
+    // Normalize the query to lowercase for case-insensitive matching
+    const normalizedQuery = query.toLowerCase()
+    
+    // Get all markdown files in the docs directory
+    const files = await fs.readdir(docsDir)
+    const mdFiles = files.filter(file => file.endsWith('.md'))
+    
+    // Check subdirectories
+    const subdirs = (await fs.readdir(docsDir, { withFileTypes: true }))
+      .filter(dirent => dirent.isDirectory())
+      .map(dirent => dirent.name)
+    
+    // Gather all markdown files from subdirectories
+    for (const subdir of subdirs) {
+      try {
+        const subdirFiles = await fs.readdir(path.join(docsDir, subdir))
+        const subdirMdFiles = subdirFiles
+          .filter(file => file.endsWith('.md'))
+          .map(file => path.join(subdir, file))
+        mdFiles.push(...subdirMdFiles)
+      } catch (err) {
+        console.error(`Error reading subdir ${subdir}:`, err)
+      }
+    }
+    
+    // Read each file and check for matches
+    const results = []
+    
+    for (const file of mdFiles) {
+      try {
+        const filePath = path.join(docsDir, file)
+        const content = await fs.readFile(filePath, 'utf8')
+        
+        // Count how many times the query appears in the content
+        const matchCount = (content.toLowerCase().match(new RegExp(normalizedQuery, 'g')) || []).length
+        
+        // If there are matches, add to results
+        if (matchCount > 0) {
+          results.push({
+            file,
+            content,
+            matchCount
+          })
+        }
+      } catch (err) {
+        console.error(`Error reading file ${file}:`, err)
+      }
+    }
+    
+    // Sort by relevance (match count)
+    return results.sort((a, b) => b.matchCount - a.matchCount)
+  } catch (err) {
+    console.error('Error in searchDocs:', err)
+    throw err
+  }
+}
+
+/**
+ * Creates a new entity in the world based on a blueprint
+ * @param {Object} world - The world instance
+ * @param {String} blueprintId - The ID of the blueprint to use
+ * @param {Array<number>} position - Position [x, y, z]
+ * @param {Array<number>} quaternion - Rotation as quaternion [x, y, z, w]
+ * @param {String} creatorId - ID of the player creating the entity (optional)
+ * @returns {Promise<Object>} The created entity
+ */
+async function createEntity(world, blueprintId, position, quaternion, creatorId = null) {
+  try {
+    // Check if blueprint exists
+    const blueprint = world.blueprints.get(blueprintId)
+    if (!blueprint) {
+      throw new Error(`Blueprint with ID ${blueprintId} not found`)
+    }
+
+    // Create entity data
+    const entityData = {
+      id: uuid(),
+      type: 'app',
+      blueprint: blueprintId,
+      position: position || [0, 0, 0],
+      quaternion: quaternion || [0, 0, 0, 1],
+      mover: null,
+      uploader: null,
+      pinned: false,
+      state: {},
+    }
+
+    // If creator ID is provided, add it to the entity data
+    if (creatorId) {
+      entityData.creatorId = creatorId
+    }
+
+    // Add the entity to the world
+    const entity = world.entities.add(entityData, true)
+
+    return entity
+  } catch (err) {
+    console.error('Error in createEntity:', err)
+    throw err
+  }
+}
+
 export function registerMCPServer(world, fastify) {
   const mcpServer = new McpServer({
     name: 'hyperfy-mcp-server',
@@ -229,7 +341,7 @@ export function registerMCPServer(world, fastify) {
             content: [
               {
                 type: 'text',
-                text: `Error: No script found for blueprint ${result.blueprintId}`,
+                text: `Error: No script found for app ${result.blueprintId}`,
               },
             ],
             isError: true,
@@ -252,7 +364,7 @@ export function registerMCPServer(world, fastify) {
           ],
           metadata: {
             entity: entityData,
-            blueprint: blueprintData
+            app: blueprintData
           }
         }
       } catch (err) {
@@ -275,10 +387,10 @@ export function registerMCPServer(world, fastify) {
 
   // Register the update-blueprint-script tool
   mcpServer.tool(
-    'update-blueprint-script',
+    'update-app-script',
     {
-      blueprintId: z.string().describe('ID of the blueprint to update'),
-      scriptContent: z.string().describe('New script content to apply to the blueprint'),
+      blueprintId: z.string().describe('ID of the app to update'),
+      scriptContent: z.string().describe('New script content to apply to the app'),
     },
     async ({ blueprintId, scriptContent }) => {
       try {
@@ -290,7 +402,7 @@ export function registerMCPServer(world, fastify) {
             content: [
               {
                 type: 'text',
-                text: `Error: Blueprint with ID ${blueprintId} not found`,
+                text: `Error: App with ID ${blueprintId} not found`,
               },
             ],
             isError: true,
@@ -307,7 +419,7 @@ export function registerMCPServer(world, fastify) {
               text: JSON.stringify({
                 success: true,
                 data: {
-                  blueprintId: result.id,
+                  appId: result.id,
                   version: result.version,
                   script: result.script
                 }
@@ -331,20 +443,20 @@ export function registerMCPServer(world, fastify) {
 
   // Enhanced blueprint search tool with more search options
   mcpServer.tool(
-    'get-blueprint-scripts',
+    'get-app-scripts',
     {
       searchQuery: z.object({
-        name: z.string().optional().describe('Search by blueprint name'),
-        author: z.string().optional().describe('Search by blueprint author'),
-        desc: z.string().optional().describe('Search in blueprint description'),
-        id: z.string().optional().describe('Search by exact blueprint ID'),
+        name: z.string().optional().describe('Search by app name'),
+        author: z.string().optional().describe('Search by app author'),
+        desc: z.string().optional().describe('Search in app description'),
+        id: z.string().optional().describe('Search by exact app ID'),
         customQuery: z.string().optional().describe('Custom SQL WHERE clause for blueprint data'),
-        props: z.record(z.any()).optional().describe('Search by blueprint props'),
-        tags: z.array(z.string()).optional().describe('Search by blueprint tags'),
-        modifiedSince: z.string().optional().describe('Find blueprints modified since date'),
+        props: z.record(z.any()).optional().describe('Search by app props'),
+        tags: z.array(z.string()).optional().describe('Search by app tags'),
+        modifiedSince: z.string().optional().describe('Find apps modified since date'),
         scriptContains: z.string().optional().describe('Search in script content')
-      }).describe('Search criteria for finding blueprints'),
-      includeEntities: z.boolean().default(false).describe('Whether to include entities using these blueprints'),
+      }).describe('Search criteria for finding apps'),
+      includeEntities: z.boolean().default(false).describe('Whether to include entities using these apps'),
       includeScripts: z.boolean().default(true).describe('Whether to include script content'),
       limit: z.number().optional().default(100).describe('Maximum number of results')
     },
@@ -437,7 +549,7 @@ export function registerMCPServer(world, fastify) {
         
         if (!results || results.length === 0) {
           return formatResponse({ 
-            message: 'No blueprints found matching the search criteria',
+            message: 'No apps found matching the search criteria',
             searchQuery 
           });
         }
@@ -449,7 +561,7 @@ export function registerMCPServer(world, fastify) {
               : result.blueprintData;
 
             const response = {
-              blueprint: blueprintData,
+              app: blueprintData,
               updatedAt: result.updatedAt,
               entities: includeEntities ? parseEntities(result.entities) : null
             };
@@ -473,7 +585,7 @@ export function registerMCPServer(world, fastify) {
                   response.error = `Script file not found: ${filename}`;
                 }
               } else {
-                response.error = 'No script URL in blueprint';
+                response.error = 'No script URL in app';
               }
             }
 
@@ -481,8 +593,8 @@ export function registerMCPServer(world, fastify) {
           } catch (err) {
             console.error('Error processing blueprint result:', err);
             return {
-              blueprint: result.blueprintId,
-              error: `Failed to process blueprint: ${err.message}`
+              app: result.blueprintId,
+              error: `Failed to process app: ${err.message}`
             };
           }
         }));
@@ -501,11 +613,11 @@ export function registerMCPServer(world, fastify) {
 
   // New tool: Get all entities using a specific script
   mcpServer.tool(
-    'find-script-usage',
+    'find-app-script-usage',
     {
       scriptHash: z.string().optional().describe('Find entities using this script hash'),
       scriptContent: z.string().optional().describe('Find entities with scripts containing this content'),
-      blueprintProps: z.record(z.any()).optional().describe('Additional blueprint properties to match')
+      blueprintProps: z.record(z.any()).optional().describe('Additional app properties to match')
     },
     async ({ scriptHash, scriptContent, blueprintProps }) => {
       let db = null;
@@ -572,7 +684,7 @@ export function registerMCPServer(world, fastify) {
             }
 
             return {
-              blueprint: blueprintData,
+              app: blueprintData,
               script,
               entities: parseEntities(result.entities)
             };
@@ -588,6 +700,98 @@ export function registerMCPServer(world, fastify) {
         return formatResponse(null, err);
       } finally {
         if (db) db.close();
+      }
+    }
+  )
+
+  // Register the search-docs tool
+  mcpServer.tool(
+    'search-docs',
+    {
+      query: z.string().describe('Search term to find in documentation files'),
+      limit: z.number().optional().default(5).describe('Maximum number of results to return')
+    },
+    async ({ query, limit = 5 }) => {
+      try {
+        const results = await searchDocs(query)
+        
+        // Limit the number of results
+        const limitedResults = results.slice(0, limit)
+        
+        return {
+          content: [
+            {
+              type: 'text',
+              text: JSON.stringify({
+                success: true,
+                data: {
+                  query,
+                  resultsCount: results.length,
+                  results: limitedResults.map(r => ({
+                    file: r.file,
+                    matchCount: r.matchCount,
+                    content: r.content
+                  }))
+                }
+              }, null, 2)
+            },
+          ],
+        }
+      } catch (err) {
+        return {
+          content: [
+            {
+              type: 'text',
+              text: `Error: ${err.message}`,
+            },
+          ],
+          isError: true,
+        }
+      }
+    }
+  )
+
+  // Register the create-entity tool
+  mcpServer.tool(
+    'create-entity',
+    {
+      blueprintId: z.string().describe('ID of the app to create an entity from'),
+      position: z.array(z.number()).length(3).optional().describe('Position [x, y, z]'),
+      quaternion: z.array(z.number()).length(4).optional().describe('Rotation as quaternion [x, y, z, w]'),
+      creatorId: z.string().optional().describe('ID of the player creating the entity')
+    },
+    async ({ blueprintId, position, quaternion, creatorId }) => {
+      try {
+        // Use default position/rotation if not provided
+        const pos = position || [0, 0, 0]
+        const rot = quaternion || [0, 0, 0, 1]
+        
+        // Create the entity
+        const entity = await createEntity(world, blueprintId, pos, rot, creatorId)
+        
+        return {
+          content: [
+            {
+              type: 'text',
+              text: JSON.stringify({
+                success: true,
+                data: {
+                  entity: entity.data
+                }
+              }, null, 2)
+            },
+          ],
+        }
+      } catch (err) {
+        return {
+          content: [
+            {
+              type: 'text',
+              text: `Error: ${err.message}`,
+            },
+          ],
+          isError: true,
+        }
       }
     }
   )
