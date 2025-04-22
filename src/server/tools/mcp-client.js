@@ -94,63 +94,85 @@ export class McpClient {
 
     // Initial Claude API call
     console.log('Sending request to Claude API...')
-    const response = await this.anthropic.messages.create({
+    const initialResponse = await this.anthropic.messages.create({
       model: 'claude-3-5-sonnet-20241022',
       max_tokens: 1000,
       messages,
       tools: this.tools,
     })
-    console.log('Received response from Claude:', JSON.stringify(response.id))
+    console.log('Received response from Claude:', JSON.stringify(initialResponse.id))
 
     // Process response and handle tool calls
     const finalText = []
     const toolResults = []
 
-    console.log(`Processing ${response.content.length} content blocks from Claude`)
-    for (const content of response.content) {
-      console.log(`Processing content of type: ${content.type}`)
-      if (content.type === 'text') {
-        console.log('Adding text response to output')
-        finalText.push(content.text)
-      } else if (content.type === 'tool_use') {
-        // Execute tool call
-        const toolName = content.name
-        const toolArgs = content.input
-        console.log(`Executing tool call: ${toolName} with args:`, JSON.stringify(toolArgs))
+    // Function to process a response recursively
+    const processResponse = async (response) => {
+      console.log(`Processing ${response.content.length} content blocks from Claude`)
+      for (const content of response.content) {
+        console.log(`Processing content of type: ${content.type}`)
+        if (content.type === 'text') {
+          console.log('Adding text response to output')
+          finalText.push(content.text)
+        } else if (content.type === 'tool_use') {
+          // Execute tool call
+          const toolName = content.name
+          const toolArgs = content.input
+          console.log(`Executing tool call: ${toolName} with args:`, JSON.stringify(toolArgs))
 
-        const result = await this.mcp.callTool({
-          name: toolName,
-          arguments: toolArgs,
-        })
-        console.log(`Tool execution result:`, JSON.stringify(result))
-        toolResults.push(result)
-        finalText.push(`[Calling tool ${toolName} with args ${JSON.stringify(toolArgs)}]`)
+          const result = await this.mcp.callTool({
+            name: toolName,
+            arguments: toolArgs,
+          })
+          console.log(`Tool execution result:`, JSON.stringify(result))
+          toolResults.push(result)
+          finalText.push(`[Calling tool ${toolName} with args ${JSON.stringify(toolArgs)}]`)
 
-        // Continue conversation with tool results
-        console.log('Adding tool result to messages for follow-up')
-        messages.push({
-          role: 'user',
-            content: result.content,
-        })
+          // Continue conversation with tool results
+          console.log('Adding tool result to messages for follow-up')
+          const toolId = `tool_${Date.now()}`;
+          
+          // Add the assistant's tool use message
+          messages.push({
+            role: 'assistant',
+            content: [{ 
+              type: 'tool_use', 
+              id: toolId, 
+              name: toolName, 
+              input: toolArgs 
+            }]
+          })
+          
+          // Add the tool result message in proper format
+          messages.push({
+            role: 'user',
+            content: [
+              {
+                type: 'tool_result',
+                tool_use_id: toolId,
+                content: result.content
+              }
+            ]
+          })
 
-        // Get next response from Claude
-        console.log('Sending follow-up request to Claude with tool results...')
-        const response = await this.anthropic.messages.create({
-          model: 'claude-3-5-sonnet-20241022',
-          max_tokens: 1000,
-          messages,
-        })
-        console.log('Received follow-up response from Claude:', JSON.stringify(response.id))
-
-        if (response.content.length > 0 && response.content[0]) {
-          const firstContent = response.content[0];
-          finalText.push(firstContent.type === 'text' ? firstContent.text : JSON.stringify(firstContent))
-        } else {
-          console.log('Warning: Empty or unexpected response content structure')
-          finalText.push('[Empty or unexpected response]')
+          // Get next response from Claude
+          console.log('Sending follow-up request to Claude with tool results...')
+          const followUpResponse = await this.anthropic.messages.create({
+            model: 'claude-3-5-sonnet-20241022',
+            max_tokens: 1000,
+            messages,
+            tools: this.tools,
+          })
+          console.log('Received follow-up response from Claude:', JSON.stringify(followUpResponse.id))
+          
+          // Process the follow-up response recursively
+          await processResponse(followUpResponse)
         }
       }
     }
+    
+    // Start processing with the initial response
+    await processResponse(initialResponse)
 
     console.log('Query processing complete')
     return finalText.join('\n')
