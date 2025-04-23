@@ -10,6 +10,8 @@ export class ClientUI extends System {
     this.visible = true
     this.menu = null
     this.apps = false
+    this.code = false
+    this.conversations = false
     this.control = null
   }
 
@@ -21,6 +23,8 @@ export class ClientUI extends System {
     if (this.control.escape.pressed) {
       if (this.apps) {
         this.toggleApps(false)
+      } else if (this.conversations) {
+        this.toggleConversations(false)
       } else if (this.menu) {
         this.setMenu(null)
       } else {
@@ -34,6 +38,12 @@ export class ClientUI extends System {
       !this.control.shiftLeft.down
     ) {
       this.toggleUI()
+    }
+    if (
+      this.control.keyP.pressed &&
+      this.control.shiftLeft.down
+    ) {
+      this.toggleConversations()
     }
     if (this.control.pointer.locked) {
       if (this.menu?.type === 'main') {
@@ -68,6 +78,12 @@ export class ClientUI extends System {
     value = isBoolean(value) ? value : !this.code
     this.code = value
     this.world.emit('code', this.code)
+  }
+
+  toggleConversations = value => {
+    value = isBoolean(value) ? value : !this.conversations
+    this.conversations = value
+    this.world.emit('conversations', this.conversations)
   }
 
   toggleUI() {

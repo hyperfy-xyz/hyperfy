@@ -29,6 +29,7 @@ import {
   VRIcon,
 } from './Icons'
 import { storage } from '../../core/storage'
+import { ConversationHistory } from './ConversationHistory'
 
 export function CoreUI({ world }) {
   const [ref, width, height] = useElemSize()
@@ -52,9 +53,11 @@ function AIButton({ world }) {
   const [isLoading, setIsLoading] = useState(false)
   const [status, setStatus] = useState('')
   const [response, setResponse] = useState('')
+  const [responseSegments, setResponseSegments] = useState([])
   const [streamOpen, setStreamOpen] = useState(false)
   const [showResponse, setShowResponse] = useState(false)
   const [authError, setAuthError] = useState(null)
+  const [toolLogs, setToolLogs] = useState([])
   const inputRef = useRef(null)
   const eventSourceRef = useRef(null)
   const responseAreaRef = useRef(null)
@@ -68,6 +71,7 @@ function AIButton({ world }) {
       inputBg: 'rgba(0, 0, 0, 0.15)',
       statusBg: 'rgba(0, 0, 0, 0.25)',
       toolUseBg: 'rgba(60, 60, 80, 0.4)',
+      toolUseExpandedBg: 'rgba(70, 70, 90, 0.6)',
       errorBg: 'rgba(180, 30, 30, 0.4)',
     },
     radius: {
@@ -101,7 +105,7 @@ function AIButton({ world }) {
     if (responseAreaRef.current) {
       responseAreaRef.current.scrollTop = responseAreaRef.current.scrollHeight
     }
-  }, [response, status])
+  }, [responseSegments, toolLogs])
 
   // Clean up event source on unmount
   useEffect(() => {
@@ -125,11 +129,16 @@ function AIButton({ world }) {
     
     // Clear previous response and set loading state
     setResponse('')
+    setResponseSegments([{ type: 'text', content: '' }])
     setStatus('Connecting...')
     setIsLoading(true)
     setShowResponse(true)
     setShowPrompt(false)
     setAuthError(null)
+    setToolLogs([])
+    
+    // Store the original query for later use with conversation history
+    const originalQuery = query;
     
     // Close any existing connection
     if (eventSourceRef.current) {
@@ -174,35 +183,82 @@ function AIButton({ world }) {
 
     eventSource.addEventListener('text', (event) => {
       const data = JSON.parse(event.data)
+      // Append text to the last segment if it's a text segment
+      setResponseSegments(prev => {
+        const newSegments = [...prev];
+        if (newSegments.length > 0 && newSegments[newSegments.length - 1].type === 'text') {
+          newSegments[newSegments.length - 1].content += data.text;
+        } else {
+          newSegments.push({ type: 'text', content: data.text });
+        }
+        return newSegments;
+      });
+      
+      // Also update the full response for history saving
       setResponse(prev => prev + data.text)
     })
 
     eventSource.addEventListener('tool_start', (event) => {
       const data = JSON.parse(event.data)
       setStatus(`Using tool: ${data.tool}...`)
-      setResponse(prev => 
-        prev + 
-        (prev ? '\n\n' : '') + 
-        `📌 Using tool: ${data.tool}\n` +
-        `${JSON.stringify(data.args, null, 2)}`
-      )
+      
+      // Create a new tool log
+      const newToolLog = {
+        id: `tool-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+        tool: data.tool,
+        type: 'start',
+        args: data.args,
+        expanded: false,
+        timestamp: new Date().toISOString()
+      }
+      
+      setToolLogs(prev => [...prev, newToolLog])
+      
+      // Insert the tool log in the response segments
+      setResponseSegments(prev => {
+        return [...prev, { type: 'tool', id: newToolLog.id }];
+      });
     })
 
     eventSource.addEventListener('tool_result', (event) => {
       const data = JSON.parse(event.data)
       console.log('Tool result:', data)
-      // We don't add raw tool results to the response as it can be verbose
-      // Just update status that tool completed
+      
+      // Add result to existing tool log
+      setToolLogs(prev => prev.map(log => {
+        if (log.tool === data.tool && log.type === 'start' && !log.result) {
+          return { ...log, result: data.result, type: 'complete' }
+        }
+        return log
+      }))
+      
       setStatus(`Tool ${data.tool} completed`)
     })
 
     eventSource.addEventListener('tool_error', (event) => {
       const data = JSON.parse(event.data)
       setStatus(`Error using tool: ${data.tool}`)
-      setResponse(prev => 
-        prev + 
-        `\n❌ Error using tool ${data.tool}: ${data.error}\n`
-      )
+      
+      // Add error to existing tool log
+      setToolLogs(prev => prev.map(log => {
+        if (log.tool === data.tool && log.type === 'start') {
+          return { ...log, error: data.error, type: 'error' }
+        }
+        return log
+      }))
+      
+      // Add error indication in the response
+      setResponseSegments(prev => {
+        const newSegments = [...prev];
+        newSegments.push({
+          type: 'text',
+          content: `\n❌ Error using tool ${data.tool}: ${data.error}`
+        });
+        return newSegments;
+      });
+      
+      // Update full response text
+      setResponse(prev => prev + `\n❌ Error using tool ${data.tool}: ${data.error}`)
     })
 
     eventSource.addEventListener('complete', (event) => {
@@ -211,6 +267,25 @@ function AIButton({ world }) {
       setIsLoading(false)
       eventSource.close()
       setStreamOpen(false)
+      
+      // Save this conversation to history after completion
+      const responseText = data.response || response;
+      
+      // Get existing history or initialize an empty array
+      const history = storage.get('ai-conversation-history', []);
+      
+      // Create a new conversation entry with tool logs and segments
+      const conversation = {
+        query: originalQuery,
+        response: responseText,
+        responseSegments: responseSegments,
+        toolLogs: toolLogs,
+        timestamp: new Date().toISOString()
+      };
+      
+      // Add to the beginning of the history and limit to 50 entries
+      const updatedHistory = [conversation, ...history].slice(0, 50);
+      storage.set('ai-conversation-history', updatedHistory);
     })
 
     eventSource.addEventListener('error', (event) => {
@@ -231,7 +306,7 @@ function AIButton({ world }) {
     if (!input.trim()) return
 
     try {
-      await handleStreamResponse(input)
+      await handleStreamResponse(input.trim())
       // Clear input after submission
       setInput('')
     } catch (error) {
@@ -249,8 +324,77 @@ function AIButton({ world }) {
     setStreamOpen(false)
     setIsLoading(false)
     setResponse('')
+    setResponseSegments([])
     setStatus('')
     setAuthError(null)
+    setToolLogs([])
+  }
+
+  const toggleToolExpanded = (toolId) => {
+    setToolLogs(prev => prev.map(log => 
+      log.id === toolId ? { ...log, expanded: !log.expanded } : log
+    ))
+  }
+
+  const renderToolDetails = (tool) => {
+    if (!tool.expanded) return null;
+    
+    return (
+      <div className="tool-details">
+        <div className="tool-args">
+          <div className="tool-section-title">Arguments:</div>
+          <pre>{JSON.stringify(tool.args, null, 2)}</pre>
+        </div>
+        
+        {tool.result && (
+          <div className="tool-result">
+            <div className="tool-section-title">Result:</div>
+            <pre>{JSON.stringify(tool.result, null, 2)}</pre>
+          </div>
+        )}
+        
+        {tool.error && (
+          <div className="tool-error">
+            <div className="tool-section-title">Error:</div>
+            <pre>{tool.error}</pre>
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  const renderToolLog = (toolId) => {
+    const tool = toolLogs.find(t => t.id === toolId);
+    if (!tool) return null;
+    
+    return (
+      <div className="tool-log">
+        <div 
+          className="tool-header" 
+          onClick={() => toggleToolExpanded(tool.id)}
+        >
+          <div className="tool-name">
+            {tool.type === 'error' ? '❌ ' : '📌 '}
+            Tool: {tool.tool}
+          </div>
+          <div className={`tool-expand-icon ${tool.expanded ? 'expanded' : ''}`}>
+            ▼
+          </div>
+        </div>
+        {renderToolDetails(tool)}
+      </div>
+    );
+  }
+
+  const renderResponseContent = () => {
+    return responseSegments.map((segment, index) => {
+      if (segment.type === 'text') {
+        return <span key={index}>{segment.content}</span>;
+      } else if (segment.type === 'tool') {
+        return <div key={index}>{renderToolLog(segment.id)}</div>;
+      }
+      return null;
+    });
   }
 
   return (
@@ -529,9 +673,68 @@ function AIButton({ world }) {
               background: ${styleConfig.colors.inputBg};
               border-radius: ${styleConfig.radius.input};
               border: 1px solid ${styleConfig.colors.border};
+              
+              .tool-log {
+                margin: 0.5rem 0;
+                border-radius: 0.25rem;
+                overflow: hidden;
+              }
+              
+              .tool-header {
+                background: ${styleConfig.colors.toolUseBg};
+                padding: 0.5rem;
+                cursor: pointer;
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                
+                &:hover {
+                  background: ${styleConfig.colors.toolUseExpandedBg};
+                }
+              }
+              
+              .tool-name {
+                font-weight: bold;
+              }
+              
+              .tool-expand-icon {
+                transition: transform 0.2s;
+                
+                &.expanded {
+                  transform: rotate(180deg);
+                }
+              }
+              
+              .tool-details {
+                padding: 0.5rem;
+                background: ${styleConfig.colors.toolUseExpandedBg};
+                border-top: 1px solid rgba(255, 255, 255, 0.1);
+              }
+              
+              .tool-section-title {
+                font-weight: bold;
+                margin-bottom: 0.25rem;
+                color: rgba(255, 255, 255, 0.7);
+              }
+              
+              .tool-args, .tool-result {
+                margin-bottom: 0.5rem;
+              }
+              
+              .tool-error {
+                color: #ff6666;
+              }
+              
+              pre {
+                margin: 0;
+                white-space: pre-wrap;
+                font-size: 0.85rem;
+                max-height: 200px;
+                overflow-y: auto;
+              }
             `}
           >
-            {response}
+            {renderResponseContent()}
           </div>
         </div>
       )}
@@ -552,6 +755,7 @@ function Content({ world, width, height }) {
   const [apps, setApps] = useState(false)
   const [kicked, setKicked] = useState(null)
   const [buildMode, setBuildMode] = useState(world.builder.enabled)
+  const [conversations, setConversations] = useState(false)
 
   useEffect(() => {
     world.on('ready', setReady)
@@ -560,6 +764,7 @@ function Content({ world, width, height }) {
     world.on('menu', setMenu)
     world.on('code', setCode)
     world.on('apps', setApps)
+    world.on('conversations', setConversations)
     world.on('avatar', setAvatar)
     world.on('kick', setKicked)
     world.on('disconnect', setDisconnected)
@@ -571,6 +776,7 @@ function Content({ world, width, height }) {
       world.off('menu', setMenu)
       world.off('code', setCode)
       world.off('apps', setApps)
+      world.off('conversations', setConversations)
       world.off('avatar', setAvatar)
       world.off('kick', setKicked)
       world.off('disconnect', setDisconnected)
@@ -623,6 +829,7 @@ function Content({ world, width, height }) {
       )}
       {avatar && <AvatarPane key={avatar.hash} world={world} info={avatar} />}
       {apps && <AppsPane world={world} close={() => world.ui.toggleApps()} />}
+      {conversations && <ConversationHistory world={world} blur={false} />}
       {!ready && <LoadingOverlay />}
       {kicked && <KickedOverlay code={kicked} />}
       {ready && isTouch && <TouchBtns world={world} />}

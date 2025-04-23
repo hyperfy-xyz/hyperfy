@@ -55,6 +55,11 @@ function MenuMainIndex({ world, pop, push }) {
       {isBuilder && (
         <MenuItemBtn label='Apps' hint='View all apps in the world' onClick={() => world.ui.toggleApps()} />
       )}
+      <MenuItemBtn 
+        label='Conversation History' 
+        hint='View your AI conversation history (Shift+P)' 
+        onClick={() => world.ui.toggleConversations()} 
+      />
     </Menu>
   )
 }
@@ -94,6 +99,11 @@ function MenuMainUI({ world, pop, push }) {
         step={0.1}
         value={ui}
         onChange={ui => world.prefs.setUI(ui)}
+      />
+      <MenuItemBtn
+        label='Conversation History'
+        hint='View your AI conversation history (Shift+P)'
+        onClick={() => world.ui.toggleConversations()}
       />
       {isBuilder && (
         <MenuItemToggle
