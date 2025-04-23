@@ -14,6 +14,8 @@ const rootDir = path.join(__dirname, '../')
 const worldDir = path.join(rootDir, process.env.WORLD)
 const assetsDir = path.join(worldDir, '/assets')
 const docsDir = path.join(rootDir, './docs')
+const repoRootDir = path.join(rootDir, '../../')
+const scriptingRulesPath = path.join(repoRootDir, 'docs/scripting-rules.md')
 
 // =====================================
 // MCP Server Implementation Below
@@ -265,11 +267,78 @@ async function createEntity(world, blueprintId, position, quaternion, creatorId 
   }
 }
 
+// Helper function to find the correct path for the scripting rules file
+function findScriptingRulesFile() {
+  const possiblePaths = [
+    scriptingRulesPath,
+    path.join(rootDir, '../../docs/scripting-rules.md'),
+    path.join(rootDir, '../docs/scripting-rules.md'),
+    path.join(docsDir, 'scripting-rules.md'),
+    path.join(repoRootDir, 'docs/scripting-rules.md')
+  ];
+  
+  for (const filePath of possiblePaths) {
+    if (fs.existsSync(filePath)) {
+      console.log(`Found scripting rules at: ${filePath}`);
+      return filePath;
+    }
+  }
+  
+  console.error("Could not find scripting-rules.md in any expected location");
+  return null;
+}
+
 export function registerMCPServer(world, fastify) {
   const mcpServer = new McpServer({
     name: 'hyperfy-mcp-server',
     version: '0.0.1',
   })
+
+  // Register the scripting rules as a static resource
+  console.log(`Registering scripting rules resource from path: ${scriptingRulesPath}`)
+  const scriptingRulesFilePath = findScriptingRulesFile();
+  
+  if (scriptingRulesFilePath) {
+    mcpServer.resource(
+      "scripting-rules",
+      "hyperfy://scripting-rules",
+      async (uri) => {
+        try {
+          // Read the markdown file
+          const markdown = await fs.readFile(scriptingRulesFilePath, 'utf8')
+          console.log(`Successfully loaded scripting rules (${markdown.length} characters)`)
+
+          return {
+            contents: [{
+              uri: uri.href,
+              text: markdown
+            }]
+          }
+        } catch (error) {
+          console.error('Error reading scripting rules file:', error)
+          return {
+            contents: [{
+              uri: uri.href,
+              text: `# Scripting Rules\n\nError: ${error.message}`
+            }]
+          }
+        }
+      }
+    )
+  } else {
+    console.error('Could not register scripting rules resource - file not found')
+    // Register a placeholder resource with an error message
+    mcpServer.resource(
+      "scripting-rules",
+      "hyperfy://scripting-rules",
+      async (uri) => ({
+        contents: [{
+          uri: uri.href,
+          text: "# Scripting Rules\n\nError: Documentation file not found"
+        }]
+      })
+    )
+  }
 
   // Register the get-entity-script tool
   mcpServer.tool(
@@ -836,10 +905,8 @@ export function registerMCPServer(world, fastify) {
     }
   )
 
-  // Register the MCP SSE plugin
-  fastify.register(fastifyMCPSSE, {
-    server: mcpServer.server,
-  })
+  // Return the server instance instead of registering it directly
+  return mcpServer;
 }
 
 // Helper function to parse entities JSON array

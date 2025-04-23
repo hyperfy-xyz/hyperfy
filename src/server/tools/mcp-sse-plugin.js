@@ -7,6 +7,7 @@ import { Sessions } from "./session-storage.js";
 //   sseEndpoint?: string;
 //   messagesEndpoint?: string;
 //   allowLocalOnly?: boolean;
+//   authHandler?: (authToken: string) => Promise<string|null>; // Function to validate auth and return player ID
 // };
 
 
@@ -22,6 +23,7 @@ export const fastifyMCPSSE = (
     sseEndpoint = "/sse",
     messagesEndpoint = "/messages",
     allowLocalOnly = true,
+    authHandler = null, // Optional auth handler function
   } = options;
 
 
@@ -47,16 +49,30 @@ export const fastifyMCPSSE = (
       return;
     }
 
+    // Get the auth token if provided
+    const authToken = req.query.authToken || req.headers.authorization?.replace('Bearer ', '');
+    let playerId = null;
+    
+    // If authHandler is provided and auth token exists, get the player ID
+    if (authHandler && authToken) {
+      try {
+        playerId = await authHandler(authToken);
+      } catch (err) {
+        fastify.log.warn("Failed to authenticate session", { error: err.message });
+      }
+    }
+
     const transport = new SSEServerTransport(messagesEndpoint, reply.raw);
     const sessionId = transport.sessionId;
 
-    sessions.add(sessionId, transport);
+    // Add session with player ID if available
+    sessions.add(sessionId, transport, playerId);
 
     reply.raw.on("close", () => {
       sessions.remove(sessionId);
     });
 
-    fastify.log.info("Starting new session", { sessionId });
+    fastify.log.info("Starting new session", { sessionId, playerId });
     await server.connect(transport);
   });
 

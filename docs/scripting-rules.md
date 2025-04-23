@@ -196,3 +196,105 @@ Every single node in the world (mesh, collider, etc) inherits the node base clas
 
 `node.cursor`
 - changes the cursor in pointer mode when hovering over this node, useful for ui etc eg `pointer`
+
+## networking
+
+---
+
+Always clearly separate your server and client code:
+
+```javascript
+// SERVER SIDE
+if (world.isServer) {
+    // Server-only code goes here
+}
+
+// CLIENT SIDE
+if (world.isClient) {
+    // Client-only code goes here
+}
+```
+
+---
+
+The server should initialize and manage the state:
+
+```javascript
+if (world.isServer) {
+    // Initialize state
+    const state = app.state;
+    state.ready = true;
+    state.someValue = initialValue;
+    
+    // Send initial state to clients
+    app.send('init', state);
+}
+```
+
+---
+
+Clients should initialize with server state and listen for updates:
+
+```javascript
+if (world.isClient) {
+    // Check if we already have state
+    if (app.state.ready) {
+        init(app.state);
+    } else {
+        // Wait for initial state
+        app.on('init', init);
+    }
+    
+    function init(state) {
+        // Set up local state based on server state
+        localState = state.someValue;
+        
+        // Listen for updates
+        app.on('stateUpdate', handleUpdate);
+    }
+}
+```
+
+---
+
+The server receives input, updates its state, and broadcasts to clients:
+
+```javascript
+if (world.isServer) {
+    // Listen for input events
+    app.on('inputEvent', (data, playerId) => {
+        // Update server state
+        state.someValue = newValue;
+        
+        // Broadcast to all clients
+        app.send('stateUpdate', state.someValue);
+    });
+    
+    // Handle new players
+    app.on('playerJoin', (playerId) => {
+        // Send current state to the new player
+        app.send(playerId, 'init', state);
+    });
+}
+```
+
+---
+
+Clients should render/animate based on the state:
+
+```javascript
+if (world.isClient) {
+    function handleUpdate(newValue) {
+        // Update local state
+        localState = newValue;
+        
+        // Trigger visual updates
+        updateVisuals();
+    }
+    
+    // Update visuals smoothly
+    app.on('update', dt => {
+        // Interpolate or update visuals here
+    });
+}
+```

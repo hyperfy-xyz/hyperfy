@@ -15,6 +15,7 @@ export class McpClient extends EventEmitter {
   anthropic
   transport
   tools
+  resources
 
   constructor() {
     super()
@@ -26,6 +27,8 @@ export class McpClient extends EventEmitter {
     console.log('Anthropic client initialized')
     this.mcp = new Client({ name: 'mcp-client-cli', version: '1.0.0' })
     console.log('MCP client initialized')
+    // Store available resources
+    this.resources = []
   }
 
   async connectToServer(serverUrl) {
@@ -72,9 +75,67 @@ export class McpClient extends EventEmitter {
         'Connected to server with tools:',
         this.tools.map(({ name }) => name)
       )
+      
+      // List available resources
+      await this.listResources()
     } catch (e) {
       console.error('Failed to connect to MCP server: ', e)
       throw e
+    }
+  }
+  
+  /**
+   * List all available resources from the server
+   * 
+   * @returns {Promise<Array>} List of available resources
+   */
+  async listResources() {
+    try {
+      console.log('Fetching available resources...')
+      const result = await this.mcp.listResources()
+      this.resources = result.resources || []
+      console.log(`Found ${this.resources.length} available resources:`, 
+        this.resources.map(r => r.name).join(', '))
+      return this.resources
+    } catch (error) {
+      console.error('Error listing resources:', error)
+      return []
+    }
+  }
+  
+  /**
+   * Read a resource from the server
+   * 
+   * @param {string} uri - URI of the resource to read
+   * @returns {Promise<Object>} Resource content
+   */
+  async readResource(uri) {
+    try {
+      console.log(`Reading resource at URI: ${uri}`)
+      const resource = await this.mcp.readResource({ uri })
+      console.log(`Successfully read resource: ${uri}`)
+      return resource
+    } catch (error) {
+      console.error(`Error reading resource ${uri}:`, error)
+      throw error
+    }
+  }
+  
+  /**
+   * Get scripting rules content
+   * 
+   * @returns {Promise<string>} Scripting rules markdown content
+   */
+  async getScriptingRules() {
+    try {
+      const resource = await this.readResource('hyperfy://scripting-rules')
+      if (resource && resource.contents && resource.contents.length > 0) {
+        return resource.contents[0].text
+      }
+      throw new Error('Invalid resource format')
+    } catch (error) {
+      console.error('Error getting scripting rules:', error)
+      return '# Error\n\nFailed to load scripting rules: ' + error.message
     }
   }
 
@@ -87,7 +148,19 @@ export class McpClient extends EventEmitter {
      * @returns Processed response as a string
      */
     console.log(`Processing query: "${query}" for user: ${userId || 'anonymous'}`)
-    this.emit('start', { query })
+    this.emit('start', { query, userId })
+    
+    // Try to get scripting rules and prepare system prompt
+    let systemPrompt = "You are a helpful AI assistant for the Hyperfy platform.";
+    try {
+      const scriptingRules = await this.getScriptingRules();
+      if (scriptingRules) {
+        systemPrompt += " You have access to these documentation guidelines for Hyperfy scripting:\n\n" + 
+          scriptingRules.substring(0, 10000); // Limit to first 10K chars if very long
+      }
+    } catch (err) {
+      console.warn("Failed to load scripting rules for system prompt:", err);
+    }
     
     const messages = [
       {
@@ -98,9 +171,9 @@ export class McpClient extends EventEmitter {
 
     // Add user context if available
     if (userId) {
-      this.emit('status', { status: `Processing request for user ${userId.substring(0, 8)}...` })
+      this.emit('status', { status: `Processing request for user ${userId.substring(0, 8)}...`, userId })
     } else {
-      this.emit('status', { status: 'Thinking...' })
+      this.emit('status', { status: 'Thinking...', userId })
     }
     
     // Initial Claude API call
@@ -109,6 +182,7 @@ export class McpClient extends EventEmitter {
     const initialResponse = await this.anthropic.messages.create({
       model: 'claude-3-5-sonnet-20241022',
       max_tokens: 8192,
+      system: systemPrompt,
       messages,
       tools: this.tools,
     })
@@ -126,7 +200,7 @@ export class McpClient extends EventEmitter {
         if (content.type === 'text') {
           console.log('Adding text response to output')
           finalText.push(content.text)
-          this.emit('text', { text: content.text })
+          this.emit('text', { text: content.text, userId })
         } else if (content.type === 'tool_use') {
           // Execute tool call
           const toolName = content.name
@@ -135,7 +209,8 @@ export class McpClient extends EventEmitter {
           
           this.emit('tool_start', { 
             tool: toolName,
-            args: toolArgs
+            args: toolArgs,
+            userId
           })
 
           try {
@@ -155,7 +230,8 @@ export class McpClient extends EventEmitter {
             
             this.emit('tool_result', { 
               tool: toolName,
-              result: result 
+              result: result,
+              userId
             })
 
             // Continue conversation with tool results
@@ -186,11 +262,12 @@ export class McpClient extends EventEmitter {
             })
 
             // Get next response from Claude
-            this.emit('status', { status: 'Processing results...' })
+            this.emit('status', { status: 'Processing results...', userId })
             console.log('Sending follow-up request to Claude with tool results...')
             const followUpResponse = await this.anthropic.messages.create({
               model: 'claude-3-5-sonnet-20241022',
               max_tokens: 8192,
+              system: systemPrompt,
               messages,
               tools: this.tools,
             })
@@ -202,7 +279,8 @@ export class McpClient extends EventEmitter {
             console.error(`Error executing tool ${toolName}:`, error)
             this.emit('tool_error', { 
               tool: toolName,
-              error: error.message 
+              error: error.message,
+              userId 
             })
             finalText.push(`[Error executing tool ${toolName}: ${error.message}]`)
           }
@@ -213,7 +291,7 @@ export class McpClient extends EventEmitter {
     // Start processing with the initial response
     await processResponse(initialResponse)
 
-    this.emit('complete', { response: finalText.join('\n') })
+    this.emit('complete', { response: finalText.join('\n'), userId })
     console.log('Query processing complete')
     return finalText.join('\n')
   }
