@@ -22,6 +22,7 @@ export function ConversationHistory({ world, blur, onClose }) {
       inputBg: 'rgba(0, 0, 0, 0.15)',
       statusBg: 'rgba(0, 0, 0, 0.25)',
       toolUseBg: 'rgba(60, 60, 80, 0.4)',
+      toolUseExpandedBg: 'rgba(70, 70, 90, 0.6)',
       errorBg: 'rgba(180, 30, 30, 0.4)',
       queryBg: 'rgba(30, 30, 50, 0.4)',
       responseBg: 'rgba(20, 20, 30, 0.4)',
@@ -123,7 +124,16 @@ export function ConversationHistory({ world, blur, onClose }) {
     return text.substring(0, maxLength) + '...';
   }
 
+  const toggleToolExpanded = (toolId) => {
+    setToolLogsExpanded(prev => ({
+      ...prev,
+      [toolId]: !prev[toolId]
+    }));
+  }
+
   const renderToolDetails = (tool) => {
+    if (!toolLogsExpanded[tool.id]) return null;
+    
     return (
       <div className="tool-details">
         <div className="tool-args">
@@ -148,11 +158,59 @@ export function ConversationHistory({ world, blur, onClose }) {
     );
   }
 
-  const toggleToolExpanded = (toolId) => {
-    setToolLogsExpanded(prev => ({
-      ...prev,
-      [toolId]: !prev[toolId]
-    }));
+  const renderToolLog = (tool) => {
+    if (!tool) {
+      console.warn('Attempted to render null/undefined tool');
+      return null;
+    }
+    
+    return (
+      <div className="tool-log" key={tool.id}>
+        <div 
+          className="tool-header" 
+          onClick={() => toggleToolExpanded(tool.id)}
+        >
+          <div className="tool-name">
+            {tool.type === 'error' ? '❌ ' : '📌 '}
+            Tool: {tool.tool}
+          </div>
+          <div className={`tool-expand-icon ${toolLogsExpanded[tool.id] ? 'expanded' : ''}`}>
+            ▼
+          </div>
+        </div>
+        {renderToolDetails(tool)}
+      </div>
+    );
+  }
+
+  const renderResponseContent = () => {
+    if (!selectedConversation) return null;
+    
+    // Add debug logging to see what's in the conversation
+    console.log('Selected conversation:', selectedConversation);
+    console.log('Tool logs:', selectedConversation.toolLogs);
+    console.log('Response segments:', selectedConversation.responseSegments);
+    
+    // If responseSegments exists and is an array, use that to render the content
+    if (selectedConversation.responseSegments && Array.isArray(selectedConversation.responseSegments) && selectedConversation.responseSegments.length > 0) {
+      return selectedConversation.responseSegments.map((segment, index) => {
+        if (segment.type === 'text') {
+          return <span key={index}>{segment.content}</span>;
+        } else if (segment.type === 'tool' && selectedConversation.toolLogs) {
+          const tool = selectedConversation.toolLogs.find(t => t.id === segment.id);
+          if (tool) {
+            return <div key={index}>{renderToolLog(tool)}</div>;
+          } else {
+            console.warn(`Tool with id ${segment.id} not found in toolLogs`);
+            return null;
+          }
+        }
+        return null;
+      });
+    }
+    
+    // Fallback to just showing the response text
+    return selectedConversation.response;
   }
 
   return (
@@ -348,7 +406,7 @@ export function ConversationHistory({ world, blur, onClose }) {
         }
         
         .tool-header {
-          background: rgba(60, 60, 80, 0.4);
+          background: ${styleConfig.colors.toolUseBg};
           padding: 0.5rem;
           cursor: pointer;
           display: flex;
@@ -356,7 +414,7 @@ export function ConversationHistory({ world, blur, onClose }) {
           align-items: center;
           
           &:hover {
-            background: rgba(70, 70, 90, 0.6);
+            background: ${styleConfig.colors.toolUseExpandedBg};
           }
         }
         
@@ -461,28 +519,18 @@ export function ConversationHistory({ world, blur, onClose }) {
             </div>
             
             <div className='history-detail-response'>
-              {selectedConversation.response}
+              {renderResponseContent()}
             </div>
             
-            {selectedConversation.toolLogs && selectedConversation.toolLogs.length > 0 && (
+            {/* Display toolLogs separately if not integrated in response */}
+            {selectedConversation.toolLogs && 
+             Array.isArray(selectedConversation.toolLogs) && 
+             selectedConversation.toolLogs.length > 0 && 
+             (!selectedConversation.responseSegments || !Array.isArray(selectedConversation.responseSegments)) && (
               <div className="tool-logs">
                 <h3>Tool Usage</h3>
                 {selectedConversation.toolLogs.map((tool) => (
-                  <div key={tool.id} className="tool-log">
-                    <div 
-                      className="tool-header" 
-                      onClick={() => toggleToolExpanded(tool.id)}
-                    >
-                      <div className="tool-name">
-                        {tool.type === 'error' ? '❌ ' : '📌 '}
-                        Tool: {tool.tool}
-                      </div>
-                      <div className={`tool-expand-icon ${toolLogsExpanded[tool.id] ? 'expanded' : ''}`}>
-                        ▼
-                      </div>
-                    </div>
-                    {toolLogsExpanded[tool.id] && renderToolDetails(tool)}
-                  </div>
+                  <div key={tool.id}>{renderToolLog(tool)}</div>
                 ))}
               </div>
             )}

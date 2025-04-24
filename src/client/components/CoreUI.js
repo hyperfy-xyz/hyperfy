@@ -58,9 +58,24 @@ function AIButton({ world }) {
   const [showResponse, setShowResponse] = useState(false)
   const [authError, setAuthError] = useState(null)
   const [toolLogs, setToolLogs] = useState([])
+  const [animation, setAnimation] = useState(false)
   const inputRef = useRef(null)
   const eventSourceRef = useRef(null)
   const responseAreaRef = useRef(null)
+
+  // Set animation to true after mount to trigger entrance animation
+  useEffect(() => {
+    setTimeout(() => setAnimation(true), 10)
+  }, [])
+
+  // Check if this component was triggered via the keyboard shortcut
+  useEffect(() => {
+    const isPromptShortcut = world.ui._isPromptShortcut
+    if (isPromptShortcut) {
+      setShowPrompt(true)
+      world.ui._isPromptShortcut = false
+    }
+  }, [])
 
   // Common styles
   const styleConfig = {
@@ -417,15 +432,17 @@ function AIButton({ world }) {
           cursor: pointer;
           z-index: 100;
           pointer-events: auto;
-          transition: transform 0.2s ease;
+          transition: transform 0.2s ease, border-color 0.2s ease;
+          transform: ${animation ? 'translateY(0) scale(1)' : 'translateY(20px) scale(0.8)'};
+          opacity: ${animation ? '1' : '0'};
 
           &:hover {
-            transform: scale(1.05);
+            transform: ${animation ? 'scale(1.05)' : 'translateY(20px) scale(0.8)'};
             border-color: ${styleConfig.colors.borderActive};
           }
 
           &:active {
-            transform: scale(0.95);
+            transform: ${animation ? 'scale(0.95)' : 'translateY(20px) scale(0.8)'};
           }
         `}
         onClick={() => setShowPrompt(!showPrompt)}
@@ -756,6 +773,7 @@ function Content({ world, width, height }) {
   const [kicked, setKicked] = useState(null)
   const [buildMode, setBuildMode] = useState(world.builder.enabled)
   const [conversations, setConversations] = useState(false)
+  const [showAIPrompt, setShowAIPrompt] = useState(false)
 
   useEffect(() => {
     world.on('ready', setReady)
@@ -798,6 +816,24 @@ function Content({ world, width, height }) {
     // elem.addEventListener('touchmove', onEvent)
     // elem.addEventListener('touchend', onEvent)
   }, [])
+
+  // Keyboard shortcut handler
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      // Check for shift + L
+      if (e.shiftKey && e.key === 'L') {
+        e.preventDefault()
+        setShowAIPrompt(true)
+        world.ui._isPromptShortcut = true
+      }
+    }
+    
+    window.addEventListener('keydown', handleKeyDown)
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown)
+    }
+  }, [])
+
   useEffect(() => {
     document.documentElement.style.fontSize = `${16 * world.prefs.ui}px`
     function onChange(changes) {
@@ -810,6 +846,12 @@ function Content({ world, width, height }) {
       world.prefs.off('change', onChange)
     }
   }, [])
+  
+  // AIButton with prompt shortcut
+  const aiButton = (ready && (buildMode || showAIPrompt)) ? 
+    <AIButton key={showAIPrompt ? 'ai-prompt-shortcut' : 'ai-normal'} world={world} /> : 
+    null
+    
   return (
     <div
       ref={ref}
@@ -834,7 +876,7 @@ function Content({ world, width, height }) {
       {kicked && <KickedOverlay code={kicked} />}
       {ready && isTouch && <TouchBtns world={world} />}
       <div id='core-ui-portal' />
-      {ready && buildMode && <AIButton world={world} />}
+      {aiButton}
     </div>
   )
 }

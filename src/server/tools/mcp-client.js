@@ -62,7 +62,7 @@ export class McpClient extends EventEmitter {
 
       // List available tools
       const toolsResult = await this.mcp.listTools()
-      console.log('Tool list received:', JSON.stringify(toolsResult, null, 2))
+      console.log('Tool list received:', JSON.stringify(toolsResult.tools.map(t => t.name), null, 2))
       this.tools = toolsResult.tools.map(tool => {
         console.log(`Processing tool: ${tool.name}`)
         return {
