@@ -24,6 +24,8 @@ import { fileURLToPath } from 'url'
 import { registerMCPServer } from './tools/registerMCPServer.js'
 import { McpClient } from './tools/mcp-client.js'
 import { readJWT } from '../core/utils-server'
+import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js'
+import { z } from 'zod'
 import { fastifyMCPSSE } from './tools/mcp-sse-plugin.js'
 
 const mcpClient = new McpClient()
@@ -47,9 +49,22 @@ const db = await getDB(path.join(worldDir, '/db.sqlite'))
 
 const storage = new Storage(path.join(worldDir, '/storage.json'))
 const world = createServerWorld()
-world.init({ db, storage, loadPhysX })
 
 const fastify = Fastify({ logger: { level: 'error' } })
+
+const appServer = new McpServer({
+  name: 'hyperfy-app-mcp-server',
+  version: '0.0.1',
+})
+
+// Register MCP SSE plugin with our auth handler
+fastify.register(fastifyMCPSSE, {
+  server: appServer,
+  sseEndpoint: '/apps/sse',
+  messagesEndpoint: '/apps/messages',
+})
+
+world.init({ db, storage, loadPhysX, mcp: appServer })
 
 fastify.register(cors)
 fastify.register(compress)
@@ -193,7 +208,7 @@ async function worldNetwork(fastify) {
 if (process.env.MCP_SERVER === 'true') {
   // Create the MCP server instance
   const mcpServer = registerMCPServer(world, fastify)
-  
+
   // Create an auth handler function to validate tokens and return player IDs
   const authHandler = async (authToken) => {
     try {
@@ -204,35 +219,35 @@ if (process.env.MCP_SERVER === 'true') {
       return null
     }
   }
-  
+
   // Register MCP SSE plugin with our auth handler
   fastify.register(fastifyMCPSSE, {
     server: mcpServer.server,
     authHandler
   })
-  
+
   // Add new SSE endpoint for streaming AI responses
   fastify.get('/mcp/stream', async (req, reply) => {
     try {
       // Get auth token from query parameter or header
       const authToken = req.query.authToken || req.headers.authorization?.replace('Bearer ', '')
-      
+
       if (!authToken) {
         reply.code(401).send({ error: 'Authentication required' })
         return
       }
-      
+
       // Validate token and get user
       let userId = null
-      
+
       try {
         // Verify JWT token
         const { userId: tokenUserId } = await readJWT(authToken)
         userId = tokenUserId
-        
+
         // Get player from world entities
         const player = world.entities.getPlayer(userId)
-        
+
         if (!player) {
           reply.code(403).send({ error: 'Player not found' })
           return
@@ -249,7 +264,7 @@ if (process.env.MCP_SERVER === 'true') {
         reply.code(401).send({ error: 'Invalid authentication token' })
         return
       }
-      
+
       // Set SSE headers
       reply.raw.writeHead(200, {
         'Content-Type': 'text/event-stream',
@@ -267,42 +282,42 @@ if (process.env.MCP_SERVER === 'true') {
           sendEvent('start', data)
         }
       }
-      
+
       const onStatus = (data) => {
         if (data.userId === userId || !data.userId) {
           sendEvent('status', data)
         }
       }
-      
+
       const onText = (data) => {
         if (data.userId === userId || !data.userId) {
           sendEvent('text', data)
         }
       }
-      
+
       const onToolStart = (data) => {
         if (data.userId === userId || !data.userId) {
           sendEvent('tool_start', data)
         }
       }
-      
+
       const onToolResult = (data) => {
         if (data.userId === userId || !data.userId) {
           sendEvent('tool_result', data)
         }
       }
-      
+
       const onToolError = (data) => {
         if (data.userId === userId || !data.userId) {
           sendEvent('tool_error', data)
         }
       }
-      
+
       const onComplete = (data) => {
         if (data.userId === userId || !data.userId) {
           sendEvent('complete', data)
           reply.raw.end()
-          
+
           // Clean up event listeners
           mcpClient.removeListener('start', onStart)
           mcpClient.removeListener('status', onStatus)

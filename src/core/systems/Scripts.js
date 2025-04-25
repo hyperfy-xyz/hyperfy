@@ -1,5 +1,5 @@
 import { System } from './System'
-
+import { z } from 'zod'
 import * as THREE from '../extras/three'
 import { DEG2RAD, RAD2DEG } from '../extras/general'
 import { clamp, num, uuid } from '../utils'
@@ -52,6 +52,7 @@ export class Scripts extends System {
       DEG2RAD,
       RAD2DEG,
       uuid,
+      z,
       // pause: () => this.world.pause(),
     })
   }
