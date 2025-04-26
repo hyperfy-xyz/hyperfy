@@ -116,24 +116,25 @@ function Content({ world, width, height }) {
       `}
     >
       {disconnected && <Disconnected />}
-	  <div
-		className='coreui-inner'
-		css={css`
+      <div
+        className='coreui-inner'
+        css={css`
           display: ${visible ? 'block' : 'none'};
         `}
-	  >
-      <Reticle world={world} />
-      {<Toast world={world} />}
-      {ready && <Side world={world} player={player} menu={menu} />}
-      {ready && menu?.type === 'app' && code && (
-        <CodeEditor key={`code-${menu.app.data.id}`} world={world} app={menu.app} blur={menu.blur} />
-      )}
-      {avatar && <AvatarPane key={avatar.hash} world={world} info={avatar} />}
-      {apps && <AppsPane world={world} close={() => world.ui.toggleApps()} />}
-      {!ready && <LoadingOverlay />}
-      {kicked && <KickedOverlay code={kicked} />}
-      {ready && isTouch && <TouchBtns world={world} />}
-      <div id='core-ui-portal' />
+      >
+        <Reticle world={world} />
+        {<Toast world={world} />}
+        {ready && <Side world={world} player={player} menu={menu} />}
+        {ready && menu?.type === 'app' && code && (
+          <CodeEditor key={`code-${menu.app.data.id}`} world={world} app={menu.app} blur={menu.blur} />
+        )}
+        {avatar && <AvatarPane key={avatar.hash} world={world} info={avatar} />}
+        {apps && <AppsPane world={world} close={() => world.ui.toggleApps()} />}
+        {!ready && <LoadingOverlay />}
+        {kicked && <KickedOverlay code={kicked} />}
+        {ready && isTouch && <TouchBtns world={world} />}
+        <div id='core-ui-portal' />
+      </div>
     </div>
   )
 }
