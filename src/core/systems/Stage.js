@@ -179,6 +179,16 @@ export class Stage extends System {
         }
         raw.needsUpdate = true
       },
+      get color() {
+        return raw.color
+      },
+      set color(val) {
+        if (typeof val !== 'string') {
+          throw new Error('[material] color must be a string (e.g. "red", "#ff0000", "rgb(255,0,0)")')
+        }
+        raw.color.set(val)
+        raw.needsUpdate = true
+      },
       get emissiveIntensity() {
         return raw.emissiveIntensity
       },

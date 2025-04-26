@@ -5,7 +5,7 @@ import { createRoot } from 'react-dom/client'
 import { Client } from './world-client'
 
 function App() {
-  return <Client wsUrl={process.env.PUBLIC_WS_URL} />
+  return <Client wsUrl={env.PUBLIC_WS_URL} />
 }
 
 const root = createRoot(document.getElementById('root'))

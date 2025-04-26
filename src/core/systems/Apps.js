@@ -8,7 +8,17 @@ import { Layers } from '../extras/Layers'
 import { ControlPriorities } from '../extras/ControlPriorities'
 import { warn } from '../extras/warn'
 
-const internalEvents = ['fixedUpdate', 'updated', 'lateUpdate', 'destroy', 'enter', 'leave', 'chat', 'health']
+const internalEvents = [
+  'fixedUpdate',
+  'updated',
+  'lateUpdate',
+  'destroy',
+  'enter',
+  'leave',
+  'chat',
+  'command',
+  'health',
+]
 
 /**
  * Apps System

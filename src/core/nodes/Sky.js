@@ -30,13 +30,13 @@ export class Sky extends Node {
   }
 
   mount() {
-    this.handle = this.ctx.world.environment?.addSky(this)
+    this.handle = this.ctx.world.environment.addSky?.(this)
   }
 
   commit(didMove) {
     if (this.needsRebuild) {
       this.handle?.destroy()
-      this.handle = this.ctx.world.environment?.addSky(this)
+      this.handle = this.ctx.world.environment.addSky?.(this)
       this.needsRebuild = false
     }
   }

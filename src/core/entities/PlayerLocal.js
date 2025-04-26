@@ -19,7 +19,7 @@ const POINTER_LOOK_SPEED = 0.1
 const PAN_LOOK_SPEED = 0.4
 const ZOOM_SPEED = 2
 const MIN_ZOOM = 2
-const MAX_ZOOM = 100 // 16
+const MAX_ZOOM = 8
 const STICK_MAX_DISTANCE = 50
 const DEFAULT_CAM_HEIGHT = 1.2
 
@@ -90,6 +90,8 @@ export class PlayerLocal extends Entity {
       prevTransform: new THREE.Matrix4(),
     }
 
+    this.speaking = false
+
     this.lastSendAt = 0
 
     this.base = createNode('group')
@@ -102,11 +104,15 @@ export class PlayerLocal extends Entity {
     this.aura.add(this.nametag)
 
     this.bubble = createNode('ui', {
+      id: 'bubble',
+      // space: 'screen',
       width: 300,
       height: 512,
-      size: 0.005,
+      // size: 0.01,
       pivot: 'bottom-center',
+      // pivot: 'top-left',
       billboard: 'full',
+      scaler: [3, 30],
       justifyContent: 'flex-end',
       alignItems: 'center',
       active: false,
@@ -304,6 +310,16 @@ export class PlayerLocal extends Entity {
     const freeze = this.data.effect?.freeze
     const anchor = this.getAnchorMatrix()
     const snare = this.data.effect?.snare || 0
+
+    if (anchor && !this.capsuleDisabled) {
+      this.capsule.setActorFlag(PHYSX.PxActorFlagEnum.eDISABLE_SIMULATION, true)
+      this.capsuleDisabled = true
+    }
+    if (!anchor && this.capsuleDisabled) {
+      this.capsule.setActorFlag(PHYSX.PxActorFlagEnum.eDISABLE_SIMULATION, false)
+      this.capsuleDisabled = false
+    }
+
     if (anchor) {
       /**
        *
@@ -678,8 +694,8 @@ export class PlayerLocal extends Entity {
     }
 
     // watch jump presses to either fly or air-jump
-    this.jumpDown = isXR ? this.control.xrRightBtn1.down : this.control.space.down
-    if (isXR ? this.control.xrRightBtn1.pressed : this.control.space.pressed) {
+    this.jumpDown = isXR ? this.control.xrRightBtn1.down : this.control.space.down || this.control.touchA.down
+    if (isXR ? this.control.xrRightBtn1.pressed : this.control.space.pressed || this.control.touchA.pressed) {
       this.jumpPressed = true
     }
 
@@ -780,19 +796,6 @@ export class PlayerLocal extends Entity {
       this.base.quaternion.slerp(q1, alpha)
     }
 
-    // make camera follow our position horizontally
-    this.cam.position.copy(this.base.position)
-    if (isXR) {
-      // ...
-    } else {
-      // and vertically at our vrm model height
-      this.cam.position.y += this.camHeight
-      // and slightly to the right over the avatars shoulder, when not in XR
-      const forward = v1.copy(FORWARD).applyQuaternion(this.cam.quaternion)
-      const right = v2.crossVectors(forward, UP).normalize()
-      this.cam.position.add(right.multiplyScalar(0.3))
-    }
-
     // emote
     let emote
     if (this.data.effect?.emote) {
@@ -807,6 +810,8 @@ export class PlayerLocal extends Entity {
       emote = this.fallDistance > 1.6 ? Emotes.FALL : Emotes.FLOAT
     } else if (this.moving) {
       emote = this.running ? Emotes.RUN : Emotes.WALK
+    } else if (this.speaking) {
+      emote = Emotes.TALK
     }
     if (!emote) emote = Emotes.IDLE
     let emoteChanged
@@ -862,6 +867,7 @@ export class PlayerLocal extends Entity {
   }
 
   lateUpdate(delta) {
+    const isXR = this.world.xr.session
     const anchor = this.getAnchorMatrix()
     // if we're anchored, force into that pose
     if (anchor) {
@@ -870,6 +876,18 @@ export class PlayerLocal extends Entity {
       const pose = this.capsule.getGlobalPose()
       this.base.position.toPxTransform(pose)
       this.capsuleHandle.snap(pose)
+    }
+    // make camera follow our position horizontally
+    this.cam.position.copy(this.base.position)
+    if (isXR) {
+      // ...
+    } else {
+      // and vertically at our vrm model height
+      this.cam.position.y += this.camHeight
+      // and slightly to the right over the avatars shoulder, when not in XR
+      const forward = v1.copy(FORWARD).applyQuaternion(this.cam.quaternion)
+      const right = v2.crossVectors(forward, UP).normalize()
+      this.cam.position.add(right.multiplyScalar(0.3))
     }
     if (this.world.xr.session) {
       // in vr snap camera
@@ -923,6 +941,11 @@ export class PlayerLocal extends Entity {
       id: this.data.id,
       ef: effect,
     })
+  }
+
+  setSpeaking(speaking) {
+    if (this.speaking === speaking) return
+    this.speaking = speaking
   }
 
   push(force) {

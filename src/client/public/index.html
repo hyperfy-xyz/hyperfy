@@ -1,8 +1,23 @@
 <!doctype html>
 <html lang="en">
   <head>
-    <title>World</title>
     <meta charset="utf-8" />
+    <title>{title}</title>
+    <meta name="description" content="{desc}" />
+
+    <!-- <meta property="og:url" content="https://myworld.xyz" /> -->
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="{title}" />
+    <meta property="og:description" content="{desc}" />
+    <!-- <meta property="og:image" content="" /> -->
+
+    <!-- <meta name="twitter:card" content="summary_large_image"> -->
+    <!-- <meta property="twitter:domain" content="myworld.xyz"> -->
+    <!-- <meta property="twitter:url" content="https://myworld.xyz"> -->
+    <meta name="twitter:title" content="{title}" />
+    <meta name="twitter:description" content="{desc}" />
+    <!-- <meta name="twitter:image" content="" /> -->
+
     <meta
       name="viewport"
       content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover"
@@ -12,11 +27,14 @@
     <!-- <link rel='icon' href='/favicon.ico' /> -->
     <link rel="preload" href="/rubik.woff2" as="font" type="font/woff2" crossorigin />
     <link rel="stylesheet" type="text/css" href="/index.css?v={buildId}" />
+    <script>
+      window.PARTICLES_PATH = '{particlesPath}'
+    </script>
   </head>
   <body>
     <div id="root"></div>
     <script src="/physx-js-webidl.js"></script>
     <script src="/env.js?v={buildId}"></script>
-    <script src="{jsFile}" type="module"></script>
+    <script src="{jsPath}" type="module"></script>
   </body>
 </html>

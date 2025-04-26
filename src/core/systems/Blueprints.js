@@ -35,7 +35,7 @@ export class Blueprints extends System {
     if (!changed) return
     this.items.set(blueprint.id, modified)
     for (const [_, entity] of this.world.entities.items) {
-      if (entity.blueprint === blueprint) {
+      if (entity.data.blueprint === blueprint.id) {
         entity.data.state = {}
         entity.build()
       }

@@ -35,16 +35,58 @@ export class ClientAudio extends System {
     this.listener.upZ.value = 0
     this.lastDelta = 0
 
-    this.gestured = false
-    this.gestureQueue = []
-    const onGesture = () => {
-      while (this.gestureQueue.length) {
-        this.gestureQueue.shift()()
-      }
-      document.body.removeEventListener('click', onGesture)
-      this.gestured = true
+    this.queue = []
+    this.unlocked = this.ctx.state !== 'suspended'
+    if (!this.unlocked) {
+      this.setupUnlockListener()
     }
-    document.body.addEventListener('click', onGesture)
+  }
+
+  ready(fn) {
+    if (this.unlocked) return fn()
+    this.queue.push(fn)
+  }
+
+  setupUnlockListener() {
+    const complete = () => {
+      this.unlocked = true
+      document.removeEventListener('click', unlock)
+      document.removeEventListener('touchstart', unlock)
+      document.removeEventListener('keydown', unlock)
+      while (this.queue.length) {
+        this.queue.pop()()
+      }
+      console.log('[audio] unlocked')
+    }
+    const unlock = async () => {
+      try {
+        await this.ctx.resume()
+        if (this.ctx.state !== 'running') throw new Error('Audio still suspended')
+        const video = document.createElement('video')
+        video.playsInline = true
+        video.muted = true
+        video.src = '/tiny.mp4'
+        video
+          .play()
+          .then(() => {
+            video.pause()
+            video.remove()
+            console.log('[audio] video played')
+          })
+          .catch(err => {
+            console.log('[audio] video failed')
+          })
+      } catch (err) {
+        console.error(err)
+      } finally {
+        // either way, mark the system as unlocked
+        complete()
+      }
+    }
+    document.addEventListener('click', unlock)
+    document.addEventListener('touchstart', unlock)
+    document.addEventListener('keydown', unlock)
+    console.log('[audio] suspended, waiting for interact...')
   }
 
   async init() {
@@ -61,7 +103,7 @@ export class ClientAudio extends System {
     if (this.listener.positionX) {
       // https://github.com/mrdoob/three.js/blob/master/src/audio/AudioListener.js
       // code path for Chrome (see three#14393)
-      const endTime = this.ctx.currentTime + delta
+      const endTime = this.ctx.currentTime + delta * 2
       this.listener.positionX.linearRampToValueAtTime(target.position.x, endTime)
       this.listener.positionY.linearRampToValueAtTime(target.position.y, endTime)
       this.listener.positionZ.linearRampToValueAtTime(target.position.z, endTime)
@@ -75,12 +117,7 @@ export class ClientAudio extends System {
       this.listener.setPosition(target.position.x, target.position.y, target.position.z)
       this.listener.setOrientation(dir.x, dir.y, dir.z, up.x, up.y, up.z)
     }
-    this.lastDelta = delta
-  }
-
-  requireGesture(fn) {
-    if (this.gestured) return fn()
-    this.gestureQueue.push(fn)
+    this.lastDelta = delta * 2
   }
 
   onPrefsChange = changes => {

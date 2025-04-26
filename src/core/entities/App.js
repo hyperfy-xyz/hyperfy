@@ -53,6 +53,13 @@ export class App extends Entity {
     // fetch blueprint
     const blueprint = this.world.blueprints.get(this.data.blueprint)
 
+    if (blueprint.disabled) {
+      this.unbuild()
+      this.blueprint = blueprint
+      this.building = false
+      return
+    }
+
     let root
     let script
     // if someone else is uploading glb, show a loading indicator
@@ -72,6 +79,7 @@ export class App extends Entity {
         root = glb.toNodes()
       } catch (err) {
         console.error(err)
+        crashed = true
         // no model, will use crash block below
       }
       // fetch script (if any)
@@ -86,7 +94,7 @@ export class App extends Entity {
       }
     }
     // if script crashed (or failed to load model), show crash-block
-    if (crashed || !root) {
+    if (crashed) {
       let glb = this.world.loader.get('model', 'asset://crash-block.glb')
       if (!glb) glb = await this.world.loader.load('model', 'asset://crash-block.glb')
       root = glb.toNodes()
@@ -104,6 +112,7 @@ export class App extends Entity {
     this.root = root
     this.root.position.fromArray(this.data.position)
     this.root.quaternion.fromArray(this.data.quaternion)
+    this.root.scale.fromArray(this.data.scale)
     // activate
     this.root.activate({ world: this.world, entity: this, moving: !!this.data.mover })
     // execute script
@@ -132,6 +141,7 @@ export class App extends Entity {
     // if remote is moving, set up to receive network updates
     this.networkPos = new LerpVector3(root.position, this.world.networkRate)
     this.networkQuat = new LerpQuaternion(root.quaternion, this.world.networkRate)
+    this.networkSca = new LerpVector3(root.scale, this.world.networkRate)
     // execute any events we collected while building
     while (this.eventQueue.length) {
       const event = this.eventQueue[0]
@@ -194,6 +204,7 @@ export class App extends Entity {
     if (this.data.mover && this.data.mover !== this.world.network.id) {
       this.networkPos.update(delta)
       this.networkQuat.update(delta)
+      this.networkSca.update(delta)
     }
     // script update()
     if (this.mode === Modes.ACTIVE && this.script) {
@@ -251,6 +262,10 @@ export class App extends Entity {
     if (data.hasOwnProperty('quaternion')) {
       this.data.quaternion = data.quaternion
       this.networkQuat.pushArray(data.quaternion)
+    }
+    if (data.hasOwnProperty('scale')) {
+      this.data.scale = data.scale
+      this.networkSca.pushArray(data.scale)
     }
     if (data.hasOwnProperty('pinned')) {
       this.data.pinned = data.pinned
@@ -390,7 +405,7 @@ export class App extends Entity {
     if (!proxy || proxy.destroyed) {
       const player = this.world.entities.getPlayer(playerId)
       if (!player) return null
-      proxy = createPlayerProxy(player)
+      proxy = createPlayerProxy(this, player)
       this.playerProxies.set(playerId, proxy)
     }
     return proxy

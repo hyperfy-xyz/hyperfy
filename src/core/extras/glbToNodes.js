@@ -11,8 +11,29 @@ export function glbToNodes(glb, world) {
   function parse(object3ds, parentNode) {
     for (const object3d of object3ds) {
       const props = object3d.userData || {}
+      const isSkinnedMeshRoot = !!object3d.children.find(c => c.isSkinnedMesh)
+      // SkinnedMesh (root)
+      if (isSkinnedMeshRoot) {
+        const node = registerNode('skinnedmesh', {
+          id: object3d.name,
+          object3d,
+          animations: glb.animations,
+          castShadow: props.castShadow,
+          receiveShadow: props.receiveShadow,
+          active: props.active,
+          position: object3d.position.toArray(),
+          quaternion: object3d.quaternion.toArray(),
+          scale: object3d.scale.toArray(),
+        })
+        if (parentNode.name === 'lod' && props.maxDistance) {
+          parentNode.insert(node, props.maxDistance)
+        } else {
+          parentNode.add(node)
+        }
+        // parse(object3d.children, node)
+      }
       // Snap (custom node)
-      if (props.node === 'snap') {
+      else if (props.node === 'snap') {
         const node = registerNode('snap', {
           id: object3d.name,
           position: object3d.position.toArray(),
@@ -95,7 +116,7 @@ export function glbToNodes(glb, world) {
       }
       // SkinnedMesh
       else if (object3d.type === 'SkinnedMesh') {
-        // TODO
+        // ...
       }
       // Object3D / Group / Scene
       else if (groupTypes.includes(object3d.type)) {

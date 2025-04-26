@@ -3,6 +3,7 @@ import fs from 'fs-extra'
 import path from 'path'
 import * as esbuild from 'esbuild'
 import { fileURLToPath } from 'url'
+import { polyfillNode } from 'esbuild-plugin-polyfill-node'
 
 const dev = process.argv.includes('--dev')
 const dirname = path.dirname(fileURLToPath(import.meta.url))
@@ -41,7 +42,7 @@ const viewerBuildDir = path.join(rootDir, 'build/viewer')
     // alias: {
     //   react: 'react', // always use our own local react (jsx)
     // },
-    plugins: [],
+    plugins: [polyfillNode({})],
   })
   if (dev) {
     await clientCtx.watch()

@@ -26,6 +26,7 @@ export class PlayerRemote extends Entity {
     this.base.quaternion.fromArray(this.data.quaternion)
 
     this.body = createNode('rigidbody', { type: 'kinematic' })
+    this.body.active = this.data.effect?.anchorId ? false : true
     this.base.add(this.body)
     this.collider = createNode('collider', {
       type: 'geometry',
@@ -49,9 +50,9 @@ export class PlayerRemote extends Entity {
     this.bubble = createNode('ui', {
       width: 300,
       height: 512,
-      size: 0.005,
       pivot: 'bottom-center',
       billboard: 'full',
+      scaler: [3, 30],
       justifyContent: 'flex-end',
       alignItems: 'center',
       active: false,
@@ -81,14 +82,6 @@ export class PlayerRemote extends Entity {
     this.teleport = 0
 
     this.world.setHot(this, true)
-
-    // on the client remote players emit enter events here.
-    // but on the server, enter events is delayed for players entering until after their snapshot is sent
-    // that way they can actually respond correctly to follow-through events.
-    // see ServerNetwork.js -> onConnection
-    if (this.world.network.isClient) {
-      this.world.events.emit('enter', { playerId: this.data.id })
-    }
   }
 
   applyAvatar() {
@@ -129,6 +122,7 @@ export class PlayerRemote extends Entity {
       this.quaternion.snap()
       this.base.position.setFromMatrixPosition(anchor)
       this.base.quaternion.setFromRotationMatrix(anchor)
+      this.base.clean()
     }
     if (this.avatar) {
       const matrix = this.avatar.getBoneTransform('head')
@@ -146,6 +140,14 @@ export class PlayerRemote extends Entity {
     }
     this.data.effect = effect
     this.onEffectEnd = onEnd
+    this.body.active = effect?.anchorId ? false : true
+  }
+
+  setSpeaking(speaking) {
+    if (this.speaking === speaking) return
+    this.speaking = speaking
+    const name = this.data.name
+    this.nametag.label = speaking ? `» ${name} «` : name
   }
 
   modify(data) {
@@ -165,12 +167,7 @@ export class PlayerRemote extends Entity {
       this.data.emote = data.e
     }
     if (data.hasOwnProperty('ef')) {
-      if (this.data.effect) {
-        this.data.effect = null
-        this.onEffectEnd?.()
-        this.onEffectEnd = null
-      }
-      this.data.effect = data.ef
+      this.setEffect(data.ef)
     }
     if (data.hasOwnProperty('name')) {
       this.data.name = data.name

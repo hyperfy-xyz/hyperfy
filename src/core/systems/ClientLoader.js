@@ -11,6 +11,7 @@ import { createEmoteFactory } from '../extras/createEmoteFactory'
 import { TextureLoader } from 'three'
 import { formatBytes } from '../extras/formatBytes'
 import { emoteUrls } from '../extras/playerEmotes'
+import Hls from 'hls.js/dist/hls.js'
 
 // THREE.Cache.enabled = true
 
@@ -101,6 +102,15 @@ export class ClientLoader extends System {
     const key = `${type}/${url}`
     if (this.promises.has(key)) {
       return this.promises.get(key)
+    }
+    if (type === 'video') {
+      const promise = new Promise(resolve => {
+        url = this.world.resolveURL(url)
+        const factory = createVideoFactory(this.world, url)
+        resolve(factory)
+      })
+      this.promises.set(key, promise)
+      return promise
     }
     const promise = this.loadFile(url).then(async file => {
       if (type === 'hdr') {
@@ -236,6 +246,12 @@ export class ClientLoader extends System {
         img.src = localUrl
       })
     }
+    if (type === 'video') {
+      promise = new Promise(resolve => {
+        const factory = createVideoFactory(this.world, localUrl)
+        resolve(factory)
+      })
+    }
     if (type === 'texture') {
       promise = this.texLoader.loadAsync(localUrl).then(texture => {
         this.results.set(key, texture)
@@ -325,5 +341,176 @@ export class ClientLoader extends System {
       })
     }
     this.promises.set(key, promise)
+  }
+}
+
+function createVideoFactory(world, url) {
+  const isHLS = url?.endsWith('.m3u8')
+  const sources = {}
+  let width
+  let height
+  let ready = false
+  let prepare
+  function createSource(key) {
+    const elem = document.createElement('video')
+    elem.crossOrigin = 'anonymous'
+    elem.playsInline = true
+    elem.loop = false
+    elem.muted = true
+    elem.style.width = '1px'
+    elem.style.height = '1px'
+    elem.style.position = 'absolute'
+    elem.style.opacity = '0'
+    elem.style.zIndex = '-1000'
+    elem.style.pointerEvents = 'none'
+    elem.style.overflow = 'hidden'
+    const needsPolyfill = isHLS && !elem.canPlayType('application/vnd.apple.mpegurl') && Hls.isSupported()
+    if (needsPolyfill) {
+      const hls = new Hls()
+      hls.loadSource(url)
+      hls.attachMedia(elem)
+    } else {
+      elem.src = url
+    }
+    const audio = world.audio.ctx.createMediaElementSource(elem)
+    let n = 0
+    let dead
+    world.audio.ready(() => {
+      if (dead) return
+      elem.muted = false
+    })
+    // set linked=false to have a separate source (and texture)
+    const texture = new THREE.VideoTexture(elem)
+    texture.colorSpace = THREE.SRGBColorSpace
+    texture.minFilter = THREE.LinearFilter
+    texture.magFilter = THREE.LinearFilter
+    texture.anisotropy = world.graphics.maxAnisotropy
+    if (!prepare) {
+      prepare = (function () {
+        /**
+         *
+         * A regular video will load data automatically BUT a stream
+         * needs to hit play() before it gets that data.
+         *
+         * The following code handles this for us, and when streaming
+         * will hit play just until we get the data needed, then pause.
+         */
+        return new Promise(async resolve => {
+          let playing = false
+          let data = false
+          elem.addEventListener(
+            'loadeddata',
+            async () => {
+              // if we needed to hit play to fetch data then revert back to paused
+              // console.log('[video] loadeddata', { playing })
+              if (playing) elem.pause()
+              data = true
+              // await new Promise(resolve => setTimeout(resolve, 2000))
+              width = elem.videoWidth
+              height = elem.videoHeight
+              ready = true
+              resolve()
+            },
+            { once: true }
+          )
+          elem.addEventListener(
+            'loadedmetadata',
+            async () => {
+              // we need a gesture before we can potentially hit play
+              // console.log('[video] ready')
+              // await this.engine.driver.gesture
+              // if we already have data do nothing, we're done!
+              // console.log('[video] gesture', { data })
+              if (data) return
+              // otherwise hit play to force data loading for streams
+              elem.play()
+              playing = true
+            },
+            { once: true }
+          )
+        })
+      })()
+    }
+    function isPlaying() {
+      return elem.currentTime > 0 && !elem.paused && !elem.ended && elem.readyState > 2
+    }
+    function play(restartIfPlaying = false) {
+      if (restartIfPlaying) elem.currentTime = 0
+      elem.play()
+    }
+    function pause() {
+      elem.pause()
+    }
+    function stop() {
+      elem.currentTime = 0
+      elem.pause()
+    }
+    function release() {
+      n--
+      if (n === 0) {
+        stop()
+        audio.disconnect()
+        texture.dispose()
+        document.body.removeChild(elem)
+        delete sources[key]
+        // help to prevent chrome memory leaks
+        // see: https://github.com/facebook/react/issues/15583#issuecomment-490912533
+        elem.src = ''
+        elem.load()
+      }
+    }
+    const handle = {
+      elem,
+      audio,
+      texture,
+      prepare,
+      get ready() {
+        return ready
+      },
+      get width() {
+        return width
+      },
+      get height() {
+        return height
+      },
+      get loop() {
+        return elem.loop
+      },
+      set loop(value) {
+        elem.loop = value
+      },
+      get isPlaying() {
+        return isPlaying()
+      },
+      get currentTime() {
+        return elem.currentTime
+      },
+      set currentTime(value) {
+        elem.currentTime = value
+      },
+      play,
+      pause,
+      stop,
+      release,
+    }
+    return {
+      createHandle() {
+        n++
+        if (n === 1) {
+          document.body.appendChild(elem)
+        }
+        return handle
+      },
+    }
+  }
+  return {
+    get(key) {
+      let source = sources[key]
+      if (!source) {
+        source = createSource(key)
+        sources[key] = source
+      }
+      return source.createHandle()
+    },
   }
 }

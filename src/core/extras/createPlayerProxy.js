@@ -4,7 +4,7 @@ import * as THREE from './three'
 
 const HEALTH_MAX = 100
 
-export function createPlayerProxy(player) {
+export function createPlayerProxy(entity, player) {
   const world = player.world
   const position = new THREE.Vector3()
   const rotation = new THREE.Euler()
@@ -154,6 +154,15 @@ export function createPlayerProxy(player) {
         // if we're the server we need to notify the player
         world.network.sendTo(player.data.owner, 'playerPush', { force })
       }
+    },
+    screenshare(targetId) {
+      if (!targetId) {
+        return console.error(`screenshare has invalid targetId: ${targetId}`)
+      }
+      if (player.data.owner !== world.network.id) {
+        return console.error('screenshare can only be called on local player')
+      }
+      world.livekit.setScreenShareTarget(targetId)
     },
   }
 }

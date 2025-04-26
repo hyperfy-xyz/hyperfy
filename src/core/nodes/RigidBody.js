@@ -25,6 +25,19 @@ const defaults = {
   onTriggerLeave: null,
 }
 
+let forceModes
+function getForceMode(mode) {
+  if (!forceModes) {
+    forceModes = {
+      force: PHYSX.PxForceModeEnum.eFORCE,
+      impulse: PHYSX.PxForceModeEnum.eIMPULSE,
+      acceleration: PHYSX.PxForceModeEnum.eACCELERATION,
+      velocityChange: PHYSX.PxForceModeEnum.eVELOCITY_CHANGE,
+    }
+  }
+  return forceModes[mode] || forceModes.force
+}
+
 export class RigidBody extends Node {
   constructor(data = {}) {
     super(data)
@@ -63,19 +76,18 @@ export class RigidBody extends Node {
       // this.actor.setMass(this.mass)
       PHYSX.PxRigidBodyExt.prototype.setMassAndUpdateInertia(this.actor, this._mass)
       // this.untrack = this.ctx.world.physics.track(this.actor, this.onPhysicsMovement)
-      if (this._centerOfMass) {
-        this.actor.setCMassLocalPose({
-          translation: this._centerOfMass,
-          rotation: _q1.set(0, 0, 0, 1),
-        })
-      }
-      this.actor.setLinearDamping(this._linearDamping)
-      this.actor.setAngularDamping(this._angularDamping)
     } else if (this._type === 'dynamic') {
       this.actor = this.ctx.world.physics.physics.createRigidDynamic(this.transform)
       // this.actor.setMass(this.mass)
       PHYSX.PxRigidBodyExt.prototype.setMassAndUpdateInertia(this.actor, this._mass)
       // this.untrack = this.ctx.world.physics.track(this.actor, this.onPhysicsMovement)
+      if (this._centerOfMass) {
+        const pose = new PHYSX.PxTransform(PHYSX.PxIDENTITYEnum.PxIdentity)
+        this._centerOfMass.toPxTransform(pose)
+        this.actor.setCMassLocalPose(pose)
+      }
+      this.actor.setLinearDamping(this._linearDamping)
+      this.actor.setAngularDamping(this._angularDamping)
     }
     for (const shape of this.shapes) {
       this.actor.attachShape(shape)
@@ -301,8 +313,8 @@ export class RigidBody extends Node {
     if (!force?.isVector3) {
       throw new Error('[rigidbody] addForce force must be Vector3')
     }
-    // TODO: modes + enums injected into script
-    this.actor?.addForce(force.toPxVec3(), PHYSX.PxForceModeEnum.eFORCE, true)
+    mode = getForceMode(mode)
+    this.actor?.addForce(force.toPxVec3(), mode, true)
   }
 
   addForceAtPos(force, pos) {

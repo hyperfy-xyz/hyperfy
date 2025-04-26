@@ -68,7 +68,7 @@ export class Audio extends Node {
       return
     }
     if (didMove) {
-      this.move()
+      this.updatePannerPosition()
     }
   }
 
@@ -76,7 +76,7 @@ export class Audio extends Node {
     this.stop()
   }
 
-  move() {
+  updatePannerPosition() {
     if (!this.pannerNode) return
     const audio = this.ctx.world.audio
     const pos = v1.setFromMatrixPosition(this.matrixWorld)
@@ -345,13 +345,13 @@ export class Audio extends Node {
       this.source.connect(this.gainNode)
       this.gainNode.connect(this.pannerNode)
       this.pannerNode.connect(audio.groupGains[this._group])
-      this.move()
+      this.updatePannerPosition()
     } else {
       this.source.connect(this.gainNode)
       this.gainNode.connect(audio.groupGains[this._group])
     }
 
-    audio.requireGesture(() => {
+    audio.ready(() => {
       if (n !== this.n) return
       this.startTime = audio.ctx.currentTime - this.offset
       this.source.start(0, this.offset)
@@ -391,6 +391,12 @@ export class Audio extends Node {
       this.pannerNode?.disconnect()
       this.pannerNode = null
     }
+  }
+
+  setPlaybackRate(rate) {
+    const audio = this.ctx.world.audio
+    const endTime = audio.ctx.currentTime + audio.lastDelta
+    this.source?.playbackRate.linearRampToValueAtTime(rate, endTime)
   }
 
   getProxy() {
@@ -486,6 +492,9 @@ export class Audio extends Node {
         },
         stop() {
           self.stop()
+        },
+        setPlaybackRate(rate) {
+          self.setPlaybackRate(rate)
         },
       }
       proxy = Object.defineProperties(proxy, Object.getOwnPropertyDescriptors(super.getProxy())) // inherit Node properties

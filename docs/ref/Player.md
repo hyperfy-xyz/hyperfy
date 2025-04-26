@@ -74,5 +74,9 @@ All options are optional.
 
 **onEnd**: a function that should be called either at the end of the `duration` or when the player moves if `cancellable`.
 
+### `.screenshare(screenId)`
 
+Can only be called on a local player.
+
+Prompts the player to share their screen, and then casts it to all video nodes that have a matching `.screenId` property.
 

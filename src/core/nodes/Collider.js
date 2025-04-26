@@ -88,7 +88,21 @@ export class Collider extends Node {
     }
     this.pmesh = pmesh
     const filterData = new PHYSX.PxFilterData(layer.group, layer.mask, pairFlags, 0)
-    this.shape = this.ctx.world.physics.physics.createShape(geometry, material, true, flags)
+    try {
+      this.shape = this.ctx.world.physics.physics.createShape(geometry, material, true, flags)
+    } catch (err) {
+      console.error('[collider] failed to create shape')
+      console.error(err)
+      // cleanup
+      if (geometry) {
+        PHYSX.destroy(geometry)
+      }
+      if (this.pmesh) {
+        this.pmesh.release()
+        this.pmesh = null
+      }
+      return
+    }
     this.shape.setQueryFilterData(filterData)
     this.shape.setSimulationFilterData(filterData)
     // const parentWorldScale = _v2
@@ -125,6 +139,7 @@ export class Collider extends Node {
     this.shape?.release()
     this.shape = null
     this.pmesh?.release()
+    this.pmesh = null
   }
 
   copy(source, recursive) {

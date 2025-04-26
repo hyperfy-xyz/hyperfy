@@ -99,6 +99,14 @@ export class ClientGraphics extends System {
     })
     this.viewport.appendChild(this.renderer.domElement)
     this.resizer.observe(this.viewport)
+
+    this.xrWidth = null
+    this.xrHeight = null
+    this.xrDimensionsNeeded = false
+  }
+
+  start() {
+    this.world.on('xrSession', this.onXRSession)
   }
 
   resize(width, height) {
@@ -119,10 +127,21 @@ export class ClientGraphics extends System {
     } else {
       this.composer.render()
     }
+    if (this.xrDimensionsNeeded) {
+      this.checkXRDimensions()
+    }
   }
 
   commit() {
     this.render()
+  }
+
+  preTick() {
+    // calc world to screen factor
+    const camera = this.world.camera
+    const fovRadians = camera.fov * (Math.PI / 180)
+    const rendererHeight = this.xrHeight || this.height
+    this.worldToScreenFactor = (Math.tan(fovRadians / 2) * 2) / rendererHeight
   }
 
   scaleUI(object3d, heightPx, pxToMeters) {
@@ -150,6 +169,49 @@ export class ClientGraphics extends System {
     // bloom
     if (changes.bloom) {
       this.bloomPass.enabled = changes.bloom.value
+    }
+  }
+
+  onXRSession = session => {
+    if (session) {
+      this.xrSession = session
+      this.xrWidth = null
+      this.xrHeight = null
+      this.xrDimensionsNeeded = true
+    } else {
+      this.xrSession = null
+      this.xrWidth = null
+      this.xrHeight = null
+      this.xrDimensionsNeeded = false
+    }
+  }
+
+  checkXRDimensions = () => {
+    // Get the current XR reference space
+    const referenceSpace = this.renderer.xr.getReferenceSpace()
+    // Get frame information
+    const frame = this.renderer.xr.getFrame()
+    if (frame && referenceSpace) {
+      // Get view information which contains projection matrices
+      const views = frame.getViewerPose(referenceSpace)?.views
+      if (views && views.length > 0) {
+        // Use the first view's projection matrix
+        const projectionMatrix = views[0].projectionMatrix
+        // Extract the relevant factors from the projection matrix
+        // This is a simplified approach
+        const fovFactor = projectionMatrix[5] // Approximation of FOV scale
+        // You might need to consider the XR display's physical properties
+        // which can be accessed via session.renderState
+        const renderState = this.xrSession.renderState
+        const baseLayer = renderState.baseLayer
+        if (baseLayer) {
+          // Get the actual resolution being used for rendering
+          this.xrWidth = baseLayer.framebufferWidth
+          this.xrHeight = baseLayer.framebufferHeight
+          this.xrDimensionsNeeded = false
+          console.log({ xrWidth: this.xrWidth, xrHeight: this.xrHeight })
+        }
+      }
     }
   }
 

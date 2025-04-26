@@ -40,6 +40,9 @@ export async function exportApp(blueprint, resolveFile) {
   if (blueprint.locked) {
     blueprint.frozen = true
   }
+  if (blueprint.disabled) {
+    blueprint.disabled = false
+  }
 
   const filename = `${blueprint.name || 'app'}.hyp`
 

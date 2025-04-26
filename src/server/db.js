@@ -193,4 +193,34 @@ const migrations = [
       await db('config').where('key', 'config').delete()
     }
   },
+  // add blueprint.disabled field
+  async db => {
+    const blueprints = await db('blueprints')
+    for (const blueprint of blueprints) {
+      const data = JSON.parse(blueprint.data)
+      if (data.disabled === undefined) {
+        data.disabled = false
+        await db('blueprints')
+          .where('id', blueprint.id)
+          .update({
+            data: JSON.stringify(data),
+          })
+      }
+    }
+  },
+  // add entity.scale field
+  async db => {
+    const entities = await db('entities')
+    for (const entity of entities) {
+      const data = JSON.parse(entity.data)
+      if (!data.scale) {
+        data.scale = [1, 1, 1]
+        await db('entities')
+          .where('id', entity.id)
+          .update({
+            data: JSON.stringify(data),
+          })
+      }
+    }
+  },
 ]

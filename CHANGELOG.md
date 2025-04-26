@@ -13,6 +13,38 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+## [v0.11.0]
+
+### Added
+- core: add title and description fields to world menu to change tab title and shared links
+- core: add fullscreen button for support devices
+- core: add player limit option to world menu
+- core: voice chat and speaking emotes while using voice chat
+- core: improve mobile UI with jump and interact buttons
+- core: improve billboarding for chat bubbles, nametags, particles etc across desktop, mobile and vr
+- apps: support for skinned meshes and skinned mesh animations
+- apps: support for listening to slash commands on server and client
+- apps: add video node
+- apps: add screensharing support to video node
+- apps: add particles node
+- apps: add ui scaler option to keep ui screen-sized while in world-space
+
+### Changed
+- core: limit camera zoom to 8m
+- core: upgraded to latest react and added node polyfills
+- core: when anchored, player capsule physics are now disabled
+- core: fix audio not unlocks on meta quest 3
+- core: decrease default shadow setting on mobile from high to medium
+- 
+
+### Fixed
+- core: fix environment model not loading/simulating on server
+- core: fix rigidbody center of mass, linear velocity and angular velocity not working
+- core: fix highspeed anchor jittering
+- core: fix geometry used for both convex and non-convex not working
+- apps: ui remount not triggering redraw
+- apps: player enter event happened before you could access the player details
+
 ## [v0.10.0]
 
 ### Added
@@ -319,7 +351,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Basic project structure
 - Core functionality from original project
 
-[Unreleased]: https://github.com/hyperfy-xyz/hyperfy/compare/v0.10.0...HEAD
+[Unreleased]: https://github.com/hyperfy-xyz/hyperfy/compare/v0.11.0...HEAD
+[0.11.0]: https://github.com/hyperfy-xyz/hyperfy/compare/v0.10.0...v0.11.0
 [0.10.0]: https://github.com/hyperfy-xyz/hyperfy/compare/v0.9.0...v0.10.0
 [0.9.0]: https://github.com/hyperfy-xyz/hyperfy/compare/v0.8.1...v0.9.0
 [0.8.1]: https://github.com/hyperfy-xyz/hyperfy/compare/v0.8.0...v0.8.1

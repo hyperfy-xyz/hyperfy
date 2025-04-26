@@ -27,6 +27,14 @@ export class Client extends System {
   start() {
     this.world.graphics.renderer.setAnimationLoop(this.world.tick)
     document.addEventListener('visibilitychange', this.onVisibilityChange)
+
+    this.world.settings.on('change', this.onSettingsChange)
+  }
+
+  onSettingsChange = changes => {
+    if (changes.title) {
+      document.title = changes.title.value || 'World'
+    }
   }
 
   onVisibilityChange = () => {
@@ -36,33 +44,34 @@ export class Client extends System {
     // and notify us.
     // this allows us to keep everything running smoothly.
     // See: https://gamedev.stackexchange.com/a/200503 (kinda fucking genius)
-    if (document.hidden) {
-      // spawn worker if we haven't yet
-      if (!worker) {
-        const script = `
-          const rate = 1000 / 5 // 5 FPS
-          let intervalId = null;
-          self.onmessage = e => {
-            if (e.data === 'start' && !intervalId) {
-              intervalId = setInterval(() => {
-                self.postMessage(1);
-              }, rate);
-              console.log('[worker] tick started')
-            }
-            if (e.data === 'stop' && intervalId) {
-              clearInterval(intervalId);
-              intervalId = null;
-              console.log('[worker] tick stopped')
-            }
+    //
+    // spawn worker if we haven't yet
+    if (!worker) {
+      const script = `
+        const rate = 1000 / 5 // 5 FPS
+        let intervalId = null;
+        self.onmessage = e => {
+          if (e.data === 'start' && !intervalId) {
+            intervalId = setInterval(() => {
+              self.postMessage(1);
+            }, rate);
+            console.log('[worker] tick started')
           }
-        `
-        const blob = new Blob([script], { type: 'application/javascript' })
-        worker = new Worker(URL.createObjectURL(blob))
-        worker.onmessage = () => {
-          const time = performance.now()
-          this.world.tick(time)
+          if (e.data === 'stop' && intervalId) {
+            clearInterval(intervalId);
+            intervalId = null;
+            console.log('[worker] tick stopped')
+          }
         }
+      `
+      const blob = new Blob([script], { type: 'application/javascript' })
+      worker = new Worker(URL.createObjectURL(blob))
+      worker.onmessage = () => {
+        const time = performance.now()
+        this.world.tick(time)
       }
+    }
+    if (document.hidden) {
       // stop rAF
       this.world.graphics.renderer.setAnimationLoop(null)
       // tell the worker to start

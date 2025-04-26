@@ -4,7 +4,7 @@ import { Socket } from '../Socket'
 import { addRole, hasRole, removeRole, serializeRoles, uuid } from '../utils'
 import { System } from './System'
 import { createJWT, readJWT } from '../utils-server'
-import { cloneDeep } from 'lodash-es'
+import { cloneDeep, isNumber } from 'lodash-es'
 import * as THREE from '../extras/three'
 
 const SAVE_INTERVAL = parseInt(process.env.SAVE_INTERVAL || '60') // seconds
@@ -69,6 +69,8 @@ export class ServerNetwork extends System {
     if (SAVE_INTERVAL) {
       this.saveTimerId = setTimeout(this.save, SAVE_INTERVAL * 1000)
     }
+    // load environment model
+    await this.world.environment.updateModel()
   }
 
   preFixedUpdate() {
@@ -214,6 +216,15 @@ export class ServerNetwork extends System {
 
   async onConnection(ws, authToken) {
     try {
+      // check player limit
+      const playerLimit = this.world.settings.playerLimit
+      if (isNumber(playerLimit) && playerLimit > 0 && this.sockets.size >= playerLimit) {
+        const packet = writePacket('kick', 'player_limit')
+        ws.send(packet)
+        ws.disconnect()
+        return
+      }
+
       // get or create user
       let user
       if (authToken) {
@@ -251,6 +262,9 @@ export class ServerNetwork extends System {
         user.roles.push('~admin')
       }
 
+      // livekit options
+      const livekit = await this.world.livekit.getPlayerOpts(user.id)
+
       // create socket
       const socket = new Socket({ id: user.id, ws, network: this })
 
@@ -282,6 +296,7 @@ export class ServerNetwork extends System {
         chat: this.world.chat.serialize(),
         blueprints: this.world.blueprints.serialize(),
         entities: this.world.entities.serialize(),
+        livekit,
         authToken,
       })
 
@@ -296,15 +311,20 @@ export class ServerNetwork extends System {
   }
 
   onChatAdded = async (socket, msg) => {
+    this.world.chat.add(msg, false)
+    this.send('chatAdded', msg, socket.id)
+  }
+
+  onCommand = async (socket, args) => {
     // TODO: check for spoofed messages, permissions/roles etc
     // handle slash commands
-    if (msg.body.startsWith('/')) {
-      const [cmd, arg1, arg2] = msg.body.slice(1).split(' ')
-      // become admin command
-      if (cmd === 'admin') {
-        const code = arg1
-        if (code !== process.env.ADMIN_CODE || !process.env.ADMIN_CODE) return
-        const player = socket.player
+    const player = socket.player
+    const playerId = player.data.id
+    const [cmd, arg1, arg2] = args
+    // become admin command
+    if (cmd === 'admin') {
+      const code = arg1
+      if (process.env.ADMIN_CODE && process.env.ADMIN_CODE === code) {
         const id = player.data.id
         const userId = player.data.userId
         const roles = player.data.roles
@@ -327,10 +347,10 @@ export class ServerNetwork extends System {
           .where('id', userId)
           .update({ roles: serializeRoles(roles) })
       }
-      if (cmd === 'name') {
-        const name = arg1
-        if (!name) return
-        const player = socket.player
+    }
+    if (cmd === 'name') {
+      const name = arg1
+      if (name) {
         const id = player.data.id
         const userId = player.data.userId
         player.data.name = name
@@ -345,25 +365,21 @@ export class ServerNetwork extends System {
         })
         await this.db('users').where('id', userId).update({ name })
       }
-      if (cmd === 'spawn') {
-        const player = socket.player
-        const op = arg1
-        this.onSpawnModified(socket, op)
-      }
-      if (cmd === 'chat') {
-        const code = arg1
-        if (code !== 'clear') return
-        if (!this.isBuilder(socket.player)) {
-          return
-        }
-        this.world.chat.clear(true)
-        return
-      }
-      return
     }
-    // handle chat messages
-    this.world.chat.add(msg, false)
-    this.send('chatAdded', msg, socket.id)
+    if (cmd === 'spawn') {
+      const op = arg1
+      this.onSpawnModified(socket, op)
+    }
+    if (cmd === 'chat') {
+      const op = arg1
+      if (op === 'clear' && this.isBuilder(socket.player)) {
+        this.world.chat.clear(true)
+      }
+    }
+    // emit event for all except admin
+    if (cmd !== 'admin') {
+      this.world.events.emit('command', { playerId, args })
+    }
   }
 
   onBlueprintAdded = (socket, blueprint) => {

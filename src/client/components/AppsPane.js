@@ -6,6 +6,7 @@ import {
   BrickWallIcon,
   CrosshairIcon,
   EyeIcon,
+  EyeOffIcon,
   FileCode2Icon,
   HardDriveIcon,
   HashIcon,
@@ -96,12 +97,12 @@ export function AppsPane({ world, close }) {
           <XIcon size={20} />
         </div>
       </div>
-      <AppsPaneContent world={world} query={query} refresh={refresh} />
+      <AppsPaneContent world={world} query={query} refresh={refresh} setRefresh={setRefresh} />
     </div>
   )
 }
 
-function AppsPaneContent({ world, query, refresh }) {
+function AppsPaneContent({ world, query, refresh, setRefresh }) {
   const [sort, setSort] = useState('count')
   const [asc, setAsc] = useState(false)
   const [target, setTarget] = useState(null)
@@ -193,6 +194,14 @@ function AppsPaneContent({ world, query, refresh }) {
     const entity = getClosest(item)
     world.ui.setMenu({ type: 'app', app: entity })
   }
+  const toggle = item => {
+    const blueprint = world.blueprints.get(item.blueprint.id)
+    const version = blueprint.version + 1
+    const disabled = !blueprint.disabled
+    world.blueprints.modify({ id: blueprint.id, version, disabled })
+    world.network.send('blueprintModified', { id: blueprint.id, version, disabled })
+    setRefresh(n => n + 1)
+  }
   return (
     <div
       className='asettings'
@@ -231,7 +240,7 @@ function AppsPaneContent({ world, query, refresh }) {
             text-align: right;
           }
           &.actions {
-            width: 3.75rem;
+            width: 5.45rem;
             text-align: right;
           }
           &:hover:not(.active) {
@@ -276,7 +285,7 @@ function AppsPaneContent({ world, query, refresh }) {
             text-align: right;
           }
           &.actions {
-            width: 3.75rem;
+            width: 5.45rem;
             display: flex;
             justify-content: flex-end;
           }
@@ -284,12 +293,17 @@ function AppsPaneContent({ world, query, refresh }) {
         .asettings-action {
           margin-left: 0.625rem;
           color: rgba(255, 255, 255, 0.4);
-          &:hover:not(.active) {
-            cursor: pointer;
-            color: white;
-          }
           &.active {
             color: #4088ff;
+          }
+          &.red {
+            color: #fb4848;
+          }
+          &:hover {
+            cursor: pointer;
+          }
+          &:hover:not(.active):not(.red) {
+            color: white;
           }
         }
       `}
@@ -371,11 +385,14 @@ function AppsPaneContent({ world, query, refresh }) {
               <span>{item.fileSize}</span>
             </div>
             <div className={'asettings-rowitem actions'}>
+              <div className={cls('asettings-action', { red: item.blueprint.disabled })} onClick={() => toggle(item)}>
+                {item.blueprint.disabled ? <EyeOffIcon size={16} /> : <EyeIcon size={16} />}
+              </div>
               <div className={cls('asettings-action', { active: target === item })} onClick={() => toggleTarget(item)}>
                 <CrosshairIcon size={16} />
               </div>
               <div className={'asettings-action'} onClick={() => inspect(item)}>
-                <EyeIcon size={16} />
+                <SettingsIcon size={16} />
               </div>
             </div>
           </div>

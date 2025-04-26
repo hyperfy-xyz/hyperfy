@@ -17,8 +17,13 @@ export class Storage {
   }
 
   set(key, value) {
-    this.data[key] = cloneDeep(value)
-    this.save()
+    try {
+      value = JSON.parse(JSON.stringify(value))
+      this.data[key] = value
+      this.save()
+    } catch (err) {
+      console.error(err)
+    }
   }
 
   async persist() {
@@ -26,8 +31,8 @@ export class Storage {
     try {
       await fs.writeJson(this.file, this.data)
     } catch (err) {
-      console.log('failed to persist storage')
       console.error(err)
+      console.log('failed to persist storage')
     }
     // console.timeEnd('[storage] persist')
   }

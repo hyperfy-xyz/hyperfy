@@ -45,6 +45,13 @@ export class Entities extends System {
     this.items.set(entity.data.id, entity)
     if (data.type === 'player') {
       this.players.set(entity.data.id, entity)
+      // on the client remote players emit enter events here.
+      // but on the server, enter events is delayed for players entering until after their snapshot is sent
+      // that way they can actually respond correctly to follow-through events.
+      // see ServerNetwork.js -> onConnection
+      if (this.world.network.isClient && data.owner !== this.world.network.id) {
+        this.world.events.emit('enter', { playerId: entity.data.id })
+      }
     }
     if (data.owner === this.world.network.id) {
       this.player = entity

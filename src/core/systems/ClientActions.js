@@ -2,6 +2,7 @@ import * as THREE from 'three'
 
 import { System } from './System'
 import { ControlPriorities } from '../extras/ControlPriorities'
+import { isTouch } from '../../client/utils'
 
 const BATCH_SIZE = 500
 
@@ -41,7 +42,7 @@ export class ClientActions extends System {
   update(delta) {
     const cameraPos = this.world.rig.position
 
-    this.btnDown = this.control.keyE.down
+    this.btnDown = this.control.keyE.down || this.control.touchB.down
 
     // clear current action if its no longer in distance
     if (this.current.node) {
@@ -49,6 +50,7 @@ export class ClientActions extends System {
       if (distance > this.current.node._distance) {
         this.current.node = null
         this.current.distance = Infinity
+        this.emit('change', false)
         this.action.stop()
       } else {
         this.current.distance = distance
@@ -75,6 +77,7 @@ export class ClientActions extends System {
     }
     if (didChange) {
       this.action.start(this.current.node)
+      this.emit('change', true)
     }
     this.action.update(delta)
   }
@@ -101,7 +104,7 @@ function createAction(world) {
     board.drawPie(left + 6, 6, 16, 100, '#484848') // grey
     board.drawPie(left + 6, 6, 16, ratio * 100, '#ffffff') // white
     board.drawCircle(left + 10, 10, 12, '#000000') // inner
-    board.drawText(left + 16, 14, 'E', '#ffffff', 18, 400) // E
+    if (!isTouch) board.drawText(left + 16, 14, 'E', '#ffffff', 18, 400) // E
     board.drawText(left + 47, 14, label, '#ffffff', 18, 400) // label
     board.commit()
     // console.timeEnd('draw')

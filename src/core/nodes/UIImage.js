@@ -145,6 +145,7 @@ export class UIImage extends Node {
     if (this._src && !this.img) {
       this.loadImage(this._src)
     }
+    this.ui?.redraw()
   }
 
   commit() {

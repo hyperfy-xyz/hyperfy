@@ -4,6 +4,7 @@ import path from 'path'
 import { fork, execSync } from 'child_process'
 import * as esbuild from 'esbuild'
 import { fileURLToPath } from 'url'
+import { polyfillNode } from 'esbuild-plugin-polyfill-node'
 
 const dev = process.argv.includes('--dev')
 const dirname = path.dirname(fileURLToPath(import.meta.url))
@@ -23,7 +24,7 @@ const clientHtmlDest = path.join(rootDir, 'build/public/index.html')
 
 {
   const clientCtx = await esbuild.context({
-    entryPoints: ['src/client/index.js'],
+    entryPoints: ['src/client/index.js', 'src/client/particles.js'],
     entryNames: '/[name]-[hash]',
     outdir: clientBuildDir,
     platform: 'browser',
@@ -45,19 +46,26 @@ const clientHtmlDest = path.join(rootDir, 'build/public/index.html')
       react: 'react', // always use our own local react (jsx)
     },
     plugins: [
+      polyfillNode({}),
       {
         name: 'client-finalize-plugin',
         setup(build) {
           build.onEnd(async result => {
             // copy over public files
             await fs.copy(clientPublicDir, clientBuildDir)
-            // find js output file
+            // find js output files
             const metafile = result.metafile
             const outputFiles = Object.keys(metafile.outputs)
-            const jsFile = outputFiles.find(file => file.endsWith('.js')).split('build/public')[1]
+            const jsPath = outputFiles
+              .find(file => file.includes('/index-') && file.endsWith('.js'))
+              .split('build/public')[1]
+            const particlesPath = outputFiles
+              .find(file => file.includes('/particles-') && file.endsWith('.js'))
+              .split('build/public')[1]
             // inject into html and copy over
             let htmlContent = await fs.readFile(clientHtmlSrc, 'utf-8')
-            htmlContent = htmlContent.replace('{jsFile}', jsFile)
+            htmlContent = htmlContent.replace('{jsPath}', jsPath)
+            htmlContent = htmlContent.replace('{particlesPath}', particlesPath)
             htmlContent = htmlContent.replaceAll('{buildId}', Date.now())
             await fs.writeFile(clientHtmlDest, htmlContent)
           })

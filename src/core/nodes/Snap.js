@@ -2,7 +2,7 @@ import * as THREE from '../extras/three'
 import { Node } from './Node'
 
 export class Snap extends Node {
-  constructor(data) {
+  constructor(data = {}) {
     super(data)
     this.name = 'snap'
     this.worldPosition = new THREE.Vector3()

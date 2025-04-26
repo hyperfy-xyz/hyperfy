@@ -21,7 +21,6 @@ export class XR extends System {
     this.camera = null
     this.controller1Model = null
     this.controller2Model = null
-    this.yOrientation = new THREE.Quaternion()
     this.supportsVR = false
     this.supportsAR = false
     this.controllerModelFactory = new XRControllerModelFactory()
@@ -32,19 +31,12 @@ export class XR extends System {
     this.supportsAR = await navigator.xr?.isSessionSupported('immersive-ar')
   }
 
-  lateUpdate() {
-    if (!this.session) return
-    const rotation = e1.setFromQuaternion(this.camera.quaternion)
-    this.yOrientation.setFromAxisAngle(UP, rotation.y)
-  }
-
   async enter() {
     const session = await navigator.xr?.requestSession('immersive-vr', {
       requiredFeatures: ['local-floor'],
     })
     this.world.entities.player.avatar.unmount()
     this.world.graphics.renderer.xr.setSession(session)
-    this.world.nametags.setOrientation(this.yOrientation)
     session.addEventListener('end', this.onSessionEnd)
     this.session = session
     this.camera = this.world.graphics.renderer.xr.getCamera()
@@ -61,7 +53,6 @@ export class XR extends System {
 
   onSessionEnd = () => {
     this.world.entities.player.avatar.mount()
-    this.world.nametags.setOrientation(this.world.rig.quaternion)
     this.world.camera.position.set(0, 0, 0)
     this.world.camera.rotation.set(0, 0, 0)
     this.world.rig.remove(this.controller1Model)

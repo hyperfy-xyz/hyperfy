@@ -5,6 +5,10 @@ import { useUpdate } from './useUpdate'
 import { hashFile } from '../../core/utils-client'
 import { LoaderIcon, XIcon } from 'lucide-react'
 import { downloadFile } from '../../core/extras/downloadFile'
+import { CurvePreview } from './CurvePreview'
+import { Curve } from '../../core/extras/Curve'
+import { Portal } from './Portal'
+import { CurvePane } from './CurvePane'
 
 const MenuContext = createContext()
 
@@ -91,7 +95,7 @@ export function MenuItemBack({ hint, onClick }) {
       onPointerLeave={() => setHint(null)}
       onClick={onClick}
     >
-      <ChevronLeftIcon />
+      <ChevronLeftIcon size={'1.5rem'} />
       <div className='menuback-label'>
         <span>Back</span>
       </div>
@@ -598,6 +602,79 @@ export function MenuItemSwitch({ label, hint, options, value, onChange }) {
   )
 }
 
+export function MenuItemCurve({ label, hint, x, xRange, y, yMin, yMax, value, onChange }) {
+  const setHint = useContext(MenuContext)
+  const curve = useMemo(() => new Curve().deserialize(value || '0,0.5,0,0|1,0.5,0,0'), [value])
+  const [edit, setEdit] = useState(false)
+  return (
+    <div
+      className='menuitemcurve'
+      css={css`
+        .menuitemcurve-control {
+          display: flex;
+          align-items: center;
+          height: 2.5rem;
+          padding: 0 0.875rem;
+        }
+        .menuitemcurve-label {
+          flex: 1;
+          white-space: nowrap;
+          text-overflow: ellipsis;
+          overflow: hidden;
+          padding-right: 1rem;
+        }
+        .menuitemcurve-curve {
+          width: 6rem;
+          height: 1.2rem;
+          position: relative;
+        }
+        &:hover {
+          cursor: pointer;
+          background-color: rgba(255, 255, 255, 0.05);
+        }
+      `}
+    >
+      <div
+        className='menuitemcurve-control'
+        onClick={() => {
+          if (edit) {
+            setEdit(null)
+          } else {
+            setEdit(curve.clone())
+          }
+        }}
+        onPointerEnter={() => setHint(hint)}
+        onPointerLeave={() => setHint(null)}
+      >
+        <div className='menuitemcurve-label'>{label}</div>
+        <div className='menuitemcurve-curve'>
+          <CurvePreview curve={curve} yMin={yMin} yMax={yMax} />
+        </div>
+      </div>
+      {edit && (
+        <Portal>
+          <CurvePane
+            curve={edit}
+            title={label}
+            xLabel={x}
+            xRange={xRange}
+            yLabel={y}
+            yMin={yMin}
+            yMax={yMax}
+            onCommit={() => {
+              onChange(edit.serialize())
+              setEdit(null)
+            }}
+            onCancel={() => {
+              setEdit(null)
+            }}
+          />
+        </Portal>
+      )}
+    </div>
+  )
+}
+
 // todo: blueprint models need migrating to file object format so
 // we can replace needing this and instead use MenuItemFile, but
 // that will also somehow need to support both model and avatar kinds.
@@ -672,6 +749,18 @@ export const fileKinds = {
     accept: '.jpg,.jpeg,.png,.webp',
     exts: ['jpg', 'jpeg', 'png', 'webp'],
     placeholder: 'jpg,png,webp',
+  },
+  image: {
+    type: 'image',
+    accept: '.jpg,.jpeg,.png,.webp',
+    exts: ['jpg', 'jpeg', 'png', 'webp'],
+    placeholder: 'jpg,png,webp',
+  },
+  video: {
+    type: 'video',
+    accept: '.mp4',
+    exts: ['mp4'],
+    placeholder: 'mp4',
   },
   hdr: {
     type: 'hdr',

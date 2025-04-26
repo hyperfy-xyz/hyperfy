@@ -19,25 +19,43 @@ export class Chat extends System {
   }
 
   add(msg, broadcast) {
-    const isCmd = msg.body.startsWith('/')
-    if (!isCmd) {
-      this.msgs = [...this.msgs, msg]
-      if (this.msgs.length > CHAT_MAX_MESSAGES) {
-        this.msgs.shift()
-      }
-      for (const callback of this.listeners) {
-        callback(this.msgs)
-      }
-      if (msg.fromId) {
-        const player = this.world.entities.getPlayer(msg.fromId)
-        player?.chat(msg.body)
-      }
+    // add to chat messages
+    this.msgs = [...this.msgs, msg]
+    if (this.msgs.length > CHAT_MAX_MESSAGES) {
+      this.msgs.shift()
     }
+    for (const callback of this.listeners) {
+      callback(this.msgs)
+    }
+    if (msg.fromId) {
+      const player = this.world.entities.getPlayer(msg.fromId)
+      player?.chat(msg.body)
+    }
+    // emit chat event
+    const readOnly = Object.freeze({ ...msg })
+    this.world.events.emit('chat', readOnly)
+    // maybe broadcast
     if (broadcast) {
       this.world.network.send('chatAdded', msg)
     }
-    const readOnly = Object.freeze({ ...msg })
-    this.world.events.emit('chat', readOnly)
+  }
+
+  command(text) {
+    if (this.world.network.isServer) return
+    const playerId = this.world.network.id
+    const args = text
+      .slice(1)
+      .split(' ')
+      .map(str => str.trim())
+      .filter(str => !!str)
+    const isAdminCommand = args[0] === 'admin'
+    if (args[0] === 'stats') {
+      this.world.prefs.setStats(!this.world.prefs.stats)
+    }
+    if (!isAdminCommand) {
+      this.world.events.emit('command', { playerId, args })
+    }
+    this.world.network.send('command', args)
   }
 
   clear(broadcast) {

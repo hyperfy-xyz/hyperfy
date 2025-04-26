@@ -155,6 +155,7 @@ export class UIView extends Node {
     this.yogaNode.setFlexGrow(this._flexGrow)
     this.yogaNode.setFlexShrink(this._flexShrink)
     this.parent.yogaNode.insertChild(this.yogaNode, this.parent.yogaNode.getChildCount())
+    this.ui?.redraw()
   }
 
   commit(didMove) {
