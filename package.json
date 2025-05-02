@@ -26,6 +26,8 @@
     "viewer:build": "node scripts/build-viewer.mjs",
     "client:dev": "node scripts/build-client.mjs --dev",
     "client:build": "node scripts/build-client.mjs",
+    "node-client:dev": "node scripts/build-node-client.mjs --dev",
+    "node-client:build": "node scripts/build-node-client.mjs",
     "lint": "eslint . --ext .js,.jsx",
     "lint:fix": "eslint . --ext .js,.jsx --fix",
     "format": "prettier --write .",
