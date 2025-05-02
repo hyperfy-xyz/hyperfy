@@ -24,7 +24,7 @@ function add(group, hits) {
   }
 }
 
-const playerCollision = (process?.env.PUBLIC_PLAYER_COLLISION || env.PUBLIC_PLAYER_COLLISION) === 'true'
+const playerCollision = (process?.env.PUBLIC_PLAYER_COLLISION || (typeof env === 'object' && env.PUBLIC_PLAYER_COLLISION)) === 'true'
 
 add('camera', ['environment'])
 add('player', ['environment', 'prop', playerCollision ? 'player' : null])

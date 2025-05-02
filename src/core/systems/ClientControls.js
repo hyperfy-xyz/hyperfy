@@ -196,20 +196,22 @@ export class ClientControls extends System {
     this.viewport = viewport
     this.screen.width = this.viewport.offsetWidth
     this.screen.height = this.viewport.offsetHeight
-    window.addEventListener('keydown', this.onKeyDown)
-    window.addEventListener('keyup', this.onKeyUp)
-    document.addEventListener('pointerlockchange', this.onPointerLockChange)
-    this.viewport.addEventListener('pointerdown', this.onPointerDown)
-    window.addEventListener('pointermove', this.onPointerMove)
+    if (typeof window !== 'undefined') {
+      window.addEventListener('keydown', this.onKeyDown)
+      window.addEventListener('keyup', this.onKeyUp)
+      document.addEventListener('pointerlockchange', this.onPointerLockChange)
+      this.viewport.addEventListener('pointerdown', this.onPointerDown)
+      window.addEventListener('pointermove', this.onPointerMove)
     this.viewport.addEventListener('touchstart', this.onTouchStart)
     this.viewport.addEventListener('touchmove', this.onTouchMove)
     this.viewport.addEventListener('touchend', this.onTouchEnd)
     this.viewport.addEventListener('touchcancel', this.onTouchEnd)
     this.viewport.addEventListener('pointerup', this.onPointerUp)
-    this.viewport.addEventListener('wheel', this.onScroll, { passive: false }) // prettier-ignore
-    document.body.addEventListener('contextmenu', this.onContextMenu)
-    window.addEventListener('resize', this.onResize)
-    window.addEventListener('blur', this.onBlur)
+      this.viewport.addEventListener('wheel', this.onScroll, { passive: false }) // prettier-ignore
+      document.body.addEventListener('contextmenu', this.onContextMenu)
+      window.addEventListener('resize', this.onResize)
+      window.addEventListener('blur', this.onBlur)
+    }
   }
 
   bind(options = {}) {

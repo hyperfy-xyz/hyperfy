@@ -10,7 +10,7 @@ export class ServerLiveKit extends System {
     this.wsUrl = process.env.LIVEKIT_WS_URL
     this.apiKey = process.env.LIVEKIT_API_KEY
     this.apiSecret = process.env.LIVEKIT_API_SECRET
-    this.enabled = this.wsUrl && this.apiKey && this.apiSecret
+    this.enabled = !!this.wsUrl && !!this.apiKey && !!this.apiSecret
   }
 
   async getPlayerOpts(playerId) {

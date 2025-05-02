@@ -46,7 +46,7 @@ export class PlayerLocal extends Entity {
   }
 
   async init() {
-    if (this.world.loader.preloader) {
+    if (this.world.loader?.preloader) {
       await this.world.loader.preloader
     }
 
@@ -160,6 +160,7 @@ export class PlayerLocal extends Entity {
   }
 
   applyAvatar() {
+    if (!this.world.loader) return
     const avatarUrl = this.getAvatarUrl()
     if (this.avatarUrl === avatarUrl) return
     this.world.loader
@@ -276,6 +277,7 @@ export class PlayerLocal extends Entity {
         }
       },
     })
+    if (!this.control.camera) return
     this.control.camera.write = true
     this.control.camera.position.copy(this.cam.position)
     this.control.camera.quaternion.copy(this.cam.quaternion)
@@ -662,7 +664,7 @@ export class PlayerLocal extends Entity {
   }
 
   update(delta) {
-    const isXR = this.world.xr.session
+    const isXR = this.world.xr?.session
     const freeze = this.data.effect?.freeze
     const anchor = this.getAnchorMatrix()
 
@@ -867,7 +869,7 @@ export class PlayerLocal extends Entity {
   }
 
   lateUpdate(delta) {
-    const isXR = this.world.xr.session
+    const isXR = this.world.xr?.session
     const anchor = this.getAnchorMatrix()
     // if we're anchored, force into that pose
     if (anchor) {
@@ -889,11 +891,11 @@ export class PlayerLocal extends Entity {
       const right = v2.crossVectors(forward, UP).normalize()
       this.cam.position.add(right.multiplyScalar(0.3))
     }
-    if (this.world.xr.session) {
+    if (this.world.xr?.session) {
       // in vr snap camera
       this.control.camera.position.copy(this.cam.position)
       this.control.camera.quaternion.copy(this.cam.quaternion)
-    } else {
+    } else if (this.cam && this.control.camera) {
       // otherwise interpolate camera towards target
       simpleCamLerp(this.world, this.control.camera, this.cam, delta)
     }

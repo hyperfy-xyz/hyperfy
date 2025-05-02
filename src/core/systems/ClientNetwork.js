@@ -24,12 +24,15 @@ export class ClientNetwork extends System {
     this.queue = []
   }
 
-  init({ wsUrl }) {
-    const authToken = storage.get('authToken')
-    this.ws = new WebSocket(`${wsUrl}?authToken=${authToken}`)
-    this.ws.binaryType = 'arraybuffer'
-    this.ws.addEventListener('message', this.onPacket)
-    this.ws.addEventListener('close', this.onClose)
+  init({ wsUrl, initialAuthToken }) {
+    const authToken = initialAuthToken;
+    const connectionUrl = (authToken && typeof authToken === 'string') 
+                          ? `${wsUrl}?authToken=${encodeURIComponent(authToken)}`
+                          : wsUrl;
+    this.ws = new WebSocket(connectionUrl);
+    this.ws.binaryType = 'arraybuffer';
+    this.ws.addEventListener('message', this.onPacket);
+    this.ws.addEventListener('close', this.onClose);
   }
 
   preFixedUpdate() {
@@ -37,7 +40,6 @@ export class ClientNetwork extends System {
   }
 
   send(name, data) {
-    // console.log('->', name, data)
     const packet = writePacket(name, data)
     this.ws.send(packet)
   }
@@ -73,7 +75,7 @@ export class ClientNetwork extends System {
         const [method, data] = this.queue.shift()
         this[method]?.(data)
       } catch (err) {
-        console.error(err)
+        console.error(`[ClientNetwork flush] Error executing method: ${err}`);
       }
     }
   }
@@ -83,63 +85,83 @@ export class ClientNetwork extends System {
   }
 
   onPacket = e => {
-    const [method, data] = readPacket(e.data)
-    this.enqueue(method, data)
-    // console.log('<-', method, data)
+    const [method, data] = readPacket(e.data);
+    this.enqueue(method, data);
   }
 
   onSnapshot(data) {
-    this.id = data.id
-    this.serverTimeOffset = data.serverTime - performance.now()
-    this.apiUrl = data.apiUrl
-    this.maxUploadSize = data.maxUploadSize
-    this.world.assetsUrl = data.assetsUrl
+    this.id = data.id;
+    this.serverTimeOffset = data.serverTime - performance.now();
+    this.apiUrl = data.apiUrl;
+    this.maxUploadSize = data.maxUploadSize;
+    this.world.assetsUrl = data.assetsUrl;
 
-    // preload environment model and avatar
-    if (data.settings.model) {
-      this.world.loader.preload('model', data.settings.model.url)
+    // Skip preload logic for agent, as ClientLoader is not present
+    // this.world.loader.preload(...) 
+    // this.world.loader.execPreload();
+
+    // Deserialize core world state
+    this.world.settings?.deserialize(data.settings);
+    this.world.chat?.deserialize(data.chat);
+    this.world.blueprints?.deserialize(data.blueprints);
+    this.world.entities?.deserialize(data.entities);
+
+    if (this.world.livekit?.deserialize) { // Deserialize for browser client ONLY
+        this.world.livekit?.deserialize(data.livekit); 
+    }
+    
+    try {
+        storage.set('authToken', data.authToken); 
+    } catch (e) {
+        console.error("[ClientNetwork onSnapshot] Error calling storage.set:", e); 
+    }
+
+    // --> Restore preload logic, guarded for client environment <--
+    if (this.world.loader) {
+        // preload environment model and avatar
+        if (data.settings.model) {
+          this.world.loader.preload('model', data.settings.model.url);
+        } else if (this.world.environment?.base?.model) { // Check environment exists
+          this.world.loader.preload('model', this.world.environment.base.model);
+        }
+        if (data.settings.avatar) {
+          this.world.loader.preload('avatar', data.settings.avatar.url);
+        }
+        // preload some blueprints
+        for (const item of data.blueprints) {
+          if (item.preload) {
+            if (item.model) {
+              const type = item.model.endsWith('.vrm') ? 'avatar' : 'model';
+              this.world.loader.preload(type, item.model);
+            }
+            if (item.script) {
+              this.world.loader.preload('script', item.script);
+            }
+            for (const value of Object.values(item.props || {})) {
+              if (value === undefined || value === null || !value?.url || !value?.type) continue;
+              this.world.loader.preload(value.type, value.url);
+            }
+          }
+        }
+        // preload emotes
+        for (const url of emoteUrls) {
+          this.world.loader.preload('emote', url);
+        }
+        // preload local player avatar
+        for (const item of data.entities) {
+          if (item.type === 'player' && item.owner === this.id) {
+            const url = item.sessionAvatar || item.avatar;
+            if (url) { // Check if url is valid
+                 this.world.loader.preload('avatar', url);
+            }
+          }
+        }
+        // Execute preload and emit ready *only* if loader exists
+        this.world.loader.execPreload(); 
     } else {
-      this.world.loader.preload('model', this.world.environment.base.model)
+        // Manually emit ready for agent if no loader (restoring previous agent fix)
+        this.world.emit('ready', true);
     }
-    if (data.settings.avatar) {
-      this.world.loader.preload('avatar', data.settings.avatar.url)
-    }
-    // preload some blueprints
-    for (const item of data.blueprints) {
-      if (item.preload) {
-        if (item.model) {
-          const type = item.model.endsWith('.vrm') ? 'avatar' : 'model'
-          this.world.loader.preload(type, item.model)
-        }
-        if (item.script) {
-          this.world.loader.preload('script', item.script)
-        }
-        for (const value of Object.values(item.props || {})) {
-          if (value === undefined || value === null || !value?.url || !value?.type) continue
-          this.world.loader.preload(value.type, value.url)
-        }
-      }
-    }
-    // preload emotes
-    for (const url of emoteUrls) {
-      this.world.loader.preload('emote', url)
-    }
-    // preload local player avatar
-    for (const item of data.entities) {
-      if (item.type === 'player' && item.owner === this.id) {
-        const url = item.sessionAvatar || item.avatar
-        this.world.loader.preload('avatar', url)
-      }
-    }
-    this.world.loader.execPreload()
-
-    this.world.collections.deserialize(data.collections)
-    this.world.settings.deserialize(data.settings)
-    this.world.chat.deserialize(data.chat)
-    this.world.blueprints.deserialize(data.blueprints)
-    this.world.entities.deserialize(data.entities)
-    this.world.livekit.deserialize(data.livekit)
-    storage.set('authToken', data.authToken)
   }
 
   onSettingsModified = data => {
@@ -214,3 +236,4 @@ export class ClientNetwork extends System {
     console.log('disconnect', code)
   }
 }
+

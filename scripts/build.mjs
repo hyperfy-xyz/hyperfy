@@ -83,6 +83,39 @@ const clientHtmlDest = path.join(rootDir, 'build/public/index.html')
 }
 
 /**
+ * Build Core
+ */
+{
+  const coreCtx = await esbuild.context({
+    entryPoints: ['src/core/exports.js'],
+    outfile: 'build/core.js',
+    platform: 'node',
+    format: 'esm',
+    bundle: true,
+    treeShaking: true,
+    minify: false,
+    sourcemap: true,
+    packages: 'external',
+    external: ['fs', 'fs/promises', 'path', 'url', 'crypto', 'perf_hooks'],
+    define: {
+      'process.env.CLIENT': 'false',
+      'process.env.SERVER': 'false',
+    },
+    plugins: [
+       // Keep polyfillNode for other potential browser APIs core might use,
+       // but esbuild should ignore the externalized modules now.
+       polyfillNode({}), 
+    ],
+  });
+
+  if (dev) {
+    await coreCtx.watch();
+  } else {
+    await coreCtx.rebuild();
+  }
+}
+
+/**
  * Build Server
  */
 
@@ -108,9 +141,16 @@ let spawn
         name: 'server-finalize-plugin',
         setup(build) {
           build.onEnd(async result => {
+
+            const physxIdlSrc = path.join(rootDir, 'src/server/physx/physx-js-webidl.js')
+            const physxIdlDest = path.join(rootDir, 'build/physx-js-webidl.js')
+            console.log('Copying physx idl to build directory:', physxIdlDest)
+            await fs.copy(physxIdlSrc, physxIdlDest)
+
             // copy over physx wasm
             const physxWasmSrc = path.join(rootDir, 'src/server/physx/physx-js-webidl.wasm')
             const physxWasmDest = path.join(rootDir, 'build/physx-js-webidl.wasm')
+            console.log('Copying physx wasm to build directory:', physxWasmDest)
             await fs.copy(physxWasmSrc, physxWasmDest)
             // start the server or stop here
             if (dev) {
@@ -118,7 +158,7 @@ let spawn
               spawn?.kill('SIGTERM')
               spawn = fork(path.join(rootDir, 'build/index.js'))
             } else {
-              process.exit(1)
+              // process.exit(1) // Don't exit if just building
             }
           })
         },

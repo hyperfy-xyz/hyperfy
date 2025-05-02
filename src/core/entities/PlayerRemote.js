@@ -85,6 +85,7 @@ export class PlayerRemote extends Entity {
   }
 
   applyAvatar() {
+    if (!this.world.loader) return
     const avatarUrl = this.data.sessionAvatar || this.data.avatar || 'asset://avatar.vrm'
     if (this.avatarUrl === avatarUrl) return
     this.world.loader.load('avatar', avatarUrl).then(src => {
