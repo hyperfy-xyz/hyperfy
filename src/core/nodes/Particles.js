@@ -125,8 +125,7 @@ export class Particles extends Node {
 
   mount() {
     this.needsRebuild = false
-    if (!this.ctx.world.network.isClient) return
-    this.emitter = this.ctx.world.particles.register(this)
+    this.emitter = this.ctx.world.particles?.register(this)
   }
 
   commit(didMove) {

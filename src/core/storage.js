@@ -1,7 +1,6 @@
-const isBrowser = typeof window !== 'undefined' && typeof window.document !== 'undefined';
-import fs from 'fs/promises';
-import path from 'path';
-import { fileURLToPath } from 'url';
+import fs from 'fs'
+import path from 'path'
+import { fileURLToPath } from 'url'
 
 class LocalStorage {
   get(key, defaultValue = null) {
@@ -33,109 +32,58 @@ class LocalStorage {
 }
 
 class NodeStorage {
-  isNodeStorage = true; 
-  _cache = null;
-  _storageFilePath = null;
-  _pendingWritePromise = Promise.resolve(); 
-  
-  constructor() { 
-      if (isBrowser) {
-          throw new Error("NodeStorage cannot be constructed in a browser environment.");
-      }
-      this._initializePath(); 
-  }
-
-  _initializePath() {
-    if (this._storageFilePath) return;
+  constructor() {
+    const dirname = path.dirname(fileURLToPath(import.meta.url))
+    const rootDir = path.join(dirname, '../')
+    this.file = path.join(rootDir, 'localstorage.json')
     try {
-        const dirname = path.dirname(fileURLToPath(import.meta.url));
-        const rootDir = path.join(dirname, '../'); 
-        this._storageFilePath = path.join(rootDir, 'local.json');
-        // console.log(`[NodeStorage _initializePath] Calculated storage path: ${this._storageFilePath}`); 
+      const data = fs.readFileSync(this.file, 'utf8')
+      this.data = JSON.parse(data)
     } catch (err) {
-       console.error("Failed to calculate NodeStorage path:", err);
-       this._storageFilePath = null;
+      this.data = {}
     }
   }
 
-  // Use statically imported fs
-  async _readData() {
-    this._initializePath(); 
-    if (!this._storageFilePath) return {}; 
-    if (this._cache !== null) return this._cache;
+  save() {
     try {
-      const data = await fs.readFile(this._storageFilePath, 'utf-8'); // Uses imported fs
-      this._cache = JSON.parse(data);
-    } catch (error) {
-       if (error.code === 'ENOENT') { this._cache = {}; }
-       else { console.error(/*...*/); this._cache = {}; }
-    }
-    return this._cache;
-  }
-
-  // Use statically imported fs
-  async _writeData(data) {
-     this._initializePath(); 
-     if (!this._storageFilePath) { /* ... */ return; }
-    try {
-      this._cache = data; 
-      const jsonData = JSON.stringify(data, null, 2);
-      this._pendingWritePromise = this._pendingWritePromise.then(async () => {
-          await fs.writeFile(this._storageFilePath, jsonData); // Uses imported fs
-      }).catch(error => {
-         // ... error handling ...
-      });
-    } catch (error) {
-      // ... error handling ...
+      fs.writeFileSync(this.file, JSON.stringify(this.data, null, 2), 'utf8')
+    } catch (err) {
+      console.error('error writing to storage file:', err)
     }
   }
 
-  async get(key, defaultValue = null) {
-      // Ensure path is calculated before reading
-      this._initializePath(); 
-      const data = await this._readData();
-      return data.hasOwnProperty(key) ? data[key] : defaultValue;
+  get(key, defaultValue = null) {
+    const value = this.data[key]
+    if (value === undefined) return defaultValue
+    return value || defaultValue
   }
 
-  async set(key, value) {
-      // Ensure path is calculated before reading for set logic
-      this._initializePath();
-      const data = await this._readData();
-      let changed = false;
-      if (value === undefined || value === null) {
-          if (data.hasOwnProperty(key)) {
-              delete data[key];
-              changed = true;
-          }
-      } else {
-          if (data[key] !== value) {
-              data[key] = value;
-              changed = true;
-          }
-      }
-      if (changed) {
-          this._writeData(data); 
-      }
+  set(key, value) {
+    if (value === undefined || value === null) {
+      delete this.data[key]
+    } else {
+      this.data[key] = value
+    }
+    this.save()
   }
 
-  async remove(key) {
-    await this.set(key, null); // Use set(key, null) to handle deletion
-  }
-
-  // Method to await the last pending write
-  async flushWrites() {
-    console.log("[NodeStorage flushWrites] Awaiting pending write operations...");
-    await this._pendingWritePromise;
-    console.log("[NodeStorage flushWrites] Write operations flushed.");
+  remove(key) {
+    delete this.data[key]
+    this.save()
   }
 }
 
-let storageInstance;
+const isBrowser = typeof window !== 'undefined'
+const isNode = typeof process !== 'undefined' && process.versions && process.versions.node
+
+let storage
+
 if (isBrowser) {
-  storageInstance = new LocalStorage();
+  storage = new LocalStorage() // todo: some browser environments (eg safari incognito) have no local storage so we need a MemoryStorage fallback
+} else if (isNode) {
+  storage = new NodeStorage()
 } else {
-  // This IIFE resolves immediately with the instance
-  storageInstance = new NodeStorage();
+  console.warn('no storage')
 }
 
-export const storage = storageInstance;
+export { storage }

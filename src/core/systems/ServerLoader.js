@@ -26,6 +26,7 @@ export class ServerLoader extends System {
     this.results = new Map()
     this.rgbeLoader = new RGBELoader()
     this.gltfLoader = new GLTFLoader()
+    this.preloadItems = []
     // this.gltfLoader.register(parser => new VRMLoaderPlugin(parser))
 
     // mock globals to allow gltf loader to work in nodejs
@@ -48,6 +49,17 @@ export class ServerLoader extends System {
   get(type, url) {
     const key = `${type}/${url}`
     return this.results.get(key)
+  }
+
+  preload(type, url) {
+    this.preloadItems.push({ type, url })
+  }
+
+  execPreload() {
+    const promises = this.preloadItems.map(item => this.load(item.type, item.url))
+    this.preloader = Promise.allSettled(promises).then(() => {
+      this.preloader = null
+    })
   }
 
   load(type, url) {
