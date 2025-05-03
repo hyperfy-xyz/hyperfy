@@ -276,7 +276,6 @@ export class PlayerLocal extends Entity {
         }
       },
     })
-    if (!this.control.camera) return
     this.control.camera.write = true
     this.control.camera.position.copy(this.cam.position)
     this.control.camera.quaternion.copy(this.cam.quaternion)
