@@ -14,7 +14,7 @@ export function createNodeClientWorld() {
   world.register('client', NodeClient)
   world.register('controls', ClientControls)
   world.register('network', ClientNetwork)
-  world.register('loader', ServerLoader) // TODO: ClientLoader should be named BrowserLoader and ServerLoader should be called NodeLoader
+  // world.register('loader', ServerLoader) // TODO: ClientLoader should be named BrowserLoader and ServerLoader should be called NodeLoader
   world.register('environment', NodeEnvironment)
   // world.register('actions', ClientActions)
   // world.register('lods', LODs)
