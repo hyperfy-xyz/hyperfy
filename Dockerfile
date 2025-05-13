@@ -18,6 +18,9 @@ WORKDIR /app
 RUN apk add --no-cache curl && \
     adduser -S nodeuser -u 1001
 
+# Install Python and build tools
+RUN apk add --no-cache python3 make g++
+
 # Copy only necessary files from builder
 COPY --from=builder /app/node_modules ./node_modules
 COPY --from=builder /app/build ./build
