@@ -10,6 +10,8 @@ import {
   SelectiveBloomEffect,
   BlendFunction,
   Selection,
+  BloomEffect,
+  KernelSize,
 } from 'postprocessing'
 
 import { System } from './System'
@@ -73,6 +75,13 @@ export class ClientGraphics extends System {
     })
     this.renderPass = new RenderPass(this.world.stage.scene, this.world.camera)
     this.composer.addPass(this.renderPass)
+    // this.bloom = new BloomEffect({
+    //   blendFunction: BlendFunction.ADD,
+    //   mipmapBlur: true,
+    //   luminanceThreshold: 1,
+    //   intensity: 0.5,
+    //   radius: 0.8,
+    // })
     this.bloom = new SelectiveBloomEffect(this.world.stage.scene, this.world.camera, {
       blendFunction: BlendFunction.ADD,
       mipmapBlur: true,
@@ -356,7 +365,9 @@ export class ClientGraphics extends System {
           const visible = getQueryResult(node)
           if (visible) {
             node.oc.visible = true
-            node.oc.skips = 60
+            node.oc.skips = 5
+            // mark tree visible + give skips
+            // showSubtree(node)
           } else {
             node.oc.visible = false
             // hideSubtree(node)
@@ -405,6 +416,16 @@ export class ClientGraphics extends System {
       node.oc.visible = true
       for (const child of node.children) {
         renderSubtree(child)
+      }
+    }
+    function showSubtree(node) {
+      if (!node.oc) {
+        initNode(node)
+      }
+      node.oc.visible = true
+      node.oc.skips = 60
+      for (const child of node.children) {
+        showSubtree(child)
       }
     }
     function hideSubtree(node) {
@@ -646,7 +667,7 @@ export class ClientGraphics extends System {
       traverse(octree.root)
       console.timeEnd('sTraverse')
 
-      // console.time('render')
+      console.time('sRender')
       for (const iMesh of opaque) {
         const size = iMesh.instanceMatrix.array.length / 16
         const count = iMesh._items.length
@@ -664,7 +685,7 @@ export class ClientGraphics extends System {
         //   renderObject(item._mesh)
         // }
       }
-      // console.timeEnd('render')
+      console.timeEnd('sRender')
     }
     function traverse(node) {
       if (!node.sc) {
