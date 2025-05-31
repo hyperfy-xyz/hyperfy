@@ -8,8 +8,8 @@ const _m1 = new THREE.Matrix4()
 const _intersects = []
 const _mesh = new THREE.Mesh()
 
-const MIN_RADIUS = 0.2
-const BUCKET_SIZE = 4
+const MIN_RADIUS = 0.5
+const BUCKET_SIZE = 16
 
 // https://anteru.net/blog/2008/loose-octrees/
 
@@ -171,6 +171,7 @@ class LooseOctreeNode {
     if (!this.canContain(item)) {
       return false
     }
+
     // if leaf and not too many items, just stash it here
     if (!this.children.length && this.items.length < BUCKET_SIZE) {
       this.items.push(item)
@@ -192,6 +193,7 @@ class LooseOctreeNode {
     item._node = this
     this.inc(1)
     return true
+
     // if (this.size / 2 < item.sphere.radius) {
     //   this.items.push(item)
     //   item._node = this

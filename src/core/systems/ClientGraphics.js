@@ -277,6 +277,9 @@ export class ClientGraphics extends System {
       _currentRenderState,
       _projScreenMatrix
     ) => {
+      // ignore if different scene, eg postprocessing etc
+      if (_scene !== this.world.stage.scene) return
+
       scene = _scene
       camera = _camera
       cameraPos.setFromMatrixPosition(camera.matrixWorld)
@@ -324,7 +327,7 @@ export class ClientGraphics extends System {
 
       // console.log('queries', stats.queries)
       // console.log('nodes', stats.nodes)
-      // console.log('occluders', stats.occluders)
+      console.log('occluders', stats.occluders)
       // console.log('draws', stats.draws)
     }
     function traverse(node) {
@@ -356,7 +359,10 @@ export class ClientGraphics extends System {
       }
       // no pending queries? issue one!
       if (!node.oc.pending) {
-        issueOcclusionQuery(node)
+        const exhausted = node.oc.visible ? stats.queries > 100 : false
+        if (!exhausted) {
+          issueOcclusionQuery(node)
+        }
         // return
       }
       // if query is pending check for result (important: we use else here so we dont read immediately after issue)
@@ -489,14 +495,10 @@ export class ClientGraphics extends System {
     }
     function sortNodes(nodes) {
       // todo: avoid slice :/
-      return nodes.slice().sort((a, b) => {
-        const distA = getNodeDistance(a)
-        const distB = getNodeDistance(b)
-        return distA - distB
-      })
+      return nodes.slice().sort(sortNodesFn)
     }
-    function getNodeDistance(node) {
-      return node.center.distanceToSquared(cameraPos)
+    function sortNodesFn(a, b) {
+      return a.center.distanceToSquared(cameraPos) - b.center.distanceToSquared(cameraPos)
     }
     function renderItem(item) {
       // don't render more than once per frame
@@ -510,6 +512,7 @@ export class ClientGraphics extends System {
         // render depth immediately
         const geometry = objects.update(object)
         if (isOccluderSized(object, geometry)) {
+          stats.occluders++
           object.modelViewMatrix.multiplyMatrices(camera.matrixWorldInverse, object.matrixWorld)
           renderer.renderBufferDirect(
             camera,
@@ -567,7 +570,7 @@ export class ClientGraphics extends System {
         //   // gl.depthMask(true)
         // }
         // TODO: do we even need this sortObjects fluff? whats it for
-        if (sortObjects) {
+        if (/*sortObjects*/ false) {
           if (object.boundingSphere !== undefined) {
             if (object.boundingSphere === null) object.computeBoundingSphere()
             vec4.copy(object.boundingSphere.center)
@@ -863,14 +866,10 @@ export class ClientGraphics extends System {
     }
     function sortNodes(nodes) {
       // todo: avoid slice :/
-      return nodes.slice().sort((a, b) => {
-        const distA = getNodeDistance(a)
-        const distB = getNodeDistance(b)
-        return distA - distB
-      })
+      return nodes.slice().sort(sortNodesFn)
     }
-    function getNodeDistance(node) {
-      return node.center.distanceToSquared(shadowCameraPos)
+    function sortNodesFn(a, b) {
+      return a.center.distanceToSquared(shadowCameraPos) - b.center.distanceToSquared(shadowCameraPos)
     }
   }
 }
