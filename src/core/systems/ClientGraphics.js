@@ -327,7 +327,7 @@ export class ClientGraphics extends System {
 
       // console.log('queries', stats.queries)
       // console.log('nodes', stats.nodes)
-      console.log('occluders', stats.occluders)
+      // console.log('occluders', stats.occluders)
       // console.log('draws', stats.draws)
     }
     function traverse(node) {
@@ -552,23 +552,6 @@ export class ClientGraphics extends System {
         const material = object.material
         // object.modelViewMatrix.multiplyMatrices(camera.matrixWorldInverse, object.matrixWorld)
 
-        // if (depth && isOccluderSized(object, geometry)) {
-        //   stats.occluders++
-        //   // gl.colorMask(false, false, false, false)
-        //   // gl.depthMask(true)
-        //   object.modelViewMatrix.multiplyMatrices(camera.matrixWorldInverse, object.matrixWorld)
-        //   // object.normalMatrix.getNormalMatrix(object.modelViewMatrix)
-        //   renderer.renderBufferDirect(
-        //     camera,
-        //     null, // scene (null for direct rendering)
-        //     geometry,
-        //     occluderMat,
-        //     object,
-        //     null // group
-        //   )
-        //   // gl.colorMask(true, true, true, true)
-        //   // gl.depthMask(true)
-        // }
         // TODO: do we even need this sortObjects fluff? whats it for
         if (/*sortObjects*/ false) {
           if (object.boundingSphere !== undefined) {
@@ -627,7 +610,8 @@ export class ClientGraphics extends System {
     const octree = this.world.stage.octree
     const gl = this.renderer.getContext()
     const proxyMat = new THREE.MeshBasicMaterial({ colorWrite: false, depthWrite: false, depthTest: true })
-    this.world.setupMaterial(proxyMat)
+    // this.world.setupMaterial(proxyMat)
+    const imeshes = new Map()
     let frame = 0
     let opaque = []
     let scene
@@ -651,6 +635,9 @@ export class ClientGraphics extends System {
       _renderer,
       _getDepthMaterial
     ) => {
+      // ignore if different scene, eg postprocessing etc
+      if (_scene !== this.world.stage.scene) return
+
       scene = _scene
       camera = _camera
       shadowCamera = _shadowCamera
@@ -663,14 +650,14 @@ export class ClientGraphics extends System {
       getDepthMaterial = _getDepthMaterial
       frame++
       opaque.length = 0
-      console.time('sTraverse')
+      // console.time('sTraverse')
       // renderer.clearDepth()
       // gl.colorMask(false, false, false, false)
       // gl.depthMask(true)
       traverse(octree.root)
-      console.timeEnd('sTraverse')
+      // console.timeEnd('sTraverse')
 
-      console.time('sRender')
+      // console.time('sRender')
       for (const iMesh of opaque) {
         const size = iMesh.instanceMatrix.array.length / 16
         const count = iMesh._items.length
@@ -682,74 +669,78 @@ export class ClientGraphics extends System {
         }
         iMesh.count = count
         iMesh.instanceMatrix.needsUpdate = true
+        // if (iMesh.wtf) {
+        //   console.log('boo', iMesh.count)
+        // }
         renderObject(iMesh)
 
         // for (const item of iMesh._items) {
         //   renderObject(item._mesh)
         // }
       }
-      console.timeEnd('sRender')
+      // console.timeEnd('sRender')
     }
     function traverse(node) {
-      if (!node.sc) {
-        initNode(node)
-      }
+      // if (!node.sc) {
+      //   initNode(node)
+      // }
       // if node is outside frustum, skip all descendants
       if (!frustum.intersectsBox(node.outer)) {
         return
       }
-      // if node encapsulates frustum, render items without query (this node only) and recurse fresh
-      if (node.outer.containsPoint(shadowCameraPos)) {
-        renderItems(node.items)
-        for (const child of sortNodes(node.children)) {
-          traverse(child)
-        }
-        return
-      }
-      // allow visible nodes to skip frames and reduce query workload
-      if (node.sc.visible && node.sc.skips) {
-        node.sc.skips--
-        renderItems(node.items)
-        for (const child of sortNodes(node.children)) {
-          traverse(child)
-        }
-        return
-      }
-      // no pending queries? issue one!
-      if (!node.sc.pending) {
-        issueOcclusionQuery(node)
-        // return
-      }
-      // if query is pending check for result (important: we use else here so we dont read immediately after issue)
-      else if (node.sc.pending) {
-        if (hasQueryResult(node)) {
-          const visible = getQueryResult(node)
-          if (visible) {
-            node.sc.visible = true
-            node.sc.skips = 60
-          } else {
-            node.sc.visible = false
-            // hideSubtree(node)
-            return
-          }
-        }
-      }
-      // not visible? skip entire tree
-      if (!node.sc.visible) {
-        // hideSubtree(node)
-        return
-      }
-      // don't recurse into tiny nodes, just force visible
-      if (node.size < 4) {
-        renderSubtree(node)
-        return
-      }
+      // // if node encapsulates frustum, render items without query (this node only) and recurse fresh
+      // if (node.outer.containsPoint(shadowCameraPos)) {
+      //   renderItems(node.items)
+      //   for (const child of sortNodes(node.children)) {
+      //     traverse(child)
+      //   }
+      //   return
+      // }
+      // // allow visible nodes to skip frames and reduce query workload
+      // if (node.sc.visible && node.sc.skips) {
+      //   node.sc.skips--
+      //   renderItems(node.items)
+      //   for (const child of sortNodes(node.children)) {
+      //     traverse(child)
+      //   }
+      //   return
+      // }
+      // // no pending queries? issue one!
+      // if (!node.sc.pending) {
+      //   issueOcclusionQuery(node)
+      //   // return
+      // }
+      // // if query is pending check for result (important: we use else here so we dont read immediately after issue)
+      // else if (node.sc.pending) {
+      //   if (hasQueryResult(node)) {
+      //     const visible = getQueryResult(node)
+      //     if (visible) {
+      //       node.sc.visible = true
+      //       node.sc.skips = 60
+      //     } else {
+      //       node.sc.visible = false
+      //       // hideSubtree(node)
+      //       return
+      //     }
+      //   }
+      // }
+      // // not visible? skip entire tree
+      // if (!node.sc.visible) {
+      //   // hideSubtree(node)
+      //   return
+      // }
+      // // don't recurse into tiny nodes, just force visible
+      // if (node.size < 4) {
+      //   renderSubtree(node)
+      //   return
+      // }
       // render items
       renderItems(node.items)
       // continue traversal into children
       for (const child of sortNodes(node.children)) {
         traverse(child)
       }
+      // NOTE: if in frustum dont have to test all children or sort nodes just insta-render everything asap
     }
     function initNode(node) {
       const geometry = new THREE.BoxGeometry(node.size * 2, node.size * 2, node.size * 2)
@@ -822,45 +813,69 @@ export class ClientGraphics extends System {
       }
     }
     function renderItem(item) {
+      // if (item._shadowFrame === frame) return
+      // item._shadowFrame = frame
+
+      // // NOTE: this render single mesh works fine but if we try to do the instanced mesh collection to reduce draws it does something weird af
+      // renderObject(item._mesh)
+      // return
+
       // collect instances to render later
       if (item._iMesh) {
-        const iMesh = item._iMesh
+        // let iMesh = item._iMesh
+        let iMesh = imeshes.get(item._iMesh)
+        if (!iMesh) {
+          // iMesh = item._iMesh.clone()
+          iMesh = new THREE.InstancedMesh(item.geometry, item.material, 10)
+          iMesh.castShadow = item._mesh.castShadow
+          iMesh.receiveShadow = item._mesh.receiveShadow
+          iMesh.matrixAutoUpdate = false
+          iMesh.matrixWorldAutoUpdate = false
+          iMesh.frustumCulled = false
+          imeshes.set(item._iMesh, iMesh)
+          // if (item.getEntity()?.blueprint?.name === 'Furnace 2') {
+          //   iMesh.wtf = true
+          // }
+        }
         if (iMesh._frame !== frame) {
           iMesh._frame = frame
-          if (!iMesh._items) iMesh._items = []
-          iMesh._items.length = 0
+          if (!iMesh._items) {
+            iMesh._items = []
+          } else {
+            iMesh._items.length = 0
+          }
           opaque.push(iMesh)
         }
         iMesh._items.push(item)
       }
     }
     function renderObject(object) {
-      // const object = item._mesh
       if (!object) return
-      if (!object.visible) return
+      if (object.visible === false) return
       const visible = object.layers.test(camera.layers)
-      if (!visible) return
-      if (object.castShadow || (object.receiveShadow && type === THREE.VSMShadowMap)) {
-        object.modelViewMatrix.multiplyMatrices(shadowCamera.matrixWorldInverse, object.matrixWorld)
-        const geometry = objects.update(object)
-        const material = object.material
-        if (Array.isArray(material)) {
-          const groups = geometry.groups
-          for (let k = 0, kl = groups.length; k < kl; k++) {
-            const group = groups[k]
-            const groupMaterial = material[group.materialIndex]
-            if (groupMaterial && groupMaterial.visible) {
-              const depthMaterial = getDepthMaterial(object, groupMaterial, light, type)
-              object.onBeforeShadow(renderer, object, camera, shadowCamera, geometry, depthMaterial, group)
-              renderer.renderBufferDirect(shadowCamera, null, geometry, depthMaterial, object, group)
-              object.onAfterShadow(renderer, object, camera, shadowCamera, geometry, depthMaterial, group)
+      if (visible && (object.isMesh || object.isLine || object.isPoints)) {
+        if (object.castShadow || (object.receiveShadow && type === THREE.VSMShadowMap)) {
+          object.modelViewMatrix.multiplyMatrices(shadowCamera.matrixWorldInverse, object.matrixWorld)
+          const geometry = objects.update(object)
+          const material = object.material
+          if (Array.isArray(material)) {
+            const groups = geometry.groups
+            for (let k = 0, kl = groups.length; k < kl; k++) {
+              const group = groups[k]
+              const groupMaterial = material[group.materialIndex]
+              if (groupMaterial && groupMaterial.visible) {
+                const depthMaterial = getDepthMaterial(object, groupMaterial, light, type)
+                object.onBeforeShadow(renderer, object, camera, shadowCamera, geometry, depthMaterial, group)
+                renderer.renderBufferDirect(shadowCamera, null, geometry, depthMaterial, object, group)
+                object.onAfterShadow(renderer, object, camera, shadowCamera, geometry, depthMaterial, group)
+              }
             }
+          } else if (material.visible) {
+            const depthMaterial = getDepthMaterial(object, material, light, type)
+            object.onBeforeShadow(renderer, object, camera, shadowCamera, geometry, depthMaterial, null)
+            renderer.renderBufferDirect(shadowCamera, null, geometry, depthMaterial, object, null)
+            object.onAfterShadow(renderer, object, camera, shadowCamera, geometry, depthMaterial, null)
           }
-        } else if (material.visible) {
-          const depthMaterial = getDepthMaterial(object, material, light, type)
-          object.onBeforeShadow(renderer, object, camera, shadowCamera, geometry, depthMaterial, null)
-          renderer.renderBufferDirect(shadowCamera, null, geometry, depthMaterial, object, null)
-          object.onAfterShadow(renderer, object, camera, shadowCamera, geometry, depthMaterial, null)
         }
       }
     }
