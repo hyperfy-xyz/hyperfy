@@ -2,6 +2,9 @@
 FROM node:22.11.0-alpine AS builder
 WORKDIR /app
 
+# Install Python and build tools
+RUN apk add --no-cache python3 make g++ linux-headers eudev-dev
+
 # Copy package.json and package-lock.json to leverage layer caching
 COPY package.json package-lock.json ./
 RUN npm install

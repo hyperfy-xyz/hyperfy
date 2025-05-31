@@ -18,6 +18,7 @@ import { ControlPriorities } from '../../core/extras/ControlPriorities'
 // import { MenuApp } from './MenuApp'
 import { ChevronDoubleUpIcon, HandIcon } from './Icons'
 import { Sidebar } from './Sidebar'
+import { Wallet } from './Wallet'
 
 export function CoreUI({ world }) {
   const ref = useRef()
@@ -105,6 +106,7 @@ export function CoreUI({ world }) {
       {kicked && <KickedOverlay code={kicked} />}
       {ready && isTouch && <TouchBtns world={world} />}
       <div id='core-ui-portal' />
+      {ready && <Wallet world={world} />}
     </div>
   )
 }
