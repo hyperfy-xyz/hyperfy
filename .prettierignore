@@ -1,3 +1,5 @@
 *.md
 Vector3Enhanced.js
 GLTFLoader.js
+WebGLRenderer.js
+WebGLShadowMap.js
