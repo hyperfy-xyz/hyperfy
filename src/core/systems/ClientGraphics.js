@@ -275,17 +275,6 @@ export class ClientGraphics extends System {
     let currentRenderState
     let projScreenMatrix = new THREE.Matrix4()
     let opaque = []
-    // const ctx = {
-    //   scene: null,
-    //   camera: null,
-    //   cameraPos: new THREE.Vector3(),
-    //   frustum: new THREE.Frustum(),
-    //   objects: null,
-    //   sortObjects: null,
-    //   currentRenderList: null,
-    //   currentRenderState: null,
-    //   _projScreenMatrix: new THREE.Matrix4(),
-    // }
     const proxyMat = new THREE.MeshBasicMaterial({ colorWrite: false, depthWrite: false, depthTest: true })
     const occluderMat = new THREE.ShaderMaterial({
       vertexShader: `
@@ -353,6 +342,7 @@ export class ClientGraphics extends System {
         }
         iMesh.count = count
         iMesh.instanceMatrix.needsUpdate = true
+        // console.log(iMesh.material.defines)
         renderObject(iMesh)
 
         // for (const item of iMesh._items) {
@@ -647,9 +637,10 @@ export class ClientGraphics extends System {
     const gl = this.renderer.getContext()
     const proxyMat = new THREE.MeshBasicMaterial({ colorWrite: false, depthWrite: false, depthTest: true })
     // this.world.setupMaterial(proxyMat)
-    const imeshes = new Map()
-    let frame = 0
-    let opaque = []
+    const iMeshes = new Map() // model -> InstanceMesh
+    const groups = new Map() // model -> group
+    const active = []
+    let pass = 0
     let scene
     let camera
     let shadowCamera
@@ -684,8 +675,8 @@ export class ClientGraphics extends System {
       objects = _objects
       renderer = _renderer
       getDepthMaterial = _getDepthMaterial
-      frame++
-      opaque.length = 0
+      pass++
+      active.length = 0
       // console.time('sTraverse')
       // renderer.clearDepth()
       // gl.colorMask(false, false, false, false)
@@ -694,25 +685,26 @@ export class ClientGraphics extends System {
       // console.timeEnd('sTraverse')
 
       // console.time('sRender')
-      for (const iMesh of opaque) {
-        const size = iMesh.instanceMatrix.array.length / 16
-        const count = iMesh._items.length
+      for (const group of active) {
+        let iMesh = iMeshes.get(group.model)
+        const size = iMesh ? iMesh.instanceMatrix.array.length / 16 : 0
+        const count = group.items.length
         if (size < count) {
-          iMesh.resize(count)
+          iMesh = new THREE.InstancedMesh(group.model.geometry, group.model.material.raw, count)
+          iMesh.castShadow = group.model.castShadow
+          iMesh.receiveShadow = group.model.receiveShadow
+          iMesh.matrixAutoUpdate = false
+          iMesh.matrixWorldAutoUpdate = false
+          iMesh.frustumCulled = false
+          iMeshes.set(group.model, iMesh)
         }
         for (let i = 0; i < count; i++) {
-          iMesh.setMatrixAt(i, iMesh._items[i].matrix)
+          iMesh.setMatrixAt(i, group.items[i].matrix)
         }
         iMesh.count = count
         iMesh.instanceMatrix.needsUpdate = true
-        // if (iMesh.wtf) {
-        //   console.log('boo', iMesh.count)
-        // }
+        // console.log(iMesh)
         renderObject(iMesh)
-
-        // for (const item of iMesh._items) {
-        //   renderObject(item._mesh)
-        // }
       }
       // console.timeEnd('sRender')
     }
@@ -849,44 +841,31 @@ export class ClientGraphics extends System {
       }
     }
     function renderItem(item) {
-      // if (item._shadowFrame === frame) return
-      // item._shadowFrame = frame
+      // if (item._shadowPass === pass) return
+      // item._shadowPass = pass
 
       // // NOTE: this render single mesh works fine but if we try to do the instanced mesh collection to reduce draws it does something weird af
       // renderObject(item._mesh)
       // return
 
       // collect instances to render later
-      if (item._iMesh) {
-        // let iMesh = item._iMesh
-        let iMesh = imeshes.get(item._iMesh)
-        if (!iMesh) {
-          // iMesh = item._iMesh.clone()
-          iMesh = new THREE.InstancedMesh(item.geometry, item.material, 10)
-          iMesh.castShadow = item._mesh.castShadow
-          iMesh.receiveShadow = item._mesh.receiveShadow
-          iMesh.matrixAutoUpdate = false
-          iMesh.matrixWorldAutoUpdate = false
-          iMesh.frustumCulled = false
-          imeshes.set(item._iMesh, iMesh)
-          // if (item.getEntity()?.blueprint?.name === 'Furnace 2') {
-          //   iMesh.wtf = true
-          // }
+      if (item.model) {
+        let group = groups.get(item.model)
+        if (!group) {
+          group = { model: item.model, items: [], pass }
+          groups.set(item.model, group)
+          active.push(group)
         }
-        if (iMesh._frame !== frame) {
-          iMesh._frame = frame
-          if (!iMesh._items) {
-            iMesh._items = []
-          } else {
-            iMesh._items.length = 0
-          }
-          opaque.push(iMesh)
+        if (group.pass !== pass) {
+          group.pass = pass
+          group.items.length = 0
+          active.push(group)
         }
-        iMesh._items.push(item)
+        group.items.push(item)
       }
     }
     function renderObject(object) {
-      if (!object) return
+      // if (!object) return
       if (object.visible === false) return
       const visible = object.layers.test(camera.layers)
       if (visible && (object.isMesh || object.isLine || object.isPoints)) {
