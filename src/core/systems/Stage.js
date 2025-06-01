@@ -317,6 +317,7 @@ class Model {
       node,
       _mesh,
       _iMesh: this._iMesh,
+      model: this,
     }
     this.stage.octree.insert(sItem)
     return {
