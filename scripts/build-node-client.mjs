@@ -35,6 +35,9 @@ let spawn
     sourcemap: true,
     packages: 'external',
     loader: {},
+    alias: {
+      three: '@hyperfy-xyz/three',
+    },
     plugins: [
       {
         name: 'server-finalize-plugin',

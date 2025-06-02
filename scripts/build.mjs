@@ -45,6 +45,8 @@ const clientHtmlDest = path.join(rootDir, 'build/public/index.html')
     },
     alias: {
       react: 'react', // always use our own local react (jsx)
+      three: '@hyperfy-xyz/three',
+      'three/examples': '@hyperfy-xyz/three/examples',
     },
     plugins: [
       polyfillNode({}),
@@ -107,6 +109,10 @@ let spawn
     define: {
       'process.env.CLIENT': 'false',
       'process.env.SERVER': 'true',
+    },
+    alias: {
+      three: '@hyperfy-xyz/three',
+      'three/examples': '@hyperfy-xyz/three/examples',
     },
     plugins: [
       {

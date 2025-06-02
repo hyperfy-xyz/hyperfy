@@ -19,14 +19,14 @@ import {
 } from 'postprocessing'
 
 import { System } from './System'
-import { WebGLRenderer } from '../libs/WebGLRenderer'
+import { looseOctreeTraverse } from '../extras/LooseOctreeTraverse'
 
 const v1 = new THREE.Vector3()
 
 let renderer
 function getRenderer() {
   if (!renderer) {
-    renderer = new WebGLRenderer({
+    renderer = new THREE.WebGLRenderer({
       powerPreference: 'high-performance',
       antialias: false,
       // logarithmicDepthBuffer: true,
@@ -264,7 +264,7 @@ export class ClientGraphics extends System {
     const renderer = this.renderer
     const stats = {}
     const gl = this.renderer.getContext()
-    let frame = 0
+    let pass = 0
     let scene
     let camera
     let cameraPos = new THREE.Vector3()
@@ -274,7 +274,7 @@ export class ClientGraphics extends System {
     let currentRenderList
     let currentRenderState
     let projScreenMatrix = new THREE.Matrix4()
-    let opaque = []
+    let active = []
     const proxyMat = new THREE.MeshBasicMaterial({ colorWrite: false, depthWrite: false, depthTest: true })
     const occluderMat = new THREE.ShaderMaterial({
       vertexShader: `
@@ -314,8 +314,8 @@ export class ClientGraphics extends System {
       currentRenderList = _currentRenderList
       currentRenderState = _currentRenderState
       projScreenMatrix = _projScreenMatrix
-      frame++
-      opaque.length = 0
+      pass++
+      active.length = 0
       stats.nodes = 0
       stats.queries = 0
       stats.skipRenderSubtreeNoCount = 0
@@ -331,18 +331,24 @@ export class ClientGraphics extends System {
       renderer.clearDepth()
 
       // console.time('render')
-      for (const iMesh of opaque) {
+      for (const iMesh of active) {
         const size = iMesh.instanceMatrix.array.length / 16
         const count = iMesh._items.length
+        // if our iMesh isn't big enough, make it bigger
         if (size < count) {
           iMesh.resize(count)
         }
-        for (let i = 0; i < count; i++) {
-          iMesh.setMatrixAt(i, iMesh._items[i].matrix)
+        // if our items changed since last time, repopulate!
+        if (iMesh._changed) {
+          for (let i = 0; i < count; i++) {
+            iMesh.setMatrixAt(i, iMesh._items[i].matrix)
+          }
+          iMesh.count = count
+          iMesh.instanceMatrix.needsUpdate = true
+          // console.log(iMesh.material.defines)
+
+          iMesh._changed = false
         }
-        iMesh.count = count
-        iMesh.instanceMatrix.needsUpdate = true
-        // console.log(iMesh.material.defines)
         renderObject(iMesh)
 
         // for (const item of iMesh._items) {
@@ -368,19 +374,22 @@ export class ClientGraphics extends System {
       }
       // if node encapsulates frustum, render items without query (this node only) and recurse fresh
       if (node.outer.containsPoint(cameraPos)) {
+        node.oc.visible = true
         renderItems(node.items)
-        for (const child of sortNodes(node.children)) {
-          traverse(child)
-        }
+        looseOctreeTraverse(cameraPos, node, traverse)
+        // for (const child of sortNodes(node.children)) {
+        //   traverse(child)
+        // }
         return
       }
       // allow visible nodes to skip frames and reduce query workload
       if (node.oc.visible && node.oc.skips) {
         node.oc.skips--
         renderItems(node.items)
-        for (const child of sortNodes(node.children)) {
-          traverse(child)
-        }
+        looseOctreeTraverse(cameraPos, node, traverse)
+        // for (const child of sortNodes(node.children)) {
+        //   traverse(child)
+        // }
         return
       }
       // no pending queries? issue one!
@@ -420,9 +429,10 @@ export class ClientGraphics extends System {
       // render items
       renderItems(node.items)
       // continue traversal into children
-      for (const child of sortNodes(node.children)) {
-        traverse(child)
-      }
+      looseOctreeTraverse(cameraPos, node, traverse)
+      // for (const child of sortNodes(node.children)) {
+      //   traverse(child)
+      // }
     }
     function renderItems(items) {
       for (const item of items) {
@@ -470,7 +480,7 @@ export class ClientGraphics extends System {
       }
     }
     function initNode(node) {
-      const geometry = new THREE.BoxGeometry(node.size * 2, node.size * 2, node.size * 2)
+      const geometry = new THREE.BoxGeometry(node.size * 4, node.size * 4, node.size * 4) // outer
       const proxy = new THREE.Mesh(geometry, proxyMat)
       proxy.position.copy(node.center)
       proxy.matrixWorld.compose(proxy.position, proxy.quaternion, proxy.scale)
@@ -527,9 +537,9 @@ export class ClientGraphics extends System {
       return a.center.distanceToSquared(cameraPos) - b.center.distanceToSquared(cameraPos)
     }
     function renderItem(item) {
-      // don't render more than once per frame
-      if (item._frame === frame) return
-      item._frame = frame
+      // don't render more than once per pass
+      if (item._renderPass === pass) return
+      item._renderPass = pass
 
       const object = item._mesh
       if (object) {
@@ -553,20 +563,24 @@ export class ClientGraphics extends System {
         // collect instances to render later
         if (item._iMesh) {
           const iMesh = item._iMesh
-          if (iMesh._frame !== frame) {
-            iMesh._frame = frame
+          if (iMesh._pass !== pass) {
+            iMesh._pass = pass
+            iMesh._count = 0
             if (!iMesh._items) iMesh._items = []
-            iMesh._items.length = 0
-            opaque.push(iMesh)
+            active.push(iMesh)
           }
-          iMesh._items.push(item)
+          if (iMesh._items[iMesh._count] !== item) {
+            iMesh._items[iMesh._count] = item
+            iMesh._changed = true
+          }
+          iMesh._count++
         }
       }
     }
     function renderObject(object, depth = true) {
-      // // don't try to render more than once per frame (eg from query result changes)
-      // if (object._frame === frame) return
-      // object._frame = frame
+      // // don't try to render more than once per pass (eg from query result changes)
+      // if (object._frame === pass) return
+      // object._frame = pass
 
       if (!object.visible) return // for brevity, can probs remove?
       const visible = object.layers.test(camera.layers)
@@ -637,7 +651,7 @@ export class ClientGraphics extends System {
     const gl = this.renderer.getContext()
     const proxyMat = new THREE.MeshBasicMaterial({ colorWrite: false, depthWrite: false, depthTest: true })
     // this.world.setupMaterial(proxyMat)
-    const iMeshes = new Map() // model -> InstanceMesh
+    // const iMeshes = new Map() // model -> InstanceMesh
     const groups = new Map() // model -> group
     const active = []
     let pass = 0
@@ -682,38 +696,156 @@ export class ClientGraphics extends System {
       // gl.colorMask(false, false, false, false)
       // gl.depthMask(true)
       traverse(octree.root)
+
+      // if (globalThis.lol >= 0 && globalThis.lol < 3) {
+      //   const _projScreenMatrix = /*@__PURE__*/ new THREE.Matrix4()
+      //   const _lightPositionWorld = /*@__PURE__*/ new THREE.Vector3()
+      //   const _lookTarget = /*@__PURE__*/ new THREE.Vector3()
+      //   const shadowCamera = light.shadow.camera
+      //   const shadowMatrix = light.shadow.matrix
+
+      //   _lightPositionWorld.setFromMatrixPosition(light.matrixWorld)
+      //   shadowCamera.position.copy(_lightPositionWorld)
+
+      //   _lookTarget.setFromMatrixPosition(light.target.matrixWorld)
+      //   shadowCamera.lookAt(_lookTarget)
+      //   shadowCamera.updateMatrixWorld()
+
+      //   _projScreenMatrix.multiplyMatrices(shadowCamera.projectionMatrix, shadowCamera.matrixWorldInverse)
+      //   light.shadow._frustum.setFromProjectionMatrix(_projScreenMatrix)
+
+      //   shadowMatrix.set(0.5, 0.0, 0.0, 0.5, 0.0, 0.5, 0.0, 0.5, 0.0, 0.0, 0.5, 0.5, 0.0, 0.0, 0.0, 1.0)
+
+      //   shadowMatrix.multiply(_projScreenMatrix)
+
+      //   self.world.stage.scene.add(createFrustumWireframe(_projScreenMatrix))
+
+      //   frustum._bar = true
+
+      //   globalThis.lol++
+
+      //   console.log('LOL')
+      // }
+
       // console.timeEnd('sTraverse')
 
       // console.time('sRender')
       for (const group of active) {
-        let iMesh = iMeshes.get(group.model)
+        let iMesh = group.iMesh
         const size = iMesh ? iMesh.instanceMatrix.array.length / 16 : 0
         const count = group.items.length
+        // if our iMesh isn't big enough, create a bigger one
         if (size < count) {
           iMesh = new THREE.InstancedMesh(group.model.geometry, group.model.material.raw, count)
+          iMesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage)
           iMesh.castShadow = group.model.castShadow
           iMesh.receiveShadow = group.model.receiveShadow
           iMesh.matrixAutoUpdate = false
           iMesh.matrixWorldAutoUpdate = false
           iMesh.frustumCulled = false
-          iMeshes.set(group.model, iMesh)
+          group.iMesh = iMesh
         }
-        for (let i = 0; i < count; i++) {
-          iMesh.setMatrixAt(i, group.items[i].matrix)
+        // if our items changed since last time, repopulate and push to gpu!
+        if (group.changed) {
+          for (let i = 0; i < count; i++) {
+            iMesh.setMatrixAt(i, group.items[i].matrix)
+          }
+          iMesh.count = count
+          iMesh.instanceMatrix.needsUpdate = true
+
+          // HACK: threejs only allows pushing instanceMatrix changes to the GPU once per frame
+          // but since we build the instances manually on each pass (multiple per frame) we need to force push this to the GPU.
+          // this could be more efficient with a `renderer.pushAttribute()` or something that does it more directly.
+          // see: WebGLObjects
+          const currFrame = renderer.info.render.frame
+          renderer.info.render.frame = -1
+          objects.update(iMesh)
+          renderer.info.render.frame = currFrame
+
+          group.changed = false
         }
-        iMesh.count = count
-        iMesh.instanceMatrix.needsUpdate = true
-        // console.log(iMesh)
         renderObject(iMesh)
       }
       // console.timeEnd('sRender')
     }
+    // function check(node) {
+    //   if (frustum.intersectsBox(node.outer)) {
+    //     console.log('WTF')
+    //   }
+    //   for (const item of node.items) {
+    //     if (frustum.intersectsSphere(item.sphere)) {
+    //       console.log('WTF2')
+    //     }
+    //     // if (item.node?.id === 'Furnace_2') {
+    //     if (item.node?.id === 'Cube310') {
+    //       // console.log('OOF', item.sphere)
+    //       if (globalThis.foo && !node._foo) {
+    //         const size = node.outer.getSize(new THREE.Vector3())
+    //         const geometry = new THREE.BoxGeometry(size.x, size.y, size.z)
+    //         const center = node.outer.getCenter(new THREE.Vector3())
+    //         console.log(size.x, size.y, size.z, node.size * 4)
+    //         console.log(center.toArray(), node.center.toArray())
+
+    //         // const geometry = new THREE.BoxGeometry(node.size * 4, node.size * 4, node.size * 4) // outer
+    //         const color = '#' + Math.floor(Math.random() * 16777215).toString(16)
+    //         const material = new THREE.MeshBasicMaterial({ wireframe: true, color })
+    //         const mesh = new THREE.Mesh(geometry, material)
+    //         // mesh.position.copy(node.center)
+    //         mesh.position.copy(center)
+    //         // mesh.position.x += Math.random()
+    //         self.world.stage.scene.add(mesh)
+    //         console.log('ADDED')
+    //         node._foo = true
+
+    //         // const cam = new THREE.CameraHelper(light.shadow.camera)
+    //         // self.world.stage.scene.add(cam)
+
+    //         // const sp = new THREE.Mesh(new THREE.SphereGeometry(item.sphere.radius), new THREE.MeshBasicMaterial())
+    //         // sp.position.copy(item.sphere.center)
+    //         // self.world.stage.scene.add(sp)
+    //       }
+    //       if (globalThis.foo && !frustum._bar) {
+    //         const _projScreenMatrix = /*@__PURE__*/ new THREE.Matrix4()
+    //         const _lightPositionWorld = /*@__PURE__*/ new THREE.Vector3()
+    //         const _lookTarget = /*@__PURE__*/ new THREE.Vector3()
+    //         const shadowCamera = light.shadow.camera
+    //         const shadowMatrix = light.shadow.matrix
+
+    //         _lightPositionWorld.setFromMatrixPosition(light.matrixWorld)
+    //         shadowCamera.position.copy(_lightPositionWorld)
+
+    //         _lookTarget.setFromMatrixPosition(light.target.matrixWorld)
+    //         shadowCamera.lookAt(_lookTarget)
+    //         shadowCamera.updateMatrixWorld()
+
+    //         _projScreenMatrix.multiplyMatrices(shadowCamera.projectionMatrix, shadowCamera.matrixWorldInverse)
+    //         light.shadow._frustum.setFromProjectionMatrix(_projScreenMatrix)
+
+    //         shadowMatrix.set(0.5, 0.0, 0.0, 0.5, 0.0, 0.5, 0.0, 0.5, 0.0, 0.0, 0.5, 0.5, 0.0, 0.0, 0.0, 1.0)
+
+    //         shadowMatrix.multiply(_projScreenMatrix)
+
+    //         self.world.stage.scene.add(createFrustumWireframe(_projScreenMatrix))
+
+    //         frustum._bar = true
+
+    //         console.log('FRUST')
+    //       }
+    //     }
+    //   }
+    //   for (const child of node.children) {
+    //     check(child)
+    //   }
+    // }
     function traverse(node) {
       // if (!node.sc) {
       //   initNode(node)
       // }
       // if node is outside frustum, skip all descendants
+      // const expandedOuter = node.outer.clone().expandByScalar(30)
+      // if (!frustum.intersectsBox(expandedOuter)) {
       if (!frustum.intersectsBox(node.outer)) {
+        // check(node)
         return
       }
       // // if node encapsulates frustum, render items without query (this node only) and recurse fresh
@@ -765,13 +897,15 @@ export class ClientGraphics extends System {
       // render items
       renderItems(node.items)
       // continue traversal into children
-      for (const child of sortNodes(node.children)) {
-        traverse(child)
-      }
+      looseOctreeTraverse(shadowCameraPos, node, traverse)
+      // for (const child of sortNodes(node.children)) {
+      //   // for (const child of node.children) {
+      //   traverse(child)
+      // }
       // NOTE: if in frustum dont have to test all children or sort nodes just insta-render everything asap
     }
     function initNode(node) {
-      const geometry = new THREE.BoxGeometry(node.size * 2, node.size * 2, node.size * 2)
+      const geometry = new THREE.BoxGeometry(node.size * 4, node.size * 4, node.size * 4) // outer
       const proxy = new THREE.Mesh(geometry, proxyMat)
       proxy.position.copy(node.center)
       proxy.matrixWorld.compose(proxy.position, proxy.quaternion, proxy.scale)
@@ -841,34 +975,53 @@ export class ClientGraphics extends System {
       }
     }
     function renderItem(item) {
-      // if (item._shadowPass === pass) return
+      // if (item._shadowPass === pass) return console.log('DUPE')
       // item._shadowPass = pass
 
       // // NOTE: this render single mesh works fine but if we try to do the instanced mesh collection to reduce draws it does something weird af
       // renderObject(item._mesh)
       // return
 
+      // if (item.node?.id === 'Cube310') {
+      //   console.log('boop')
+      //   console.log(`Shadow pass ${pass}: rendering item`, item.node.id)
+      // }
+
       // collect instances to render later
       if (item.model) {
         let group = groups.get(item.model)
+        // no group yet? init and mark active
         if (!group) {
-          group = { model: item.model, items: [], pass }
+          group = { model: item.model, items: [], count: 0, pass }
           groups.set(item.model, group)
           active.push(group)
         }
+        // new pass? reset count and mark active
         if (group.pass !== pass) {
           group.pass = pass
-          group.items.length = 0
+          group.count = 0
           active.push(group)
         }
-        group.items.push(item)
+        // if next item is different, flag changed.
+        // this lets us know if we need to rebuild the entire instanceMatrix later.
+        if (group.items[group.count] !== item) {
+          group.items[group.count] = item
+          group.changed = true
+        }
+        // keep count
+        group.count++
       }
+
+      // if (item._mesh) {
+      //   renderObject(item._mesh)
+      // }
     }
     function renderObject(object) {
       // if (!object) return
-      if (object.visible === false) return
-      const visible = object.layers.test(camera.layers)
-      if (visible && (object.isMesh || object.isLine || object.isPoints)) {
+      // if (object.visible === false) return
+      // const visible = object.layers.test(camera.layers)
+      // if (visible && (object.isMesh || object.isLine || object.isPoints)) {
+      if (object.isMesh || object.isLine || object.isPoints) {
         if (object.castShadow || (object.receiveShadow && type === THREE.VSMShadowMap)) {
           object.modelViewMatrix.multiplyMatrices(shadowCamera.matrixWorldInverse, object.matrixWorld)
           const geometry = objects.update(object)
@@ -959,4 +1112,70 @@ class PriorityQueue {
       idx = smallest
     }
   }
+}
+
+/**
+ * Creates a THREE.LineSegments wireframe that visualizes the volume
+ * defined by the given projection‐view matrix (P·V).
+ *
+ * @param {THREE.Matrix4} projViewMatrix  – the same matrix you passed into frustum.setFromProjectionMatrix(...)
+ * @param {Number} color                  – (optional) line color, default = 0xffffff
+ * @returns {THREE.LineSegments}          – a LineSegments object you can add() to your scene
+ */
+function createFrustumWireframe(projViewMatrix, color = 0xffffff) {
+  // 1. Invert P·V so we can go from NDC → world space
+  const invPV = projViewMatrix.clone().invert()
+
+  // 2. Define the 8 corners in NDC (x,y,z) at {±1,±1,±1}
+  const ndcCorners = [
+    new THREE.Vector3(-1, -1, -1), // near‐bottom‐left
+    new THREE.Vector3(+1, -1, -1), // near‐bottom‐right
+    new THREE.Vector3(+1, +1, -1), // near‐top‐right
+    new THREE.Vector3(-1, +1, -1), // near‐top‐left
+    new THREE.Vector3(-1, -1, +1), // far‐bottom‐left
+    new THREE.Vector3(+1, -1, +1), // far‐bottom‐right
+    new THREE.Vector3(+1, +1, +1), // far‐top‐right
+    new THREE.Vector3(-1, +1, +1), // far‐top‐left
+  ]
+
+  // 3. Unproject each NDC corner into world‐space
+  const worldCorners = ndcCorners.map(c => c.clone().applyMatrix4(invPV))
+
+  // 4. Specify which pairs of corners form the 12 edges of the frustum
+  const edgeIndices = [
+    // near‐plane rectangle
+    [0, 1],
+    [1, 2],
+    [2, 3],
+    [3, 0],
+    // far‐plane rectangle
+    [4, 5],
+    [5, 6],
+    [6, 7],
+    [7, 4],
+    // spokes from near to far
+    [0, 4],
+    [1, 5],
+    [2, 6],
+    [3, 7],
+  ]
+
+  // 5. Build a BufferGeometry of line segments
+  const geometry = new THREE.BufferGeometry()
+  const posArray = []
+  for (let [i, j] of edgeIndices) {
+    posArray.push(
+      worldCorners[i].x,
+      worldCorners[i].y,
+      worldCorners[i].z,
+      worldCorners[j].x,
+      worldCorners[j].y,
+      worldCorners[j].z
+    )
+  }
+  geometry.setAttribute('position', new THREE.Float32BufferAttribute(posArray, 3))
+
+  // 6. Create a simple LineBasicMaterial and return the LineSegments
+  const mat = new THREE.LineBasicMaterial({ color })
+  return new THREE.LineSegments(geometry, mat)
 }
