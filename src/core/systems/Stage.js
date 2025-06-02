@@ -275,6 +275,7 @@ class Model {
 
     // new: used after occlusion culling to construct visible instances
     this._iMesh = new THREE.InstancedMesh(this.geometry, this.material.raw, 10)
+    this._iMesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage)
     this._iMesh.castShadow = this.castShadow
     this._iMesh.receiveShadow = this.receiveShadow
     this._iMesh.matrixAutoUpdate = false

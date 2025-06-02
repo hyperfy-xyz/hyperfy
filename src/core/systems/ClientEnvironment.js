@@ -3,6 +3,7 @@ import * as THREE from '../extras/three'
 import { System } from './System'
 
 import { CSM } from '../libs/csm/CSM'
+// import { CSM } from '@hyperfy-xyz/three/examples/jsm/csm/CSM.js'
 import { isNumber, isString } from 'lodash-es'
 
 const csmLevels = {
@@ -187,19 +188,21 @@ export class ClientEnvironment extends System {
     }
   }
 
-  update(delta) {
-    this.csm.update()
-  }
+  // update(delta) {}
 
   lateUpdate(delta) {
     this.sky.position.x = this.world.rig.position.x
     this.sky.position.z = this.world.rig.position.z
     this.sky.matrixWorld.setPosition(this.sky.position)
     // this.sky.matrixWorld.copyPosition(this.world.rig.matrixWorld)
+
+    this.csm.update()
+    this.csmHelper?.update()
   }
 
   buildCSM() {
     const options = csmLevels[this.world.prefs.shadows]
+    console.log('buildCSM', options)
     if (this.csm) {
       this.csm.updateCascades(options.cascades)
       this.csm.updateShadowMapSize(options.shadowMapSize)
@@ -247,6 +250,8 @@ export class ClientEnvironment extends System {
         }
       }
     }
+    // this.csmHelper = new CSM.Helper(this.csm)
+    // this.world.stage.scene.add(this.csmHelper)
   }
 
   onSettingsChange = changes => {

@@ -39,9 +39,10 @@ const viewerBuildDir = path.join(rootDir, 'build/viewer')
     //   '.js': 'jsx',
     // },
     external: ['three'],
-    // alias: {
-    //   react: 'react', // always use our own local react (jsx)
-    // },
+    alias: {
+      // react: 'react', // always use our own local react (jsx)
+      three: '@hyperfy-xyz/three',
+    },
     plugins: [polyfillNode({})],
   })
   if (dev) {

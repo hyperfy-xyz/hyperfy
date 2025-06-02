@@ -38,9 +38,10 @@ const buildDirectory = path.join(rootDir, 'build')
       '.js': 'jsx',
     },
     external: ['three', 'react', 'react-dom', 'ses'],
-    // alias: {
-    //   react: 'react', // always use our own local react (jsx)
-    // },
+    alias: {
+      // react: 'react', // always use our own local react (jsx)
+      three: '@hyperfy-xyz/three',
+    },
     plugins: [polyfillNode({})],
   })
   if (dev) {

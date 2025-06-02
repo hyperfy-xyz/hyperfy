@@ -341,9 +341,9 @@ class CSMHelper extends three.Group {
     const cascadeLines = this.cascadeLines
     const cascadePlanes = this.cascadePlanes
     const shadowLines = this.shadowLines
-    this.position.copy(camera.position)
-    this.quaternion.copy(camera.quaternion)
-    this.scale.copy(camera.scale)
+    this.position.setFromMatrixPosition(camera.matrixWorld)
+    this.quaternion.setFromRotationMatrix(camera.matrixWorld)
+    this.scale.setFromMatrixScale(camera.matrixWorld)
     this.updateMatrixWorld(true)
     while (cascadeLines.length > cascades) {
       this.remove(cascadeLines.pop())
@@ -762,6 +762,119 @@ export class CSM {
         light.shadow.map = null
       }
     }
+  }
+  showFrustums() {
+    // Create a group to hold all frustum visualizations
+    const frustumGroup = new three.Group()
+    frustumGroup.name = 'CSM_Frustum_Visualization'
+
+    // Remove any existing frustum visualization
+    const existing = this.parent.getObjectByName('CSM_Frustum_Visualization')
+    if (existing) {
+      this.parent.remove(existing)
+    }
+
+    // Colors for different cascade levels
+    const cascadeColors = [
+      0xff0000, // Red
+      0x00ff00, // Green
+      0x0000ff, // Blue
+      0xffff00, // Yellow
+      0xff00ff, // Magenta
+      0x00ffff, // Cyan
+      0xffa500, // Orange
+      0x800080, // Purple
+    ]
+
+    // Create line geometry for frustum wireframe
+    const createFrustumLines = (frustum, color) => {
+      const indices = new Uint16Array([
+        // Near face
+        0, 1, 1, 2, 2, 3, 3, 0,
+        // Far face
+        4, 5, 5, 6, 6, 7, 7, 4,
+        // Connecting lines
+        0, 4, 1, 5, 2, 6, 3, 7,
+      ])
+
+      const positions = new Float32Array(24) // 8 vertices * 3 components
+      const geometry = new three.BufferGeometry()
+
+      // Set near vertices (0-3)
+      for (let i = 0; i < 4; i++) {
+        const vertex = frustum.vertices.near[i]
+        positions[i * 3] = vertex.x
+        positions[i * 3 + 1] = vertex.y
+        positions[i * 3 + 2] = vertex.z
+      }
+
+      // Set far vertices (4-7)
+      for (let i = 0; i < 4; i++) {
+        const vertex = frustum.vertices.far[i]
+        positions[(i + 4) * 3] = vertex.x
+        positions[(i + 4) * 3 + 1] = vertex.y
+        positions[(i + 4) * 3 + 2] = vertex.z
+      }
+
+      geometry.setIndex(new three.BufferAttribute(indices, 1))
+      geometry.setAttribute('position', new three.BufferAttribute(positions, 3))
+
+      const material = new three.LineBasicMaterial({
+        color: color,
+        transparent: true,
+        opacity: 0.8,
+      })
+
+      return new three.LineSegments(geometry, material)
+    }
+
+    // Create frustum visualization for each cascade
+    for (let i = 0; i < this.frustums.length; i++) {
+      const frustum = this.frustums[i]
+      const color = cascadeColors[i % cascadeColors.length]
+
+      // Transform frustum to world space
+      const worldSpaceFrustum = new CSMFrustum()
+      frustum.toSpace(this.camera.matrixWorld, worldSpaceFrustum)
+
+      const lines = createFrustumLines(worldSpaceFrustum, color)
+      lines.name = `CSM_Cascade_${i}`
+
+      frustumGroup.add(lines)
+
+      // Optional: Add a text label for each cascade
+      // if (typeof three.TextGeometry !== 'undefined') {
+      //   // Only add text if TextGeometry is available
+      //   try {
+      //     const textGeometry = new three.TextGeometry(`C${i}`, {
+      //       font: null, // You'd need to load a font
+      //       size: 5,
+      //       height: 0.1,
+      //     })
+      //     const textMaterial = new three.MeshBasicMaterial({ color: color })
+      //     const textMesh = new three.Mesh(textGeometry, textMaterial)
+
+      //     // Position text at center of far plane
+      //     const center = new three.Vector3()
+      //     for (const vertex of worldSpaceFrustum.vertices.far) {
+      //       center.add(vertex)
+      //     }
+      //     center.divideScalar(4)
+      //     textMesh.position.copy(center)
+
+      //     frustumGroup.add(textMesh)
+      //   } catch (e) {
+      //     // Font not loaded, skip text labels
+      //   }
+      // }
+    }
+
+    // Add the complete visualization to the parent
+    this.parent.add(frustumGroup)
+
+    console.log(`CSM: Created frustum visualization with ${this.frustums.length} cascades`)
+
+    return frustumGroup
   }
   dispose() {
     this.shaders.forEach(function (shader, material) {
