@@ -23,6 +23,7 @@ export class LooseOctree {
   insert(item) {
     if (!item.sphere) item.sphere = new THREE.Sphere()
     if (!item.geometry.boundingSphere) item.geometry.computeBoundingSphere()
+    if (!item.move) item.move = 0
     item.sphere.copy(item.geometry.boundingSphere).applyMatrix4(item.matrix)
     if (item.sphere.radius < MIN_RADIUS) item.sphere.radius = MIN_RADIUS // prevent huge subdivisions
     let added = this.root.insert(item)
@@ -40,6 +41,8 @@ export class LooseOctree {
       // console.error('octree item move called but there is no _node')
       return
     }
+    // mark moved for render/batch pipeline
+    item.move++
     // update bounding sphere
     item.sphere.copy(item.geometry.boundingSphere).applyMatrix4(item.matrix)
     // if it still fits inside its current node that's cool

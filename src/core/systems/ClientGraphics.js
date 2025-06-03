@@ -15,16 +15,17 @@ import {
 } from 'postprocessing'
 
 import { System } from './System'
-import { looseOctreeTraverse } from '../extras/LooseOctreeTraverse'
+import { looseOctreeTraverse } from '../extras/looseOctreeTraverse'
 
 const v1 = new THREE.Vector3()
+const v2 = new THREE.Vector3()
 
 let renderer
 function getRenderer() {
   if (!renderer) {
     renderer = new THREE.WebGLRenderer({
       powerPreference: 'high-performance',
-      antialias: false,
+      antialias: true,
       // logarithmicDepthBuffer: true,
       // reverseDepthBuffer: true,
     })
@@ -75,35 +76,36 @@ export class ClientGraphics extends System {
     })
     this.renderPass = new RenderPass(this.world.stage.scene, this.world.camera)
     this.composer.addPass(this.renderPass)
-    // this.bloom = new BloomEffect({
-    //   blendFunction: BlendFunction.ADD,
-    //   mipmapBlur: true,
-    //   luminanceThreshold: 1,
-    //   intensity: 0.5,
-    //   radius: 0.8,
-    // })
-    this.bloom = new SelectiveBloomEffect(this.world.stage.scene, this.world.camera, {
+    this.bloom = new BloomEffect({
       blendFunction: BlendFunction.ADD,
       mipmapBlur: true,
       luminanceThreshold: 1,
-      luminanceSmoothing: 0.3,
       intensity: 0.5,
       radius: 0.8,
     })
-    this.bloom.inverted = true
-    this.bloom.selection.layer = 14 // NO_BLOOM layer
-    this.bloomPass = new EffectPass(this.world.camera, this.bloom)
-    this.bloomPass.enabled = this.world.prefs.bloom
-    this.composer.addPass(this.bloomPass)
-    this.effectPass = new EffectPass(
-      this.world.camera,
-      new SMAAEffect({
-        preset: SMAAPreset.HIGH,
-      }),
-      new ToneMappingEffect({
-        mode: ToneMappingMode.ACES_FILMIC,
-      })
-    )
+    this.bloomEnabled = this.world.prefs.bloom
+    // this.bloom = new SelectiveBloomEffect(this.world.stage.scene, this.world.camera, {
+    //   blendFunction: BlendFunction.ADD,
+    //   mipmapBlur: true,
+    //   luminanceThreshold: 1,
+    //   luminanceSmoothing: 0.3,
+    //   intensity: 0.5,
+    //   radius: 0.8,
+    // })
+    // this.bloom.inverted = true
+    // this.bloom.selection.layer = 14 // NO_BLOOM layer
+    // this.bloomPass = new EffectPass(this.world.camera, this.bloom)
+    // this.bloomPass.enabled = this.world.prefs.bloom
+    // this.composer.addPass(this.bloomPass)
+    this.smaa = new SMAAEffect({
+      preset: SMAAPreset.HIGH,
+    })
+    this.tonemapping = new ToneMappingEffect({
+      mode: ToneMappingMode.ACES_FILMIC,
+    })
+    this.effectPass = new EffectPass(this.world.camera)
+    this.updatePostProcessingEffects()
+    // this.effectPass.setEffects([this.bloom, this.smaa, this.tonemapping])
     this.composer.addPass(this.effectPass)
     this.world.prefs.on('change', this.onPrefsChange)
     this.resizer = new ResizeObserver(() => {
@@ -169,7 +171,8 @@ export class ClientGraphics extends System {
     }
     // bloom
     if (changes.bloom) {
-      this.bloomPass.enabled = changes.bloom.value
+      this.bloomEnabled = changes.bloom.value
+      this.updatePostProcessingEffects()
     }
   }
 
@@ -185,6 +188,17 @@ export class ClientGraphics extends System {
       this.xrHeight = null
       this.xrDimensionsNeeded = false
     }
+  }
+
+  updatePostProcessingEffects() {
+    const effects = []
+    if (this.bloomEnabled) {
+      effects.push(this.bloom)
+    }
+    effects.push(this.smaa)
+    effects.push(this.tonemapping)
+    this.effectPass.setEffects(effects)
+    this.effectPass.recompile()
   }
 
   checkXRDimensions = () => {
@@ -228,6 +242,7 @@ export class ClientGraphics extends System {
     const renderer = this.renderer
     const stats = {}
     const gl = this.renderer.getContext()
+    const batches = new Map() // renderable -> batch { renderable, items, count, pass } { imesh }
     let pass = 0
     let scene
     let camera
@@ -295,25 +310,47 @@ export class ClientGraphics extends System {
       renderer.clearDepth()
 
       // console.time('render')
-      for (const iMesh of active) {
-        const size = iMesh.instanceMatrix.array.length / 16
-        const count = iMesh._items.length
-        // if our iMesh isn't big enough, make it bigger
-        if (size < count) {
-          iMesh.resize(count)
+      for (const batch of active) {
+        // single objects
+        if (batch.count === 1) {
+          const mesh = batch.renderable.mesh
+          mesh.matrixWorld.copy(batch.items[0].matrix)
+          renderObject(mesh)
         }
-        // if our items changed since last time, repopulate!
-        if (iMesh._changed) {
-          for (let i = 0; i < count; i++) {
-            iMesh.setMatrixAt(i, iMesh._items[i].matrix)
+        // instanced objects
+        else {
+          let imesh = batch.imesh
+          const size = imesh ? imesh.instanceMatrix.array.length / 16 : -1
+          const count = batch.count
+          // if imesh isn't big enough, make it bigger
+          if (size < count) {
+            if (!imesh) {
+              const mesh = batch.renderable.mesh
+              imesh = new THREE.InstancedMesh(mesh.geometry, mesh.material, count)
+              imesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage)
+              imesh.castShadow = mesh.castShadow
+              imesh.receiveShadow = mesh.receiveShadow
+              imesh.matrixAutoUpdate = false
+              imesh.matrixWorldAutoUpdate = false
+              imesh.frustumCulled = false
+              batch.imesh = imesh
+            } else {
+              imesh.resize(count)
+            }
+            batch.changed = true
           }
-          iMesh.count = count
-          iMesh.instanceMatrix.needsUpdate = true
-          // console.log(iMesh.material.defines)
-
-          iMesh._changed = false
+          // if items changed since last time, repopulate!
+          if (batch.changed) {
+            for (let i = 0; i < count; i++) {
+              imesh.setMatrixAt(i, batch.items[i].matrix)
+            }
+            imesh.count = count
+            imesh.instanceMatrix.needsUpdate = true
+            //
+            batch.changed = false
+          }
+          renderObject(imesh)
         }
-        renderObject(iMesh)
 
         // for (const item of iMesh._items) {
         //   renderObject(item._mesh)
@@ -505,50 +542,76 @@ export class ClientGraphics extends System {
       if (item._renderPass === pass) return
       item._renderPass = pass
 
-      const object = item._mesh
-      if (object) {
-        object.matrixWorld.copy(item.matrix)
+      // const object = item._mesh
+      // if (object) {
+      //   object.matrixWorld.copy(item.matrix)
 
-        // render depth immediately
-        const geometry = objects.update(object)
-        if (isOccluderSized(object, geometry)) {
+      //   // render depth immediately
+      //   const geometry = objects.update(object)
+      //   if (isOccluder(object, geometry)) {
+      //     stats.occluders++
+      //     object.modelViewMatrix.multiplyMatrices(camera.matrixWorldInverse, object.matrixWorld)
+      //     renderer.renderBufferDirect(
+      //       camera,
+      //       null, // scene (null for direct rendering)
+      //       geometry,
+      //       occluderMat,
+      //       object,
+      //       null // group
+      //     )
+      //   }
+      // }
+
+      const renderable = item.renderable
+      if (renderable) {
+        // check if we should render depth as an occluder
+        const mesh = renderable.mesh
+        mesh.matrixWorld.copy(item.matrix)
+        if (isOccluder(mesh)) {
+          const geometry = objects.update(mesh)
           stats.occluders++
-          object.modelViewMatrix.multiplyMatrices(camera.matrixWorldInverse, object.matrixWorld)
+          mesh.modelViewMatrix.multiplyMatrices(camera.matrixWorldInverse, mesh.matrixWorld)
           renderer.renderBufferDirect(
             camera,
             null, // scene (null for direct rendering)
             geometry,
             occluderMat,
-            object,
+            mesh,
             null // group
           )
         }
 
-        // collect instances to render later
-        if (item._iMesh) {
-          const iMesh = item._iMesh
-          if (iMesh._pass !== pass) {
-            iMesh._pass = pass
-            iMesh._count = 0
-            if (!iMesh._items) iMesh._items = []
-            active.push(iMesh)
-          }
-          if (iMesh._items[iMesh._count] !== item) {
-            iMesh._items[iMesh._count] = item
-            iMesh._changed = true
-          }
-          iMesh._count++
+        // collect items in batches to render later
+        let batch = batches.get(renderable)
+        if (!batch) {
+          batch = { renderable, items: [], count: 0, pass }
+          batches.set(renderable, batch)
+          active.push(batch)
         }
+        if (batch.pass !== pass) {
+          batch.pass = pass
+          batch.count = 0
+          active.push(batch)
+        }
+        if (batch.items[batch.count] !== item) {
+          batch.items[batch.count] = item
+          batch.changed = true
+        }
+        if (item.move !== item._renderMove) {
+          item._renderMove = item.move
+          batch.changed = true
+        }
+        batch.count++
       }
     }
-    function renderObject(object, depth = true) {
+    function renderObject(object) {
       // // don't try to render more than once per pass (eg from query result changes)
-      // if (object._frame === pass) return
-      // object._frame = pass
+      // if (object._renderPass === pass) return
+      // object._renderPass = pass
 
-      if (!object.visible) return // for brevity, can probs remove?
-      const visible = object.layers.test(camera.layers)
-      if (!visible) return // for brevity, can probs remove?
+      // if (!object.visible) return // for brevity, can probs remove?
+      // const visible = object.layers.test(camera.layers)
+      // if (!visible) return // for brevity, can probs remove?
 
       if (object.isMesh || object.isLine || object.isPoints) {
         stats.draws++
@@ -556,8 +619,8 @@ export class ClientGraphics extends System {
         const material = object.material
         // object.modelViewMatrix.multiplyMatrices(camera.matrixWorldInverse, object.matrixWorld)
 
-        // TODO: do we even need this sortObjects fluff? whats it for
-        if (/*sortObjects*/ false) {
+        // transparent objects need to be ordered back to front
+        if (sortObjects && material.transparent) {
           if (object.boundingSphere !== undefined) {
             if (object.boundingSphere === null) object.computeBoundingSphere()
             vec4.copy(object.boundingSphere.center)
@@ -584,22 +647,24 @@ export class ClientGraphics extends System {
         }
       }
     }
-    function isOccluderSized(object, geometry) {
+    function isOccluder(mesh) {
+      if (mesh.material.transparent) return false
+
       // Get bounding sphere - prefer object's cached one
-      let boundingSphere = object.boundingSphere
+      let boundingSphere = mesh.boundingSphere
       if (!boundingSphere) {
-        if (!geometry.boundingSphere) {
-          geometry.computeBoundingSphere()
+        if (!mesh.geometry.boundingSphere) {
+          mesh.geometry.computeBoundingSphere()
         }
-        boundingSphere = geometry.boundingSphere
+        boundingSphere = mesh.geometry.boundingSphere
       }
       if (!boundingSphere) return false
       // Transform bounding sphere center to world space
-      const worldCenter = v1.copy(boundingSphere.center).applyMatrix4(object.matrixWorld)
-      // Calculate distance from camera to object
+      const worldCenter = v1.copy(boundingSphere.center).applyMatrix4(mesh.matrixWorld)
+      // Calculate distance from camera to mesh
       const distance = cameraPos.distanceTo(worldCenter)
-      // Get the world-space radius (accounting for object scaling)
-      const worldRadius = boundingSphere.radius * object.scale.length() // rough approximation
+      // Get the world-space radius (accounting for mesh scaling)
+      const worldRadius = boundingSphere.radius * v2.setFromMatrixScale(mesh.matrixWorld).length() // rough approximation
       // Calculate projected size in pixels
       const fovRadians = camera.fov * (Math.PI / 180)
       const projectedRadius = (worldRadius / distance) * (1 / Math.tan(fovRadians / 2)) * (self.height / 2)
@@ -616,7 +681,7 @@ export class ClientGraphics extends System {
     const proxyMat = new THREE.MeshBasicMaterial({ colorWrite: false, depthWrite: false, depthTest: true })
     // this.world.setupMaterial(proxyMat)
     // const iMeshes = new Map() // model -> InstanceMesh
-    const groups = new Map() // model -> group
+    const batches = new Map() // renderable -> batch { renderable, items, count, pass } { imesh }
     const active = []
     let pass = 0
     let scene
@@ -694,41 +759,42 @@ export class ClientGraphics extends System {
       // console.timeEnd('sTraverse')
 
       // console.time('sRender')
-      for (const group of active) {
-        let iMesh = group.iMesh
-        const size = iMesh ? iMesh.instanceMatrix.array.length / 16 : 0
-        const count = group.items.length
-        // if our iMesh isn't big enough, create a bigger one
+      for (const batch of active) {
+        let imesh = batch.imesh
+        const size = imesh ? imesh.instanceMatrix.array.length / 16 : 0
+        const count = batch.count
+        // if imesh isn't big enough, create a bigger one
         if (size < count) {
-          iMesh = new THREE.InstancedMesh(group.model.geometry, group.model.material.raw, count)
-          iMesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage)
-          iMesh.castShadow = group.model.castShadow
-          iMesh.receiveShadow = group.model.receiveShadow
-          iMesh.matrixAutoUpdate = false
-          iMesh.matrixWorldAutoUpdate = false
-          iMesh.frustumCulled = false
-          group.iMesh = iMesh
+          const mesh = batch.renderable.mesh
+          imesh = new THREE.InstancedMesh(mesh.geometry, mesh.material, count)
+          imesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage)
+          imesh.castShadow = mesh.castShadow
+          imesh.receiveShadow = mesh.receiveShadow
+          imesh.matrixAutoUpdate = false
+          imesh.matrixWorldAutoUpdate = false
+          imesh.frustumCulled = false
+          batch.imesh = imesh
+          batch.changed = true
         }
-        // if our items changed since last time, repopulate and push to gpu!
-        if (group.changed) {
+        // if items changed since last time, repopulate and push to gpu!
+        if (batch.changed) {
           for (let i = 0; i < count; i++) {
-            iMesh.setMatrixAt(i, group.items[i].matrix)
+            imesh.setMatrixAt(i, batch.items[i].matrix)
           }
-          iMesh.count = count
-          iMesh.instanceMatrix.needsUpdate = true
-
+          imesh.count = count
+          imesh.instanceMatrix.needsUpdate = true
           // HACK: threejs only allows pushing instanceMatrix changes to the GPU once per frame
           // but since we build the instances manually on each pass (multiple per frame) we need to force push this to the GPU.
           // this could be more efficient with a `renderer.pushAttribute()` or something that does it more directly.
           // see: WebGLObjects
           const currFrame = renderer.info.render.frame
           renderer.info.render.frame = -1
-          objects.update(iMesh)
+          objects.update(imesh)
           renderer.info.render.frame = currFrame
-
-          group.changed = false
+          //
+          batch.changed = false
         }
-        renderObject(iMesh)
+        renderObject(imesh)
       }
       // console.timeEnd('sRender')
     }
@@ -952,28 +1018,34 @@ export class ClientGraphics extends System {
       // }
 
       // collect instances to render later
-      if (item.model) {
-        let group = groups.get(item.model)
-        // no group yet? init and mark active
-        if (!group) {
-          group = { model: item.model, items: [], count: 0, pass }
-          groups.set(item.model, group)
-          active.push(group)
+      const renderable = item.renderable
+      if (renderable) {
+        let batch = batches.get(renderable)
+        // no batch yet? init and mark active
+        if (!batch) {
+          batch = { renderable, items: [], count: 0, pass }
+          batches.set(renderable, batch)
+          active.push(batch)
         }
         // new pass? reset count and mark active
-        if (group.pass !== pass) {
-          group.pass = pass
-          group.count = 0
-          active.push(group)
+        if (batch.pass !== pass) {
+          batch.pass = pass
+          batch.count = 0
+          active.push(batch)
         }
         // if next item is different, flag changed.
         // this lets us know if we need to rebuild the entire instanceMatrix later.
-        if (group.items[group.count] !== item) {
-          group.items[group.count] = item
-          group.changed = true
+        if (batch.items[batch.count] !== item) {
+          batch.items[batch.count] = item
+          batch.changed = true
+        }
+        // track moved items
+        if (item.move !== item._shadowMove) {
+          item._shadowMove = item.move
+          batch.changed = true
         }
         // keep count
-        group.count++
+        batch.count++
       }
 
       // if (item._mesh) {

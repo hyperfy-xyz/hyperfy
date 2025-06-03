@@ -73,8 +73,8 @@ export class Image extends Node {
       return
     }
     if (didMove) {
-      if (this.mesh) {
-        this.mesh.matrixWorld.copy(this.matrixWorld)
+      if (this.sItem) {
+        this.ctx.world.stage.octree.move(this.sItem)
       }
     }
   }
@@ -223,13 +223,16 @@ export class Image extends Node {
     this.mesh.matrixWorld.copy(this.matrixWorld)
     this.mesh.matrixAutoUpdate = false
     this.mesh.matrixWorldAutoUpdate = false
-    this.ctx.world.stage.scene.add(this.mesh)
+    // this.ctx.world.stage.scene.add(this.mesh)
     this.sItem = {
       matrix: this.matrixWorld,
       geometry,
       material,
       getEntity: () => this.ctx.entity,
       node: this,
+      renderable: {
+        mesh: this.mesh,
+      },
     }
     this.ctx.world.stage.octree.insert(this.sItem)
   }
@@ -237,7 +240,7 @@ export class Image extends Node {
   unbuild() {
     this.n++
     if (this.mesh) {
-      this.ctx.world.stage.scene.remove(this.mesh)
+      // this.ctx.world.stage.scene.remove(this.mesh)
       this.mesh.material.dispose()
       this.mesh.geometry.dispose()
       this.mesh = null
