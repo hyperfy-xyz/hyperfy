@@ -100,7 +100,6 @@ export class Stage extends System {
         mesh,
       },
     }
-    // this.scene.add(mesh)
     this.octree.insert(sItem)
     return {
       material: material.proxy,
@@ -109,7 +108,6 @@ export class Stage extends System {
         this.octree.move(sItem)
       },
       destroy: () => {
-        // this.scene.remove(mesh)
         this.octree.remove(sItem)
       },
     }
@@ -276,34 +274,13 @@ class Model {
     this.renderable = {
       mesh,
     }
-
-    // this.iMesh = new THREE.InstancedMesh(this.geometry, this.material.raw, 10)
-    // // this.iMesh.name = this.mesh.name
-    // this.iMesh.castShadow = this.castShadow
-    // this.iMesh.receiveShadow = this.receiveShadow
-    // this.iMesh.matrixAutoUpdate = false
-    // this.iMesh.matrixWorldAutoUpdate = false
-    // this.iMesh.frustumCulled = false
-    // this.iMesh.getEntity = this.getEntity.bind(this)
-    // this.items = [] // { matrix, node }
-    // this.dirty = true
   }
 
   create(node, matrix) {
-    // const item = {
-    //   idx: this.items.length,
-    //   node,
-    //   matrix,
-    //   // octree
-    // }
-    // this.items.push(item)
-    // this.iMesh.setMatrixAt(item.idx, item.matrix) // silently fails if too small, gets increased in clean()
-    // this.dirty = true
     const sItem = {
       matrix,
       geometry: this.geometry,
       material: this.material.raw,
-      // getEntity: () => this.items[item.idx]?.node.ctx.entity,
       getEntity: () => node.ctx.entity,
       node,
       renderable: this.renderable,
@@ -312,68 +289,13 @@ class Model {
     return {
       material: this.material.proxy,
       move: matrix => {
-        // this.move(item, matrix)
         this.stage.octree.move(sItem)
       },
       destroy: () => {
-        // this.destroy(item)
         this.stage.octree.remove(sItem)
       },
     }
   }
-
-  // move(item, matrix) {
-  //   item.matrix.copy(matrix)
-  //   this.iMesh.setMatrixAt(item.idx, matrix)
-  //   this.dirty = true
-  // }
-
-  // destroy(item) {
-  //   const last = this.items[this.items.length - 1]
-  //   const isOnly = this.items.length === 1
-  //   const isLast = item === last
-  //   if (isOnly) {
-  //     this.items = []
-  //     this.dirty = true
-  //   } else if (isLast) {
-  //     // this is the last instance in the buffer, pop it off the end
-  //     this.items.pop()
-  //     this.dirty = true
-  //   } else {
-  //     // there are other instances after this one in the buffer, swap it with the last one and pop it off the end
-  //     this.iMesh.setMatrixAt(item.idx, last.matrix)
-  //     last.idx = item.idx
-  //     this.items[item.idx] = last
-  //     this.items.pop()
-  //     this.dirty = true
-  //   }
-  // }
-
-  // clean() {
-  //   if (!this.dirty) return
-  //   const size = this.iMesh.instanceMatrix.array.length / 16
-  //   const count = this.items.length
-  //   if (size < this.items.length) {
-  //     const newSize = count + 100
-  //     // console.log('increase', this.mesh.name, 'from', size, 'to', newSize)
-  //     this.iMesh.resize(newSize)
-  //     for (let i = size; i < count; i++) {
-  //       this.iMesh.setMatrixAt(i, this.items[i].matrix)
-  //     }
-  //   }
-  //   this.iMesh.count = count
-  //   if (this.iMesh.parent && !count) {
-  //     // this.stage.scene.remove(this.iMesh)
-  //     this.dirty = false
-  //     return
-  //   }
-  //   if (!this.iMesh.parent && count) {
-  //     // this.stage.scene.add(this.iMesh)
-  //   }
-  //   this.iMesh.instanceMatrix.needsUpdate = true
-  //   // this.iMesh.computeBoundingSphere()
-  //   this.dirty = false
-  // }
 
   getEntity(instanceId) {
     console.warn('TODO: remove if you dont ever see this')
