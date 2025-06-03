@@ -386,12 +386,13 @@ export class ClientGraphics extends System {
             }
             batch.changed = true
           }
+          // count can shrink without batch change
+          imesh.count = count
           // if items changed since last time, repopulate!
           if (batch.changed) {
             for (let i = 0; i < count; i++) {
               imesh.setMatrixAt(i, batch.items[i].matrix)
             }
-            imesh.count = count
             imesh.instanceMatrix.needsUpdate = true
             //
             batch.changed = false
@@ -823,12 +824,13 @@ export class ClientGraphics extends System {
           batch.imesh = imesh
           batch.changed = true
         }
+        // count can shrink without batch change
+        imesh.count = count
         // if items changed since last time, repopulate and push to gpu!
         if (batch.changed) {
           for (let i = 0; i < count; i++) {
             imesh.setMatrixAt(i, batch.items[i].matrix)
           }
-          imesh.count = count
           imesh.instanceMatrix.needsUpdate = true
           // HACK: threejs only allows pushing instanceMatrix changes to the GPU once per frame
           // but since we build the instances manually on each pass (multiple per frame) we need to force push this to the GPU.
