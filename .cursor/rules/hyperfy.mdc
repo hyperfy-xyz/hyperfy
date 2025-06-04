@@ -1,0 +1,912 @@
+---
+description: # Developer Style and Syntax Ruleset
+globs: *.js
+alwaysApply: true
+---
+## 1. Project Structure
+- **Modular Organization**: Code is organized into clear directories (`src/core`, `src/client`, `src/server`)
+- **Separation of Concerns**: Clear separation between client, server, and core shared functionality
+- **System-based Architecture**: Uses a component/system architecture pattern similar to ECS (Entity Component System)
+- **Asset Management**: Organized asset management with hashing and caching for immutability
+- **Core/Client/Server Split**: Clear separation between shared code (core), client-specific, and server-specific functionality
+- **Utility Separation**: Utilities are split based on environment (utils.js, utils-client.js, utils-server.js)
+- **Bootstrap Process**: Clear bootstrapping process for both client and server
+- **Multi-layered Architecture**: Hierarchical organization with World → Systems → Entities → Nodes
+- **Component Registration**: Components are registered with the world at initialization time
+
+## 2. JavaScript Style
+- **Modern JavaScript**: Uses ES6+ features extensively
+  - Arrow functions for callbacks and short methods
+  - Async/await for asynchronous operations
+  - Object destructuring and spread operators
+  - Class-based object-oriented programming with inheritance
+  - Import/export modules
+- **Functional Patterns**: Uses functional programming patterns where appropriate (map, filter, etc.)
+- **Immutable Data Patterns**: Tendency to create new objects rather than modify existing ones
+- **Method Binding**: Uses class property arrow functions for methods that need `this` binding
+- **Default Parameters**: Consistently uses default parameters for optional values
+- **Promise Handling**: Clean promise handling with proper error management
+- **ESM Modules**: Uses ES modules with named exports/imports
+- **Singleton Patterns**: Uses singleton pattern for resources that should be instantiated once
+- **Getter/Setter Patterns**: Extensive use of getters and setters for controlled property access
+- **Method Chaining**: Methods often return `this` to enable chaining
+- **Consistent Initialization**: Consistent patterns for object initialization and default values
+
+## 3. Naming Conventions
+- **camelCase**: Used for variables, functions, methods, and instances
+- **PascalCase**: Used for class names and constructor functions
+- **Descriptive Names**: Clear, descriptive names that indicate purpose
+- **Method Naming Patterns**: Lifecycle methods follow clear naming patterns (pre/post prefixes)
+- **Constants**: Uses UPPER_SNAKE_CASE for constants
+- **Private Properties/Methods**: No strict pattern for private members, but sometimes prefixed with underscore
+- **Event Handlers**: Prefix with 'on' for event handlers (e.g., `onKeyDown`, `onPointerMove`)
+- **Consistent Abbreviations**: Uses consistent abbreviations (e.g., 'lmb' for left mouse button)
+- **Boolean Variables**: Boolean variables often start with 'is', 'has', or 'should'
+- **Vector/Quaternion/Matrix Variables**: Uses clear naming conventions for 3D math (v1, q1, m1)
+- **Temporary Variables**: Consistently uses underscore prefix for temporary variables (_v1, _q1)
+- **Interface Naming**: Clear naming for interfaces and implementation classes
+
+## 4. Code Organization
+- **Class Structure**: Well-organized classes with clear inheritance patterns
+- **Lifecycle Methods**: Consistent use of lifecycle methods (init, start, update, etc.)
+- **Event-driven Architecture**: Uses EventEmitter pattern for communication between components
+- **Modular Design**: Functions and classes are modular and focused on a single responsibility
+- **Proxy Pattern**: Uses JavaScript Proxy objects for advanced property access
+- **Reusable Components**: Emphasis on creating reusable, composable components
+- **Vector Reuse**: Creates and reuses THREE.js vectors to avoid garbage collection
+- **Lazy Initialization**: Resources are initialized only when needed
+- **Memoization**: Cached results for expensive operations
+- **Default Parameter Objects**: Extensive use of default parameter objects
+- **Component Hierarchy**: Clear parent-child relationships between components
+- **Property Validation**: Validates property values before setting them
+- **Consistent Method Organization**: Similar classes have similar method organization
+
+## 5. Documentation
+- **JSDoc Comments**: Uses JSDoc-style comments for explaining functionality
+- **Inline Comments**: Concise explanatory comments for complex logic
+- **Clear Method Documentation**: Comments explaining the purpose of lifecycle methods
+- **Function Documentation**: Clearly documents function parameters and returns
+- **Code Section Markers**: Uses comment blocks to separate logical sections
+- **TODO Comments**: Uses TODO comments to mark areas for future improvement
+- **Implementation Notes**: Comments explaining why certain implementation decisions were made
+- **Multi-line Documentation**: Substantial documentation for complex functions or classes
+- **Header Documentation**: Clear file header documentation explaining file purpose
+- **Constant Documentation**: Documents the purpose and valid values for constants
+- **Reference Documentation**: Links to external resources for complex algorithms
+- **Performance Notes**: Comments about performance considerations
+
+## 6. Error Handling
+- **Graceful Error Handling**: Try/catch blocks for error handling
+- **Error Logging**: Consistent error logging
+- **Defensive Programming**: Checks for null/undefined values before operations
+- **Error Prevention**: Uses defensive programming to avoid common issues
+- **Fallbacks**: Implements fallback behavior when errors occur
+- **Error Wrapping**: Often wraps async operations in try/catch blocks
+- **Error Reporting**: Configurable error reporting (development vs. production)
+- **Promise Error Handling**: Properly handles promise rejections
+- **Input Validation**: Validates inputs to methods to prevent errors
+- **Type Checking**: Uses lodash's isString, isNumber, etc. for type checking
+- **Enumeration Validation**: Validates that values match expected enumerations
+
+## 7. Application Architecture
+- **Game Loop Pattern**: Uses a fixed timestep game loop with accumulator for physics
+- **Systems and Components**: Organized as systems that operate on entities/components
+- **Event-Based Communication**: Uses events for cross-system communication
+- **State Management**: Clear patterns for managing application state
+- **Simulation Steps**: Well-defined simulation steps (fixed update, update, late update)
+- **Time Management**: Sophisticated handling of time, delta time, and interpolation
+- **Dependency Injection**: Systems are passed dependencies via constructor
+- **Command Pattern**: Uses command pattern for undo/redo operations
+- **Observer Pattern**: Extensive use of observer pattern for events
+- **Entity-Component Structure**: Clear separation between entities and their components
+- **Hierarchical Scene Graph**: Node-based scene graph with parent-child relationships
+- **Client-Server Split**: Clear separation between client and server functionality
+- **Systems Registration**: Systems are registered with the world in a consistent order
+
+## 8. Networking
+
+### Protocol and Communication
+- **WebSockets**: Used for real-time communication
+  - WebSocket connections with authentication tokens
+  - Binary message format for efficiency
+  - Socket wrapper class for abstraction
+- **Binary Protocol**: Efficient binary messaging
+  - msgpackr for binary serialization
+  - Packet ID mapping for compact messages
+  - Method name to ID conversion
+
+### Connection Management
+- **Socket Handling**: Socket lifecycle management
+  - Connection establishment with authentication
+  - Message handling and dispatch
+  - Proper disconnection handling
+- **Heartbeat System**: Connection health monitoring
+  - Ping/pong mechanism for connection status
+  - Alive status tracking
+  - Socket termination for inactive connections
+
+### Data Synchronization
+- **Entity Updates**: Entity state synchronization
+  - Position and rotation updates
+  - Added/modified/removed entity events
+  - Blueprint synchronization
+- **Snapshot System**: State synchronization
+  - Initial state snapshots
+  - Time synchronization
+  - Chat history and entity state
+
+## 9. Utility Functions
+- **Small, Focused Utilities**: Utility functions are small, focused, and reusable
+- **Exported Functions**: Utilities are exported as named functions
+- **Default Parameters**: Uses default parameters when appropriate
+- **Utility File Organization**: Separates utilities by context (client, server, shared)
+- **Pure Functions**: Preference for pure functions that don't have side effects
+- **Common Patterns**: Common operations are abstracted into reusable utility functions
+- **Cryptographic Functions**: Consistent patterns for hashing and security operations
+- **Environment-specific Implementations**: Same utility functions implemented differently for client/server
+- **JWT Pattern**: Consistent JWT creation and verification
+- **Vector Math Utilities**: Specialized utilities for 3D vector operations
+- **Role Management Utilities**: Utilities for handling user roles and permissions
+- **ID Generation**: Consistent pattern for generating unique IDs
+
+## 10. React (Client-Side)
+- **Functional Components**: Uses functional React components with hooks
+- **Hooks Pattern**: Uses useState, useEffect, useRef, and useMemo hooks
+- **CSS-in-JS**: Uses a CSS-in-JS solution (@firebolt-dev/css)
+- **Component Composition**: Builds complex UIs through component composition
+- **React Refs**: Uses refs for DOM manipulation and imperative actions
+- **Effect Cleanup**: Properly manages effect cleanup in useEffect
+- **Component Memoization**: Uses useMemo and useCallback for performance
+- **Imperative Handles**: Uses imperative handles for cross-component communication
+- **Custom Hooks**: Creates custom hooks for reusable logic
+- **Lucide Icons**: Uses Lucide for consistent icon design
+- **Responsive Design**: Adapts UI based on screen size
+- **Conditional Rendering**: Clean patterns for conditional component rendering
+- **Event Handling**: Consistent patterns for handling user events
+- **UI State Management**: Manages UI state through React state and context
+
+## 11. Server-Side
+- **Fastify**: Uses Fastify for HTTP server
+- **Middleware Pattern**: Clear middleware registration pattern
+- **Environment Variables**: Uses environment variables for configuration
+- **Graceful Shutdown**: Implements graceful shutdown handling
+- **Database Migrations**: Uses a migration system for database schema changes
+- **API Routes**: Clearly defined API routes with appropriate HTTP methods
+- **Static File Serving**: Efficient serving of static files with appropriate headers
+- **Session Management**: Handles user sessions securely
+- **Multipart Uploads**: Supports file uploads with size limits and validation
+- **dotenv-flow**: Uses dotenv-flow for environment variable loading
+- **Source Map Support**: Enables source map support for better debugging
+- **ESM Compatibility**: Ensures ESM compatibility with global __dirname
+- **Health Checks**: Implements health check endpoints
+- **Status Endpoints**: Provides status information endpoints
+- **Authentication Middleware**: Clean authentication middleware implementation
+
+## 12. Formatting and Syntax
+- **Semicolons**: Consistent use of semicolons at the end of statements
+- **Braces**: Opening braces on the same line as statements
+- **2-Space Indentation**: Uses 2 spaces for indentation
+- **Arrow Function Style**: Concise arrow functions for callbacks
+- **Template Literals**: Uses template literals for string interpolation
+- **Short-Circuit Evaluation**: Uses `&&` and `||` for conditional rendering and default values
+- **Object Shorthand**: Uses object property shorthand when variable names match
+- **Destructuring Assignment**: Extensively uses destructuring for objects and arrays
+- **Function Parameter Formatting**: Parameters on separate lines for long parameter lists
+- **Consistent Spacing**: Consistent spacing around operators and after commas
+- **Import Organization**: Organizes imports by type and importance
+- **Code Block Organization**: Logical organization of code blocks within methods
+- **Default Value Organization**: Organizes default values in a consistent way
+
+## 13. Performance Considerations
+- **Fixed Timestep**: Implements fixed timestep physics loop
+- **Accumulator Pattern**: Uses accumulator for physics simulation
+- **Caching**: Implements aggressive caching for static assets
+- **Binary Protocol**: Uses efficient binary protocol for network communication
+- **Object Pooling**: Re-uses objects to minimize garbage collection
+- **Spatial Partitioning**: Implements spatial partitioning for efficient collision detection
+- **Web Worker Usage**: Uses web workers for computationally intensive tasks
+- **Throttling/Debouncing**: Applies throttling and debouncing to expensive operations
+- **Resource Reuse**: Reuses resources like renderers across instances
+- **Memory Management**: Careful management of memory in WebGL contexts
+- **Matrix Property Caching**: Caches matrix calculations for performance
+- **Dirty Flagging**: Uses dirty flags to track when recalculations are needed
+- **Entity Activation Control**: Only activates entities when needed
+- **Render Loop Optimization**: Optimizes render loop for performance
+
+## 14. 3D Graphics Patterns
+- **THREE.js Integration**: Deep integration with THREE.js for 3D rendering
+  - Custom extensions to THREE.js core classes
+  - Bridging between THREE.js transforms and PhysX transforms
+  - Vector/quaternion conversion utilities
+  - Custom shader material integration
+  - Seamless physics-graphics synchronization
+- **Object Pooling**: Reuses 3D objects and vectors to minimize garbage collection
+  - Persistent vector and quaternion objects for calculations
+  - Object recycling for particle systems
+  - Mesh instance reuse
+  - Texture atlas implementation for batching
+- **Render Loop**: Efficient render loop with request animation frame
+  - Synchronized with physics updates
+  - Throttling for performance optimization
+  - Adaptive quality settings
+  - Frame dropping for consistent simulation
+- **Camera Management**: Sophisticated camera management with field of view adjustments
+  - Adaptive FOV based on screen aspect ratio
+  - Camera collision and environment awareness
+  - Smooth camera transitions and easing
+  - Support for multiple camera modes (first-person, third-person, etc.)
+- **Material Handling**: Consistent patterns for material creation and management
+  - Material pooling and reuse
+  - PBR (Physically Based Rendering) support
+  - Material property animation
+  - Custom shader integration via three-custom-shader-material
+- **Lighting Setup**: Standard approaches to lighting setup
+  - HDR environment maps for image-based lighting
+  - Cascaded shadow maps implementation
+  - Dynamic lighting with performance considerations
+  - Light probes for global illumination approximation
+- **Physics Integration**: Clean integration between rendering and physics
+  - Matrix-based synchronization between PhysX and THREE.js
+  - Interpolation for smooth rendering between physics steps
+  - Debug visualization of physics objects
+  - Performance optimization with visibility culling
+- **Scene Graph**: Well-organized scene graph with clear parent-child relationships
+  - Node-based architecture
+  - Transformation inheritance
+  - Scene traversal optimization
+  - Dirty flag system for matrix updates
+- **HDR Lighting**: Uses HDR environment maps for realistic lighting
+  - RGBE texture format support
+  - Tone mapping for display adaptation
+  - Environment map prefiltering
+  - IBL (Image Based Lighting) implementation
+- **Adaptive FOV**: Adjusts field of view based on aspect ratio
+  - Vertical FOV preservation
+  - Widescreen compensation
+  - VR-specific FOV handling
+- **Custom Shaders**: Uses custom shader materials for advanced effects
+  - Material extension pattern
+  - GLSL snippet integration
+  - ShaderLib extension
+  - Custom uniform management
+- **Billboard System**: Implements billboarding for UI elements
+  - Camera-facing billboards
+  - Y-axis aligned billboards
+  - Billboard matrix calculation optimization
+  - Quad-based billboarding for particles
+- **LOD System**: Level of detail system for performance optimization
+  - Distance-based LOD switching
+  - Screen-space error metrics
+  - Smooth LOD transitions
+  - Asset management for multiple detail levels
+- **Pivot System**: Flexible pivot point system for positioning elements
+  - Custom pivot definitions (center, edges, corners)
+  - Runtime pivot adjustment
+  - Pivot transformation utilities
+  - Anchor point system for UI
+- **Rendering Optimizations**:
+  - View frustum culling
+  - Occlusion culling
+  - Instanced rendering for similar objects
+  - Batching for static objects
+  - Texture atlasing for reducing draw calls
+  - Material sorting for minimizing state changes
+  - WebGL extension detection and fallbacks
+  - Shader complexity adaptation based on device capabilities
+
+## 15. Database Patterns
+- **Knex Query Builder**: Uses Knex.js as SQL query builder
+- **Migration System**: Implements a version-based migration system
+- **Schema Validation**: Validates data before database operations
+- **Transaction Support**: Uses transactions for multi-step operations
+- **Connection Management**: Properly manages database connections
+- **Data Serialization**: Consistent patterns for serializing/deserializing data to/from the database
+- **Schema Evolution**: Carefully handles schema evolution without breaking changes
+- **SQLite for Development**: Uses SQLite for local development database
+- **Version-based Migrations**: Keeps track of schema version in a config table
+- **Data Normalization**: Properly normalizes data for database storage
+- **Migration Versioning**: Each migration is clearly versioned and never modified
+- **Migration Documentation**: Each migration is well-documented with its purpose
+- **Entity Persistence**: Clean patterns for persisting entities to the database
+
+## 16. Testing Patterns
+- **Minimal Error Classes**: Clear error class hierarchy with descriptive error messages
+- **Defensive Programming**: Validates inputs before operations
+- **Error Recovery**: Attempts to recover from errors when possible
+- **Fallback Values**: Provides fallback values for error scenarios
+- **Centralized Error Handling**: Centralizes error handling in appropriate places
+- **Safe Defaults**: Provides safe default values in failure cases
+- **Validation Functions**: Dedicated functions for validating specific data types and formats
+
+## 17. Security Considerations
+
+### Script Sandboxing
+- **SES Integration**: Secure ECMAScript implementation
+  - Lockdown configuration for security boundaries
+  - Error handling configuration options
+  - Script execution within compartments
+- **Compartment System**: Secure script execution
+  - Limited global object access
+  - Controlled API surface area
+  - Predefined safe functions and objects
+
+### Access Controls
+- **Reference Protection**: Node reference security
+  - Secure reference accessor pattern
+  - Controlled access to internal references
+  - Prevention of unauthorized access
+- **JWT Authentication**: Authentication system
+  - Token-based authentication
+  - Role-based access control
+  - Token validation and verification
+
+## 18. Physics System Design
+- **PhysX Integration**: Clean integration with PhysX physics engine
+  - Custom fork of physx-js-webidl with WebAssembly bindings
+  - Separate loading mechanisms for client and server environments
+  - Extension of THREE.js objects with PhysX functionality
+  - Version tracking with `PHYSX.PHYSICS_VERSION` for compatibility
+  - PxFoundation initialization with custom allocator and error callback
+- **Contact Events**: Sophisticated handling of contact events
+  - Custom callback implementation for PxSimulationEventCallback
+  - Filtering of contact events based on shape properties
+  - Clean event propagation to affected entities
+  - Separate handling for touch found and touch lost events
+  - Contact point data extraction and normalization
+- **Collision Filtering**: Uses layer masks for collision filtering
+  - PxFilterData with group and mask values for precise collision control
+  - Custom query filtering with PxQueryFilterCallback implementation
+  - Shape-specific collision configuration
+  - Separate filtering for simulation shapes and scene query shapes
+- **Physics Debugging**: Tools for debugging physics issues
+  - Visual debugging toggles for development builds
+  - Spatial visualization of physics objects
+  - Contact point visualization
+  - Bounds visualization for collision shapes
+- **Raycasting API**: Clean API for raycasting and overlap tests
+  - PxRaycastResult and PxSweepResult implementations
+  - Reusable vectors to minimize garbage collection
+  - Consistent query filter data and hit flags
+  - Support for multiple hit modes (closest, any, multiple)
+  - Separation of simulation and scene query systems
+- **Interpolation**: Smooth interpolation between physics steps
+  - Uses accumulator pattern for deterministic physics
+  - Alpha interpolation for visual smoothness between steps
+  - Explicit control over interpolation for kinematic bodies
+  - Compensation for network latency in visual representation
+- **WASM Integration**: Clean integration with WebAssembly for physics
+  - Custom build configuration with PxWasmBindings
+  - Optimized WASM binaries for both server and client
+  - Proper memory management across JavaScript/WASM boundary
+  - Export naming configuration for global access (`EXPORT_NAME=PhysX`)
+- **Physics Material Management**: Consistent patterns for physics materials
+  - Material properties configuration for friction and restitution
+  - Material sharing across similar objects
+  - Dynamic material property adjustment
+- **Collision Callbacks**: Well-structured collision callback system
+  - Trigger callbacks (onTriggerEnter, onTriggerLeave)
+  - Contact callbacks (onContactStart, onContactEnd)
+  - Proxy objects for safe access to callback data
+  - Event propagation to responsible entities
+- **Custom Contact Events**: Sophisticated custom contact event creation
+  - Filtering based on object types and properties
+  - Transformation of low-level physics events into high-level game events
+  - Support for custom contact modification
+- **Rigid Body Types**: Clear distinction between static, kinematic, and dynamic bodies
+  - Type-specific initialization logic
+  - Appropriate mass and inertia setup based on type
+  - Flag configuration for kinematic bodies
+  - Performance optimizations based on body type
+  - Early pair elimination for kinematic-kinematic interactions
+- **Physics Property Access**: Clean API for accessing and setting physics properties
+  - Getters and setters for common physics properties
+  - Safe property access through proxy objects
+  - Validation of physics property values
+- **Physics Force Application**: Consistent patterns for applying forces and torques
+  - Support for different force modes (force, impulse, velocity change)
+  - Centralized force application via systems
+  - Helper methods for common force operations
+- **Collision Shape Management**: Flexible collision shape attachment system
+  - Support for box, sphere, convex mesh, and triangle mesh geometries
+  - Shape flags for query vs. simulation shapes
+  - Dynamic addition and removal of shapes from rigid bodies
+  - Mesh scaling and transformation
+  - Convex hull generation for complex shapes
+- **Scene Configuration**: Sophisticated physics scene setup
+  - Configurable gravity, broadphase, and solver types
+  - Scene flags for CCD and active actor tracking
+  - Custom CPU dispatcher configuration
+  - TGS solver type for improved stability
+  - GPU-accelerated broadphase where supported
+- **Scene Query System**: Optimized scene query implementation
+  - Separation of collision broadphase and scene query system
+  - Efficient raycasting and overlap checks
+  - Specialized structure for scene queries to improve performance
+  - Pruning strategy selection for different use cases
+  - Dynamic tree rebuild rate optimization
+- **Character Controller**: Custom character controller implementation
+  - Uses scene queries and penetration depth computation
+  - Sweep-based movement with step resolution
+  - Depenetration logic for resolving overlaps
+  - Collision filtering specific to characters
+  - Support for slopes and steps
+- **Performance Optimizations**:
+  - Fixed timestep physics to avoid stability issues
+  - "Well of Despair" avoidance through careful timestep management
+  - Scene query optimization with tight bounds for convex meshes
+  - Dynamic tree rebuild rate configuration
+  - Pruning structure selection based on scene characteristics
+  - Double-buffering approach for scene queries during simulation
+  - Separate broadphase for simulation and scene queries
+
+## 19. External Library Integration
+- **Clean Module Loading**: Clean patterns for loading external modules
+- **Library Initialization**: Consistent patterns for library initialization
+- **Promise-based Loading**: Uses promises for asynchronous resource loading
+- **Global Access**: Provides global access to important libraries
+- **Lazy Loading**: Loads libraries only when needed
+- **Version Management**: Keeps track of library versions
+- **Library Extension**: Extends libraries with custom functionality
+- **Consistent API Wrapping**: Wraps external libraries in consistent APIs
+- **Error Handling for External Libraries**: Properly handles errors from external libraries
+
+## 20. Entity System Design
+- **Base Entity Class**: Clean base entity class with core functionality
+- **Specialized Entity Types**: Specialized entity classes for specific purposes
+- **Entity Serialization**: Consistent patterns for entity serialization
+- **Entity Creation**: Clear factory patterns for entity creation
+- **Entity Management**: Centralized entity management
+- **Entity Events**: Well-structured entity event system
+- **Entity Proxies**: Creates proxies for safer entity access
+- **Local/Remote Distinction**: Clear distinction between local and remote entities
+- **Player-specific Entities**: Special handling for player entities
+- **Entity Positioning**: Consistent systems for entity positioning and movement
+
+## 21. Node System Design
+- **Base Node Class**: Flexible base node class with transformation capabilities
+- **Specialized Node Types**: Specialized node classes for specific purposes (UI, Audio, Mesh, etc.)
+- **Node Transformation**: Sophisticated transformation system with matrices
+- **Node Hierarchy**: Clear parent-child relationships between nodes
+- **Node Activation**: Nodes are activated and deactivated in a controlled manner
+- **Node Property Access**: Consistent getter/setter patterns for node properties
+- **Node Proxies**: Creates proxies for safer node access
+- **Node Copy System**: Consistent patterns for copying nodes
+- **Node Event System**: Well-structured node event system
+- **Node Serialization**: Consistent patterns for node serialization
+
+## 22. Audio System Design
+- **Positional Audio**: Sophisticated positional audio system
+  - Integration with THREE.js spatial audio
+  - Multiple audio distance models (linear, inverse, exponential)
+- **Audio Groups**: Organized audio groups for different types of sounds
+  - Dedicated music and SFX groups
+  - Volume control at both group and individual sound levels
+- **Distance Models**: Multiple distance models for different audio behaviors
+  - Configurable reference distance and maximum distance
+  - Appropriate rolloff factors for different sound types
+- **Audio Parameter Control**: Fine-grained control over audio parameters
+  - Volume, loop settings, spatial positioning
+  - Cone settings for directional audio
+- **Audio Lifecycle Management**: Clean lifecycle management for audio resources
+  - Proper disposal of audio sources and nodes
+  - Dynamic creation and connection of audio graph
+- **Spatial Audio**: 3D spatial audio integrated with the scene
+  - Automatic positioning based on node transformation
+  - WebAudio API panners for spatial effects
+- **Audio Resource Management**: Efficient management of audio resources
+  - Caching of audio buffers
+  - Lazy loading of audio resources
+- **Audio State Control**: Play, pause, stop functionality with appropriate state handling
+  - Method chaining for audio control operations
+  - Event handling for audio state changes
+- **Volume Control**: Consistent volume control patterns
+  - Gain node management
+  - Cross-fading capabilities
+
+## 23. UI System Design
+
+### Component Architecture
+- **Declarative UI**: Component-based UI architecture
+  - Node-based UI components
+  - Property-driven configuration
+  - Hierarchical structure
+
+### Layout Engine
+- **Yoga Integration**: Flexbox-like layout system using Yoga
+  - Flexbox direction, justification, and alignment
+  - Gap and padding support
+  - Measurement functions for dynamic content
+  - Edge settings for borders and margins
+
+### Styling System
+- **Styling Properties**: Comprehensive styling options
+  - Background colors and transparency
+  - Border width, color, and radius
+  - Text styling with font families and sizes
+  - Image rendering options
+
+### Rendering
+- **Canvas-Based Rendering**: UI drawn using HTML Canvas
+  - CanvasTexture for THREE.js integration
+  - Context2D drawing operations
+  - Texture optimizations with anisotropy
+
+### Interaction
+- **Hit Testing**: Spatial hit testing for UI elements
+  - Raycasting from 3D to 2D coordinates
+  - Hierarchical hit testing through UI tree
+  - Event coordinates translated to canvas space
+
+### Positioning
+- **3D Integration**: UI planes positioned in 3D space
+  - PlaneGeometry with configurable dimensions
+  - Pivot point options for alignment
+  - Billboard options for camera-facing UI
+  - Scale calculation based on screen metrics
+
+## 24. File Structure and Organization
+
+### Overview
+The project follows a clear three-part division:
+- `src/core/` - Core functionality shared between client and server
+- `src/client/` - Client-specific code
+- `src/server/` - Server-specific code
+
+### File Structure Tree
+
+```
+src/
+├── core/                        # Shared functionality between client and server
+│   ├── assets/                  # Core assets (copied to world assets directory at startup)
+│   ├── entities/                # Entity definitions
+│   │   ├── App.js               # Application entity - manages complex application logic
+│   │   ├── Entity.js            # Base entity class - foundation for all entities
+│   │   ├── Player.js            # Base player entity - common player functionality
+│   │   ├── PlayerLocal.js       # Client-side player implementation - handles local player controls
+│   │   └── PlayerRemote.js      # Remote player representation - handles networked players
+│   │
+│   ├── extras/                  # Additional utilities and helpers
+│   │   ├── ControlPriorities.js # Control system priorities
+│   │   ├── Layers.js            # Layer definitions for rendering and physics
+│   │   ├── bindRotations.js     # Utility for binding rotation controls
+│   │   ├── buttons.js           # Input button definitions and mappings
+│   │   ├── createNode.js        # Factory for creating nodes
+│   │   ├── createPlayerProxy.js # Creates proxy for safer player access
+│   │   ├── extendThreePhysX.js  # Extends THREE.js with PhysX functionality
+│   │   ├── fillRoundRect.js     # Utility for drawing rounded rectangles
+│   │   ├── general.js           # General purpose constants and utilities
+│   │   ├── playerEmotes.js      # Player emote definitions and handlers
+│   │   ├── simpleCamLerp.js     # Camera interpolation utility
+│   │   ├── three.js             # THREE.js re-exports and extensions
+│   │   └── yoga.js              # Layout engine constants and types
+│   │
+│   ├── libs/                    # Third-party library integrations
+│   │   ├── csm/                 # Cascaded Shadow Maps implementation
+│   │   ├── stats-gl/            # WebGL performance monitoring
+│   │   ├── three-custom-shader-material/  # Custom shader material implementation
+│   │   └── three-vrm/           # VRM avatar support for THREE.js
+│   │
+│   ├── nodes/                   # Node definitions (building blocks for entities)
+│   │   ├── Action.js            # Action node for handling interactive actions
+│   │   ├── Anchor.js            # Anchor node for spatial anchoring
+│   │   ├── Audio.js             # Audio node for 3D spatial audio
+│   │   ├── Avatar.js            # Avatar node for character representation
+│   │   ├── Collider.js          # Collider node for physics collisions
+│   │   ├── Controller.js        # Controller node for input handling
+│   │   ├── Group.js             # Group node for organizing hierarchies
+│   │   ├── Joint.js             # Joint node for physics constraints
+│   │   ├── LOD.js               # Level of Detail node for performance optimization
+│   │   ├── Mesh.js              # Mesh node for 3D geometry
+│   │   ├── Nametag.js           # Nametag node for displaying player names
+│   │   ├── Node.js              # Base node class - foundation for all nodes
+│   │   ├── RigidBody.js         # RigidBody node for physics simulation
+│   │   ├── Sky.js               # Sky node for environment visualization
+│   │   ├── Snap.js              # Snap node for object snapping
+│   │   ├── UI.js                # Base UI node for user interface elements
+│   │   ├── UIImage.js           # UI image node for displaying images
+│   │   ├── UIText.js            # UI text node for displaying text
+│   │   ├── UIView.js            # UI view container node
+│   │   └── index.js             # Node exports and registration
+│   │
+│   ├── systems/                 # System definitions (game logic components)
+│   │   ├── Anchors.js           # System for managing spatial anchors
+│   │   ├── Blueprints.js        # System for managing object blueprints
+│   │   ├── Chat.js              # System for player chat functionality
+│   │   ├── Client.js            # Base client system
+│   │   ├── ClientActions.js     # System for client-side actions
+│   │   ├── ClientAudio.js       # System for client-side audio
+│   │   ├── ClientBuilder.js     # System for client-side world building
+│   │   ├── ClientControls.js    # System for handling user input
+│   │   ├── ClientEnvironment.js # System for client-side environment
+│   │   ├── ClientGraphics.js    # System for rendering and graphics
+│   │   ├── ClientLoader.js      # System for loading assets
+│   │   ├── ClientNetwork.js     # System for client-side networking
+│   │   ├── ClientPrefs.js       # System for client preferences
+│   │   ├── ClientStats.js       # System for performance monitoring
+│   │   ├── ClientTarget.js      # System for targeting and selection
+│   │   ├── Entities.js          # System for entity management
+│   │   ├── Events.js            # System for event handling
+│   │   ├── LODs.js              # System for level of detail management
+│   │   ├── Nametags.js          # System for nametag rendering
+│   │   ├── Physics.js           # System for physics simulation
+│   │   ├── Scripts.js           # System for scripting/code execution
+│   │   ├── Server.js            # Base server system
+│   │   ├── ServerLoader.js      # System for server-side asset loading
+│   │   ├── ServerNetwork.js     # System for server-side networking
+│   │   ├── Snaps.js             # System for object snapping
+│   │   ├── Stage.js             # System for managing the world stage
+│   │   ├── System.js            # Base system class - foundation for all systems
+│   │   └── XR.js                # System for XR (VR/AR) support
+│   │
+│   ├── Socket.js                # WebSocket wrapper with packet handling
+│   ├── World.js                 # Core world class - main simulation container
+│   ├── createClientWorld.js     # Factory for creating client-side world
+│   ├── createServerWorld.js     # Factory for creating server-side world
+│   ├── lockdown.js              # Security lockdown configuration
+│   ├── packets.js               # Network packet definitions and handling
+│   ├── storage.js               # Data storage and persistence
+│   ├── utils-client.js          # Client-specific utilities
+│   ├── utils-server.js          # Server-specific utilities
+│   └── utils.js                 # Shared utilities
+│
+├── client/                      # Client-specific code
+│   ├── components/              # React UI components
+│   │   ├── AppsPane.js          # UI panel for application management
+│   │   ├── AvatarPane.js        # UI panel for avatar customization
+│   │   ├── ChatBox.js           # UI component for chat interface
+│   │   ├── CodePane.js          # UI panel for code editing
+│   │   ├── ContextWheel.js      # Radial context menu component
+│   │   ├── GUI.js               # Main GUI component containing all UI elements
+│   │   ├── Inputs.js            # Input handling components
+│   │   ├── InspectPane.js       # UI panel for object inspection
+│   │   ├── MouseLeftIcon.js     # Left mouse button icon
+│   │   ├── MouseRightIcon.js    # Right mouse button icon
+│   │   ├── MouseWheelIcon.js    # Mouse wheel icon
+│   │   ├── SettingsPane.js      # UI panel for settings
+│   │   ├── cls.js               # CSS class utility
+│   │   ├── useElemSize.js       # Hook for tracking element size
+│   │   ├── usePane.js           # Hook for managing UI panels
+│   │   └── useUpdate.js         # Hook for component updates
+│   │
+│   ├── public/                  # Static public assets
+│   ├── AvatarPreview.js         # Avatar preview renderer
+│   ├── index.js                 # Client entry point
+│   ├── loadPhysX.js             # PhysX loader for client
+│   └── utils.js                 # Client-specific utilities
+│
+└── server/                      # Server-specific code
+    ├── physx/                   # PhysX bindings for server
+    │   ├── loadPhysX.js         # PhysX loader for server
+    │   ├── physx-js-webidl.js   # PhysX JavaScript bindings
+    │   └── physx-js-webidl.wasm # PhysX WebAssembly module
+    │
+    ├── bootstrap.js             # Server bootstrap process
+    ├── db.js                    # Database management and migrations
+    └── index.js                 # Server entry point
+```
+
+### Key File Descriptions
+
+#### Core Files
+- **World.js**: The central simulation container that manages systems, game loop, and timing.
+- **System.js**: Base class for all systems with lifecycle methods (init, start, update, etc.).
+- **Node.js**: Base class for scene nodes with transformation and hierarchy functionality.
+- **Entity.js**: Base class for entities that exist in the world.
+- **Socket.js**: WebSocket wrapper for network communication.
+- **packets.js**: Defines network protocol and packet structure.
+
+#### Client Files
+- **index.js**: Client entry point that initializes React and the client world.
+- **AvatarPreview.js**: Handles rendering and customization of player avatars.
+- **GUI.js**: Main UI component that manages all interface elements.
+- **loadPhysX.js**: Loads the PhysX physics engine on the client.
+
+#### Server Files
+- **index.js**: Server entry point that initializes Fastify and the server world.
+- **db.js**: Manages database connection and migrations.
+- **bootstrap.js**: Handles server startup process and environment setup.
+
+#### System Files
+- **Physics.js**: Handles physics simulation with PhysX integration.
+- **ClientControls.js**: Manages user input and control systems.
+- **ClientNetwork.js**: Handles client-side networking.
+- **ServerNetwork.js**: Handles server-side networking.
+- **ClientGraphics.js**: Manages rendering and visual effects.
+
+#### Node Files
+- **Audio.js**: Handles 3D spatial audio.
+- **RigidBody.js**: Handles physics bodies and interactions.
+- **UI.js**: Base class for UI elements rendered in the 3D world.
+- **Mesh.js**: Handles 3D geometry and materials.
+- **Avatar.js**: Manages character avatars and animations.
+
+## 25. Game Loop and Time Management
+
+### Game Loop Architecture
+- **Fixed Timestep**: Uses a fixed timestep model with accumulator for physics simulation
+  - Predictable and deterministic physics behavior
+  - Consistent simulation regardless of frame rate
+  - Standard practice for physics engines like PhysX
+  - Prevents "tunneling" issues with fast-moving objects
+- **Frame Management**: Tracks frame count and time for consistent updates
+  - Global frame counter for synchronization
+  - Time dilation support for effects like slow-motion
+  - Smooth handling of frame rate fluctuations
+- **Delta Time Handling**: Sophisticated handling of delta time with clamping for stability
+  - Maximum delta time cap to prevent "spiral of death"
+  - Minimum delta time threshold to handle unusual timing cases
+  - Compensation for browser throttling during background tabs
+- **Time Accumulation**: Accumulates time to determine when physics steps should occur
+  - Classic accumulator pattern for fixed timestep simulation
+  - Leftover time preservation for accurate simulation
+  - Prevents small time steps that would hurt performance
+- **Multi-phase Updates**: Clear separation between different update phases:
+  - `preTick`: Performance monitoring begins, frame setup
+  - `preFixedUpdate`: Preparation before physics steps
+  - `fixedUpdate`: Updates that need to run at fixed intervals
+  - `postFixedUpdate`: Actions after physics simulation
+  - `preUpdate`: Preparation for variable-rate updates
+  - `update`: Main game logic updates
+  - `postUpdate`: Post-processing of updates
+  - `lateUpdate`: Updates that need to run after main updates
+  - `postLateUpdate`: Final cleanup of update cycle
+  - `commit`: Commit changes to rendering or output
+  - `postTick`: Performance monitoring ends, frame cleanup
+  
+### Interpolation
+- **Alpha Calculation**: Calculates interpolation alpha based on accumulator and fixed timestep
+  - Smooth blending between physics states
+  - Normalized value between 0 and 1 for linear interpolation
+  - Used for visual representation of physical objects
+- **Physics Interpolation**: Smoothly interpolates physics between fixed steps
+  - Position and rotation interpolation for rigid bodies
+  - Prevents visual stuttering despite fixed physics rate
+  - Special handling for teleportation and discontinuous movement
+- **Visual Smoothing**: Uses interpolation to provide smooth visuals despite fixed physics rate
+  - Camera movement smoothing
+  - Character animation blending
+  - State transitions for visual effects
+
+### Timing Constants
+- **Fixed Delta Time**: Set to 1/50 (0.02s) for consistent physics simulation
+  - 50Hz physics update rate
+  - Compromise between accuracy and performance
+  - Aligns with monitor refresh rates (typically 60Hz)
+- **Maximum Delta Time**: Capped at 1/30 (0.033s) to prevent spiral of death
+  - Avoids the "physics well of despair" described in PhysX documentation
+  - Prevents cascading performance issues from time spikes
+  - Maintains stability during performance drops
+- **Network Rate**: Set to 1/8 (0.125s) for efficient network updates
+  - 8Hz network update frequency
+  - Bandwidth optimization while maintaining responsive feel
+  - Interpolation compensates for lower update rate
+
+### System Management
+- **System Registration**: Systems are registered with the world in a specific order
+  - Establishes initialization and update execution order
+  - Ensures dependencies are satisfied
+  - Controls information flow between systems
+- **System Lifecycle**: Each system implements the same update methods as the world
+  - Consistent lifecycle methods across all systems
+  - Predictable execution flow
+  - Clean separation of update phases
+- **Priority-based Updates**: Systems are updated in a defined order to handle dependencies
+  - Critical systems (physics, network) updated first
+  - Dependent systems follow in logical sequence
+  - Input systems before processing, rendering after state updates
+
+### Performance Considerations
+- **Accumulator Capping**: Prevents large time steps that could cause instability
+  - Avoids physics anomalies from long frames
+  - Maintains simulation stability during performance spikes
+  - Graceful degradation during performance issues
+- **Delta Clamping**: Ensures delta time stays within reasonable bounds
+  - Minimum threshold prevents zero or negative delta time
+  - Maximum threshold prevents excessive stepping
+  - Consistent behavior across varying frame rates
+- **Performance Monitoring**: Hooks for stats/performance monitors in preTick and postTick
+  - Granular timing data collection
+  - System-specific performance tracking
+  - Memory usage monitoring
+  - GPU performance tracking via stats-gl
+
+### Game Loop Optimization Strategies
+- **Adaptive Time Steps**: Can slightly vary time step within bounds to recover from spikes
+- **Work Distribution**: Spreads computation across frames to avoid performance spikes
+- **Frame Dropping**: Intelligent frame dropping under heavy load while maintaining simulation integrity
+- **Multi-threading**: Leverages the PxDefaultCpuDispatcher for parallel physics computation
+- **Separating Sim Frequency**: Ability to decouple physics simulation from rendering frequency
+- **Performance Recovery**: Implements strategies to recover from temporary performance issues
+- **"Well of Despair" Avoidance**: Careful management of sub-stepping to avoid performance traps
+- **Scene Complexity Management**: Dynamically adjusts simulation complexity based on performance
+
+### Scene Query Optimization
+- **Double-buffering**: Implements double-buffering approach for scene queries during simulation
+- **Separate Structures**: Uses different data structures for broadphase collision and scene queries
+- **Update Frequency Control**: Can update scene query structures at different rates than simulation
+- **Bounds Optimization**: Uses tighter bounds for scene queries than for broadphase collision
+- **Dynamic Tree Rebuild**: Configurable dynamic tree rebuild rate for scene query performance
+- **Objects Per Node**: Tweakable parameter for objects per node in scene query structures
+- **Pruner Selection**: Appropriate pruner selection for different scene characteristics
+
+## 26. Asset Management System
+
+### Asset Loading and Caching
+- **Resource Loading**: Basic resource loading system
+  - Type-specific loaders (textures, models, audio)
+  - Caching for reuse
+- **Asset Caching**: Basic caching strategy
+  - Memory cache for loaded assets
+  - URL.createObjectURL for local files
+- **Results Management**: Tracking of loaded assets
+  - Results map for tracking loaded assets
+  - Promises map for in-flight requests
+
+### Asset Optimization
+- **Texture Management**: Basic texture handling
+  - Canvas textures for UI elements
+  - Anisotropy settings for better quality
+  - CanvasTexture with configurable filters
+- **Model Optimization**: Basic model handling
+  - Node-based representation of loaded models
+  - Statistics tracking for loaded models
+  - File size tracking
+
+### File Formats
+- **Image Formats**: Support for standard web image formats
+  - Standard web formats via TextureLoader
+- **3D Model Formats**: Support for industry-standard 3D formats
+  - glTF as primary format via GLTFLoader
+  - VRM for avatar models
+- **HDR Format**: Support for high dynamic range images
+  - RGBE format loading
+
+## 27. THREE.js and PhysX Integration
+
+### Core Integration Architecture
+- **Extension System**: THREE.js objects extended with PhysX functionality
+  - Vector3 extensions for PhysX conversions
+  - Quaternion and Matrix4 extensions for transforms
+  - Utility methods for conversions between coordinate systems
+
+### Physics Simulation Integration
+- **Physics System**: Core integration between THREE.js scene and PhysX
+  - Scene creation with configurable parameters
+  - Simulation and fetching of results
+  - Active actor tracking
+  - Interpolation for smooth rendering
+
+### Geometry Bridge
+- **Geometry Conversion**: Convert THREE.js geometries to PhysX meshes
+  - Primitive shapes (box, sphere)
+  - Convex mesh generation
+  - Triangle mesh generation
+  - Scale handling for mesh geometries
+
+### Colliders
+- **Collider System**: PhysX shape creation and management
+  - Multiple collider types (box, sphere, geometry)
+  - Material properties (friction, restitution)
+  - Layer-based filtering
+  - Trigger volumes
+
+### Joints
+- **Joint System**: Constraint system for physics objects
+  - Distance joint implementation
+  - Joint frames and transformations
+  - Constraint flags and breaking forces
+  - Limit configuration
+
+### Collision Detection
+- **Raycast and Sweep**: Spatial queries for collision detection
+  - Raycasting implementation
+  - Sweep tests with geometry
+  - Filter data for layer-based queries
+  - Hit result processing
+
+### Contact Events
+- **Contact Handling**: System for responding to collisions
+  - Simulation event callbacks
+  - Contact point collection
+  - Actor pair handling
+  - Filtering of contact events
