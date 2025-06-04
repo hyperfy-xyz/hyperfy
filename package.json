@@ -71,7 +71,8 @@
   },
   "optionalDependencies": {
     "@aws-sdk/client-s3": "^3.685.0",
-    "@aws-sdk/s3-request-presigner": "^3.685.0"
+    "@aws-sdk/s3-request-presigner": "^3.685.0",
+    "pg": "^8.16.0"
   },
   "devDependencies": {
     "@babel/eslint-parser": "^7.23.10",
