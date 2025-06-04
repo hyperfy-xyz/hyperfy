@@ -39,6 +39,7 @@ export class ClientPrefs extends System {
     this.shadows = data.shadows ? data.shadows : isTouch ? 'low' : 'med' // none, low=1, med=2048cascade, high=4096cascade
     this.postprocessing = isBoolean(data.postprocessing) ? data.postprocessing : true
     this.bloom = isBoolean(data.bloom) ? data.bloom : true
+    this.ao = isBoolean(data.ao) ? data.ao : true
     this.music = isNumber(data.music) ? data.music : 1
     this.sfx = isNumber(data.sfx) ? data.sfx : 1
     this.voice = isNumber(data.voice) ? data.voice : 1
@@ -74,6 +75,7 @@ export class ClientPrefs extends System {
       shadows: this.shadows,
       postprocessing: this.postprocessing,
       bloom: this.bloom,
+      ao: this.ao,
       music: this.music,
       sfx: this.sfx,
       voice: this.voice,
@@ -107,6 +109,10 @@ export class ClientPrefs extends System {
 
   setBloom(value) {
     this.modify('bloom', value)
+  }
+
+  setAO(value) {
+    this.modify('ao', value)
   }
 
   setMusic(value) {

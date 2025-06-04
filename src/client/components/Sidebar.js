@@ -418,6 +418,7 @@ function Prefs({ world, hidden }) {
   const [shadows, setShadows] = useState(world.prefs.shadows)
   const [postprocessing, setPostprocessing] = useState(world.prefs.postprocessing)
   const [bloom, setBloom] = useState(world.prefs.bloom)
+  const [ao, setAO] = useState(world.prefs.ao)
   const [music, setMusic] = useState(world.prefs.music)
   const [sfx, setSFX] = useState(world.prefs.sfx)
   const [voice, setVoice] = useState(world.prefs.voice)
@@ -453,6 +454,7 @@ function Prefs({ world, hidden }) {
       if (changes.shadows) setShadows(changes.shadows.value)
       if (changes.postprocessing) setPostprocessing(changes.postprocessing.value)
       if (changes.bloom) setBloom(changes.bloom.value)
+      if (changes.ao) setAO(changes.ao.value)
       if (changes.music) setMusic(changes.music.value)
       if (changes.sfx) setSFX(changes.sfx.value)
       if (changes.voice) setVoice(changes.voice.value)
@@ -539,21 +541,31 @@ function Prefs({ world, hidden }) {
           onChange={shadows => world.prefs.setShadows(shadows)}
         />
         <FieldToggle
-          label='Postprocessing'
+          label='Post-processing'
           hint='Enable or disable all postprocessing effects'
-          trueLabel='Enabled'
-          falseLabel='Disabled'
+          trueLabel='On'
+          falseLabel='Off'
           value={postprocessing}
           onChange={postprocessing => world.prefs.setPostprocessing(postprocessing)}
         />
         <FieldToggle
           label='Bloom'
           hint='Enable or disable the bloom effect'
-          trueLabel='Enabled'
-          falseLabel='Disabled'
+          trueLabel='On'
+          falseLabel='Off'
           value={bloom}
           onChange={bloom => world.prefs.setBloom(bloom)}
         />
+        {world.settings.ao && (
+          <FieldToggle
+            label='Ambient Occlusion'
+            hint='Enable or disable the ambient occlusion effect'
+            trueLabel='On'
+            falseLabel='Off'
+            value={ao}
+            onChange={ao => world.prefs.setAO(ao)}
+          />
+        )}
         <Group label='Audio' />
         <FieldRange
           label='Music'
@@ -596,6 +608,8 @@ function World({ world, hidden }) {
   const [model, setModel] = useState(world.settings.model)
   const [avatar, setAvatar] = useState(world.settings.avatar)
   const [playerLimit, setPlayerLimit] = useState(world.settings.playerLimit)
+  const [occlusion, setOcclusion] = useState(world.settings.occlusion)
+  const [ao, setAO] = useState(world.settings.ao)
   const [publicc, setPublic] = useState(world.settings.public)
   useEffect(() => {
     const onChange = changes => {
@@ -605,6 +619,8 @@ function World({ world, hidden }) {
       if (changes.model) setModel(changes.model.value)
       if (changes.avatar) setAvatar(changes.avatar.value)
       if (changes.playerLimit) setPlayerLimit(changes.playerLimit.value)
+      if (changes.occlusion) setOcclusion(changes.occlusion.value)
+      if (changes.ao) setAO(changes.ao.value)
       if (changes.public) setPublic(changes.public.value)
     }
     world.settings.on('change', onChange)
@@ -690,10 +706,28 @@ function World({ world, hidden }) {
             value={playerLimit}
             onChange={value => world.settings.set('playerLimit', value, true)}
           />
+          <FieldToggle
+            label='Occlusion Culling'
+            hint={`Improves performance for worlds with lots of occluders, eg walls that hide many other objects behind them. Worlds with large open spaces and not many occluders may get better performance by disabling this.`}
+            trueLabel='On'
+            falseLabel='Off'
+            value={occlusion}
+            onChange={value => world.settings.set('occlusion', value, true)}
+          />
+          <FieldToggle
+            label='Ambient Occlusion'
+            hint={`Improves visuals by approximating darkened corners etc. When enabled, users also have an option to disable this on their device for performance.`}
+            trueLabel='On'
+            falseLabel='Off'
+            value={ao}
+            onChange={value => world.settings.set('ao', value, true)}
+          />
           {isAdmin && (
             <FieldToggle
-              label='Public'
+              label='Free Build'
               hint='Allow everyone to build (and destroy) things in the world. When disabled only admins can build.'
+              trueLabel='On'
+              falseLabel='Off'
               value={publicc}
               onChange={value => world.settings.set('public', value, true)}
             />
