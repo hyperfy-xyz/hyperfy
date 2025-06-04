@@ -1,0 +1,1991 @@
+---
+description: Syntax for Hyperfy Apps
+globs: 
+alwaysApply: false
+---
+# 🌐 Hyp App API Reference
+
+```
+╔══════════════════════════════════════╗
+║        HYP APP API REFERENCE         ║
+╚══════════════════════════════════════╝
+```
+
+## Introduction
+
+The Hyp App API is the modern way to create and manage applications in Hyperfy worlds. This API replaces the legacy method of manually creating apps in the world folder, providing a more streamlined and powerful development experience.
+
+## Core Concepts
+
+### App Structure
+
+Global App Format
+
+For simpler apps or scripts, you can directly use the `app` global without the wrapping object:
+
+```javascript
+// Direct use of the app global
+app.configure(() => {
+  return [
+    // Configuration options...
+  ]
+})
+
+// Create objects
+const myObject = app.create('mesh')
+app.add(myObject)
+
+// Set up event handlers
+app.on('update', (dt) => {
+  // Update logic
+})
+```
+
+Choose the format that best suits your app's complexity and organization needs.
+
+### SES Environment Restrictions
+
+Hyperfy uses SES (Secure ECMAScript) for security, which imposes specific syntax restrictions:
+
+- **Never use ES6 `export` or `import` syntax** - SES will throw errors
+- **Always wrap apps in parentheses** when using the object return format
+- **Use only approved global APIs and objects**
+- **No direct `eval()` or `new Function()` usage**
+- **Avoid using browser-specific APIs** that aren't explicitly provided
+
+## Creating Apps in World
+
+### The Hyp App Method
+
+Creating apps with the Hyp App system is simple:
+
+```javascript
+// Create a new app directly in the world
+({
+  init() {
+    // Create a cube
+    const geometry = new THREE.BoxGeometry(1, 1, 1)
+    const material = new THREE.MeshBasicMaterial({ color: 0xff00ff })
+    this.cube = new THREE.Mesh(geometry, material)
+    
+    // Add it to the scene
+    this.app.add(this.cube)
+    
+    // Position it
+    this.cube.position.set(0, 1, 0)
+  },
+  
+  update() {
+    // Rotate the cube
+    if (this.cube) {
+      this.cube.rotation.y += 0.01
+    }
+  },
+  
+  cleanup() {
+    // Dispose of resources
+    if (this.cube) {
+      this.cube.geometry.dispose()
+      this.cube.material.dispose()
+    }
+  }
+})
+```
+
+### Configuration
+
+Apps can be configured using the `app.configure()` method, which defines UI controls for customizing your app. The API supports multiple configuration types and complex conditional fields:
+
+```javascript
+app.configure(() => {
+  return [
+    // Basic text input
+    {
+      key: 'title',
+      type: 'text',
+      label: 'Title',
+      initial: 'Default Title'
+    },
+    
+    // File upload for assets
+    {
+      key: 'audioFile',
+      type: 'file',
+      kind: 'audio',
+      label: 'Background Music'
+    },
+    
+    // Section header for grouping
+    {
+      type: 'section',
+      key: 'appearance',
+      label: 'Appearance Settings',
+    },
+    
+    // Multiple choice option
+    {
+      type: 'switch',
+      key: 'theme',
+      label: 'Theme',
+      initial: 'neon',
+      options: [
+        { value: 'neon', label: '霓虹' },
+        { value: 'dark', label: '暗黒' },
+        { value: 'light', label: '明るい' }
+      ]
+    },
+    
+    // Conditional fields that appear based on other selections
+    {
+      key: 'neonColor',
+      type: 'color',
+      label: 'Neon Color',
+      value: '#00ffaa',
+      when: [{ key: 'theme', op: 'eq', value: 'neon' }]
+    }
+  ]
+})
+```
+
+#### Conditional Configuration Fields
+
+You can create dynamic configurations with fields that only appear when certain conditions are met:
+
+```javascript
+app.configure(() => {
+  return [
+    // Selection switch
+    {
+      key: 'emote',
+      type: 'switch',
+      label: 'Custom',
+      options: [
+        { label: '1', value: '1' },
+        { label: '2', value: '2' },
+        { label: '3', value: '3' },
+        { label: '4', value: '4' },
+      ],
+    },
+    
+    // Dynamically generated fields using spread syntax
+    ...customEmoteFields('1'),
+    ...customEmoteFields('2'),
+    ...customEmoteFields('3'),
+    ...customEmoteFields('4'),
+  ]
+  
+  // Helper function to generate conditional fields
+  function customEmoteFields(n) {
+    return [
+      {
+        key: `emote${n}Name`,
+        type: 'text',
+        label: 'Name',
+        when: [{ key: 'emote', op: 'eq', value: n }],
+      },
+      {
+        key: `emote${n}`,
+        type: 'file',
+        label: 'Emote',
+        kind: 'emote',
+        when: [{ key: 'emote', op: 'eq', value: n }],
+      },
+    ]
+  }
+})
+```
+
+#### Configuration Field Types
+
+The configuration system supports a variety of field types:
+
+- **text**: Simple text input
+- **textarea**: Multi-line text input
+- **number**: Numeric input with min/max/step options
+- **switch**: Multiple choice selection
+- **color**: Color picker
+- **file**: File upload with various kinds (audio, texture, model, emote, hdr)
+- **section**: Header for organizing fields
+
+#### Accessing Configuration Values
+
+Configuration values are accessible through the `app.config` object:
+
+```javascript
+// Access configuration with optional chaining for nullable fields
+const audioUrl = app.config.audioFile?.url
+const themeName = app.config.theme
+const title = app.config.title || 'Default Title'
+```
+
+## Working Examples
+
+### Audio Player Example
+
+This example demonstrates how to create a simple audio player with play, pause, and stop controls.
+
+```javascript
+// Audio Player App
+app.configure(() => {
+  return [
+    {
+      key: 'audio',
+      type: 'file',
+      kind: 'audio',
+      label: 'Audio'
+    }
+  ]
+})
+
+const audio = app.create('audio')
+audio.src = config.audio?.url
+
+const body = app.get('Body')
+body.add(audio)
+
+const ui = app.create('ui')
+ui.backgroundColor = 'rgba(0, 15, 30, 0.8)'
+ui.position.y = 3
+body.add(ui)
+
+const btn1 = app.create('uitext')
+btn1.value = '[ PLAY ]'
+btn1.color = '#00ffaa'
+btn1.onPointerDown = () => audio.play()
+ui.add(btn1)
+
+const btn2 = app.create('uitext')
+btn2.value = '[ PAUSE ]'
+btn2.color = '#00ffaa'
+btn2.onPointerDown = () => audio.pause()
+ui.add(btn2)
+
+const btn3 = app.create('uitext')
+btn3.value = '[ STOP ]'
+btn3.color = '#00ffaa'
+btn3.onPointerDown = () => audio.stop()
+ui.add(btn3)
+
+const time = app.create('uitext')
+time.value = ''
+time.color = '#00ffaa'
+ui.add(time)
+
+app.on('update', () => {
+  time.value = audio.currentTime.toFixed(2)
+})
+```
+
+### Basic Sky Example
+
+A simple example showing how to create and configure a sky:
+
+```javascript
+app.configure(() => {
+  return [
+    {
+      key: 'sky',
+      label: 'Sky',
+      type: 'file',
+      kind: 'texture',
+    },
+    {
+      key: 'hdr',
+      label: 'HDR',
+      type: 'file',
+      kind: 'hdr',
+    },
+  ]
+})
+
+const sky = app.create('sky')
+sky.bg = app.config.sky?.url
+sky.hdr = app.config.hdr?.url
+app.add(sky)
+```
+
+### Dynamic Sky System
+
+A more advanced sky system with time-of-day switching:
+
+```javascript
+app.configure(() => {
+    return [
+        {
+            type: 'section',
+            key: 'title',
+            label: 'Sky',
+        },
+        {
+            type: 'switch',
+            key: 'switch',
+            label: 'TOD',
+            value: 1,
+            options: [
+                { value: 1, label: '☀️' },
+                { value: 2, label: '🌅' },
+                { value: 3, label: '🌙' },
+                { value: 4, label: '🌌' }
+            ]
+        },
+        {
+            key: 'sky1',
+            label: 'Dusk Sky',
+            type: 'file',
+            kind: 'texture',
+            value: null
+        },
+        {
+            key: 'hdr1',
+            label: 'Dusk HDR',
+            type: 'file',
+            kind: 'hdr',
+            value: null
+        }
+        // Additional sky options...
+    ]
+})
+
+const sky = app.create('sky')
+app.add(sky)
+
+function updateSky() {
+    const mode = app.config.switch
+    
+    if (mode === 4) {
+        // Aurora
+        sky.bg = app.config.sky3?.url
+        sky.hdr = app.config.hdr3?.url
+    } else if (mode === 3) {
+        // Night
+        sky.bg = app.config.sky2?.url
+        sky.hdr = app.config.hdr2?.url
+    } else if (mode === 2) {
+        // Dusk
+        sky.bg = app.config.sky1?.url
+        sky.hdr = app.config.hdr1?.url
+    } else {
+        // Day mode (empty sky/hdr means engine default)
+        sky.bg = null
+        sky.hdr = null
+    }
+}
+
+// Initial setup and event listeners
+updateSky()
+app.on('config', updateSky)
+```
+
+### Client-Server Communication
+
+A simple example showing client-server communication:
+
+```javascript
+// Client-side code
+if (world.isClient) {
+    const action = app.create('action')
+    action.label = '[ M0VE CUBE ]'
+    action.position.set(0, 1, 0)
+
+    action.onTrigger = () => {
+        app.send("cube:move")
+    }
+
+    app.on("cube:position", (data) => {
+        app.position.fromArray(data)
+    })
+
+    app.add(action)
+}
+
+// Server-side code
+if (world.isServer) {
+    app.on("cube:move", () => {
+        app.position.y += 1
+        app.send("cube:position", app.position.toArray())
+    })
+}
+```
+
+### Advanced Avatar System
+
+This example demonstrates a more complex system for avatar management with emotes and interactions:
+
+```javascript
+// Constants
+const BUBBLE_TIME = 5
+const EMOTE_TIME = 2
+const LOOK_TIME = 5
+const UP = new Vector3(0, 1, 0)
+
+// Reusable vectors and quaternions
+const v1 = new Vector3()
+const v2 = new Vector3()
+const q1 = new Quaternion()
+
+// Initialize
+const config = app.config
+const vrm = app.get('avatar')
+
+// Server-side code
+if (world.isServer) {
+  // Send initial state
+  const state = { ready: true }
+  app.state = state
+  app.send('state', state)
+  
+  // Create controller
+  const ctrl = app.create('controller')
+  ctrl.position.copy(app.position)
+  world.add(ctrl)
+  ctrl.quaternion.copy(app.quaternion)
+  ctrl.add(vrm)
+  
+  // Handle emotes from configuration
+  const emoteUrls = {}
+  if (config.emote1Name && config.emote1?.url) {
+    emoteUrls[config.emote1Name] = config.emote1.url
+  }
+  // Additional emotes...
+  
+  // World event listeners
+  world.on('chat', msg => {
+    if (msg.fromId === app.instanceId) return
+    // Process chat events
+  })
+}
+
+// Client-side code
+if (world.isClient) {
+  const idleEmoteUrl = config.emote0?.url
+  world.attach(vrm)
+  
+  // Initialize based on state
+  let state = app.state
+  if (state.ready) {
+    init()
+  } else {
+    world.remove(vrm)
+    app.on('state', _state => {
+      state = _state
+      init()
+    })
+  }
+  
+  // Create UI bubble for chat
+  const bubble = app.create('ui')
+  bubble.width = 300
+  bubble.height = 512
+  bubble.size = 0.005
+  bubble.pivot = 'bottom-center'
+  bubble.billboard = 'full'
+  bubble.justifyContent = 'flex-end'
+  bubble.alignItems = 'center'
+  bubble.position.y = 2
+  bubble.active = false
+  
+  // Add bubble content
+  const bubbleBox = app.create('uiview')
+  bubbleBox.backgroundColor = 'rgba(0, 0, 0, 0.95)'
+  bubbleBox.borderRadius = 20
+  bubbleBox.padding = 20
+  bubble.add(bubbleBox)
+  
+  const bubbleText = app.create('uitext')
+  bubbleText.color = '#00ffaa'
+  bubbleText.lineHeight = 1.4
+  bubbleText.fontSize = 16
+  bubbleText.value = '...'
+  bubbleBox.add(bubbleText)
+  vrm.add(bubble)
+  
+  // Initialize the avatar
+  function init() {
+    world.add(vrm)
+    vrm.setEmote(idleEmoteUrl)
+  }
+  
+  // Event handlers for various avatar actions
+  app.on('say', value => {
+    // Handle speech
+  })
+  
+  app.on('emote', url => {
+    // Handle emote animations
+  })
+  
+  app.on('update', delta => {
+    // Update timers and animations
+  })
+}
+```
+
+### Conditional Configuration Fields
+
+Example of creating dynamic configuration options with conditional visibility:
+
+```javascript
+app.configure(() => {
+  return [
+    {
+      key: 'emotes',
+      type: 'section',
+      label: 'Emotes',
+    },
+    {
+      key: 'emote',
+      type: 'switch',
+      label: 'Custom',
+      options: [
+        { label: '1', value: '1' },
+        { label: '2', value: '2' },
+        { label: '3', value: '3' },
+        { label: '4', value: '4' },
+      ],
+    },
+    ...customEmoteFields('1'),
+    ...customEmoteFields('2'),
+    ...customEmoteFields('3'),
+    ...customEmoteFields('4'),
+  ]
+  
+  // Helper function to generate conditional fields
+  function customEmoteFields(n) {
+    return [
+      {
+        key: `emote${n}Name`,
+        type: 'text',
+        label: 'Name',
+        when: [{ key: 'emote', op: 'eq', value: n }],
+      },
+      {
+        key: `emote${n}`,
+        type: 'file',
+        label: 'Emote',
+        kind: 'emote',
+        when: [{ key: 'emote', op: 'eq', value: n }],
+      },
+    ]
+  }
+})
+```
+
+## UI Components
+
+The Hyp App API provides powerful UI components with extensive styling options:
+
+```javascript
+// Basic UI container
+const ui = app.create('ui')
+ui.backgroundColor = 'rgba(0, 15, 30, 0.8)'
+ui.width = 300
+ui.height = 200
+ui.position.y = 2
+ui.billboard = 'full'       // Always face user
+ui.pivot = 'bottom-center'  // Pivot point
+ui.justifyContent = 'center' // Flex layout
+ui.alignItems = 'center'     // Flex layout
+ui.flexDirection = 'column'  // Flex layout
+ui.gap = 10                 // Space between children
+ui.padding = 15             // Inner spacing
+ui.borderRadius = 20        // Rounded corners
+ui.active = true            // Visibility toggle
+ui.size = 0.005             // Scale factor
+app.add(ui)
+
+// Text
+const text = app.create('uitext')
+text.value = 'H3LL0 W0RLD'
+text.color = '#00ffaa'
+text.fontSize = 24
+text.fontWeight = 700
+text.lineHeight = 1.4
+text.marginTop = 10
+text.padding = 8
+ui.add(text)
+
+// Panel (container for other UI elements)
+const panel = app.create('uiview')
+panel.backgroundColor = 'rgba(0, 15, 30, 0.8)'
+panel.borderRadius = 20
+panel.padding = 15
+panel.width = 280
+panel.flexDirection = 'row'
+ui.add(panel)
+```
+
+### Interactive UI Elements
+
+UI elements can respond to user interaction:
+
+```javascript
+const button = app.create('uitext')
+button.value = '[ ACTIVATE ]'
+button.color = '#00ffaa'
+button.fontSize = 18
+button.backgroundColor = 'rgba(0, 0, 0, 0.5)'
+button.padding = 10
+button.borderRadius = 5
+
+// Interaction events
+button.onPointerDown = () => {
+  // Called when pressed
+  button.color = '#ffffff'
+}
+
+button.onPointerUp = () => {
+  // Called when released
+  button.color = '#00ffaa'
+  performAction()
+}
+
+button.onPointerOver = () => {
+  // Called when hovering
+  button.backgroundColor = 'rgba(0, 30, 60, 0.5)'
+}
+
+button.onPointerOut = () => {
+  // Called when no longer hovering
+  button.backgroundColor = 'rgba(0, 0, 0, 0.5)'
+}
+```
+
+## Event Handling
+
+The Hyp App API provides several event types for various purposes:
+
+```javascript
+// App lifecycle events
+app.on('update', (dt) => {
+  // Called every frame with delta time in seconds
+  // Use for animations, continuous behaviors
+})
+
+app.on('fixedUpdate', (dt) => {
+  // Called at fixed intervals (physics timing)
+  // Use for physics and consistent-rate behaviors
+})
+
+app.on('config', () => {
+  // Called when configuration changes
+  // Use to react to user-modified settings
+})
+
+// Custom events for app communication
+app.on('customEvent', (data) => {
+  // Handle custom event with data
+})
+
+// World events
+world.on('enter', (player) => {
+  // Called when a player enters the world
+})
+
+world.on('leave', (player) => {
+  // Called when a player leaves the world
+})
+
+world.on('chat', (message) => {
+  // Called when a chat message is sent
+})
+
+// Clean up event listeners
+app.off('eventName', handlerFunction)
+```
+
+### Timer-Based Events
+
+You can create timer-based behaviors using the update event:
+
+```javascript
+// Create a timer system
+const timers = {
+  animation: { 
+    duration: 5, 
+    current: 0,
+    active: true
+  }
+}
+
+app.on('update', (dt) => {
+  // Update timers
+  Object.values(timers).forEach(timer => {
+    if (timer.active) {
+      timer.current += dt
+      
+      if (timer.current >= timer.duration) {
+        // Timer completed
+        timer.current = 0
+        // Perform action or reset
+      }
+    }
+  })
+})
+```
+
+## Client-Server Architecture
+
+Hyp apps can leverage both client and server-side code for multiplayer experiences:
+
+```javascript
+// Client-specific code
+if (world.isClient) {
+  const action = app.create('action')
+  action.label = '[ M0VE CUBE ]'
+  action.position.set(0, 1, 0)
+
+  action.onTrigger = () => {
+    // Send message to server with optional data
+    app.send("cube:move", { player: app.instanceId })
+  }
+
+  // Listen for messages from server
+  app.on("cube:position", (data) => {
+    // Update local representation based on authoritative server data
+    app.position.fromArray(data.position)
+    updateUI(data.playerName)
+  })
+
+  app.add(action)
+}
+
+// Server-specific code
+if (world.isServer) {
+  // Maintain authoritative state
+  let height = 1
+  
+  // Listen for client requests
+  app.on("cube:move", (data, sender) => {
+    // Get information about the sender
+    const player = world.getPlayer(sender)
+    const playerName = player ? player.name : 'Unknown'
+    
+    // Update authoritative state
+    height += 1
+    app.position.y = height
+    
+    // Broadcast updated state to all clients
+    app.send("cube:position", {
+      position: app.position.toArray(),
+      playerName: playerName
+    })
+    
+    // Log server-side for monitoring
+    console.log(`Cube moved by ${playerName}`)
+  })
+}
+```
+
+### Client-Server Data Flow
+
+The typical data flow in client-server apps follows this pattern:
+
+1. Client triggers an action (button press, interaction)
+2. Client sends a message to the server with `app.send()`
+3. Server receives the message and updates authoritative state
+4. Server broadcasts updated state to all clients
+5. Clients receive the update and apply changes to their local representation
+6. Clients update UI to reflect the new state
+
+### State Synchronization
+
+For complex apps, use app state to synchronize initial state:
+
+```javascript
+// Server: Initialize and send state
+if (world.isServer) {
+  const state = {
+    position: [0, 1, 0],
+    color: '#00ffaa',
+    ready: true
+  }
+  app.state = state
+  app.send('state', state)
+}
+
+// Client: Initialize from state
+if (world.isClient) {
+  let state = app.state
+  
+  if (state.ready) {
+    // Initialize from existing state
+    initializeFromState(state)
+  } else {
+    // Wait for state
+    app.on('state', (_state) => {
+      state = _state
+      initializeFromState(state)
+    })
+  }
+}
+```
+
+## Networking
+
+Hyperfy apps can communicate with external services using the fetch API:
+
+```javascript
+// Make a GET request
+async function fetchData() {
+  try {
+    const response = await fetch('https://api.example.com/data')
+    const data = await response.json()
+    return data
+  } catch (error) {
+    console.error('Failed to fetch data:', error)
+    return null
+  }
+}
+
+// Make a POST request with authentication
+async function sendData(payload) {
+  try {
+    const response = await fetch('https://api.example.com/update', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer YOUR_TOKEN'
+      },
+      body: JSON.stringify(payload)
+    })
+    
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`)
+    }
+    
+    const result = await response.json()
+    return result
+  } catch (error) {
+    console.error('Error sending data:', error)
+    return null
+  }
+}
+```
+
+## Best Practices
+
+### Performance Optimization
+
+```javascript
+// Object pooling for frequently used objects
+this.pool = Array(10).fill(null).map(() => {
+  const geometry = new THREE.BoxGeometry(1, 1, 1)
+  const material = new THREE.MeshBasicMaterial()
+  return new THREE.Mesh(geometry, material)
+})
+
+// Reuse objects instead of creating new ones
+const tempVector = new Vector3()
+
+function updatePosition(target) {
+  // Use the temp vector instead of creating a new one
+  tempVector.copy(target.position).add(velocity)
+  object.position.copy(tempVector)
+}
+```
+
+### Memory Management
+
+Always dispose of resources in the cleanup method:
+
+```javascript
+cleanup() {
+  // Dispose geometries
+  Object.values(this.geometries).forEach(g => g.dispose())
+  
+  // Dispose materials
+  Object.values(this.materials).forEach(m => m.dispose())
+  
+  // Remove from scene
+  if (this.mesh && this.mesh.parent) {
+    this.mesh.parent.remove(this.mesh)
+  }
+}
+```
+
+### Client-Server Code Organization
+
+Keep your client and server code well-organized:
+
+```javascript
+// Shared variables and constants
+const CONSTANTS = {
+  MAX_HEIGHT: 10,
+  MIN_HEIGHT: 0,
+  MOVE_SPEED: 0.5
+}
+
+// Server-specific code in one block
+if (world.isServer) {
+  // Server-only variables
+  const serverState = {
+    // Server state here
+  }
+  
+  // Server initialization
+  function initServer() {
+    // Initialize server-specific components
+  }
+  
+  // Server event handlers
+  function setupServerEvents() {
+    app.on('event1', handleEvent1)
+    app.on('event2', handleEvent2)
+  }
+  
+  // Initialize server
+  initServer()
+  setupServerEvents()
+}
+
+// Client-specific code in one block
+if (world.isClient) {
+  // Client-only variables
+  const clientState = {
+    // Client state here
+  }
+  
+  // Client initialization
+  function initClient() {
+    // Initialize client-specific components
+  }
+  
+  // Client event handlers
+  function setupClientEvents() {
+    app.on('event3', handleEvent3)
+    app.on('event4', handleEvent4)
+  }
+  
+  // Initialize client
+  initClient()
+  setupClientEvents()
+}
+```
+
+### Safe Access Patterns
+
+Use optional chaining and nullish coalescing for safer code:
+
+```javascript
+// Optional chaining for potentially undefined properties
+const url = config.texture?.url
+
+// Nullish coalescing for default values
+const name = config.name ?? 'Default Name'
+
+// Safe function calls
+player?.getPosition()?.toArray() || [0, 0, 0]
+
+// Type checking before operations
+if (typeof value === 'number' && !isNaN(value)) {
+  // Perform operation with number
+}
+```
+
+## Migration from Legacy Methods
+
+The Hyp App API represents the modern approach to creating Hyperfy applications. If you have code built using the older approaches, this section will help you migrate.
+
+### Legacy App Structure vs. Modern Approach
+
+#### Legacy Method:
+```javascript
+// Manually creating a file in world/apps directory
+export default function App(app) {
+  // App code here
+  const cube = app.three.getMesh('cube')
+  
+  app.three.onUpdate(() => {
+    cube.rotation.y += 0.01
+  })
+}
+```
+
+#### Modern Method:
+```javascript
+// Using the Hyp App API with object return format
+({
+  init() {
+    // Initialize app
+    this.cube = this.app.get('cube')
+  },
+  
+  update() {
+    // Update every frame
+    if (this.cube) {
+      this.cube.rotation.y += 0.01
+    }
+  },
+  
+  cleanup() {
+    // Clean up resources
+  }
+})
+```
+
+### Migration Steps
+
+1. **Move App Files** - Relocate your app code from the world/apps directory to use the Hyp App system.
+
+2. **Update Structure** - Convert your app structure to use either the object return format (recommended) or the global app format.
+
+3. **Replace Legacy APIs** - Update legacy API calls with their modern equivalents:
+
+   | Legacy API | Modern API |
+   |------------|------------|
+   | `app.three.getMesh()` | `app.get()` |
+   | `app.three.onUpdate()` | `app.on('update')` |
+   | `app.three.add()` | `app.add()` |
+   | `app.three.createObj()` | `app.create()` |
+   | `app.three.physics.createRigidBody()` | `app.create('rigidbody')` |
+
+4. **Update Event Handling** - Use the modern event system with `app.on()` and `app.off()` instead of legacy callbacks.
+
+5. **Replace JSON Configuration** - Move from static JSON configuration to dynamic configuration with `app.configure()`.
+
+6. **Implement Cleanup** - Add proper resource cleanup in the `cleanup()` lifecycle method.
+
+7. **Test Thoroughly** - Ensure your migrated app functions as expected in the new environment.
+
+8. **Consider New Features** - Take advantage of new Hyp App API features like conditional configuration, improved UI components, and enhanced networking.
+
+### Common Migration Issues
+
+- **Missing Resources**: Ensure all assets are properly imported and accessible
+- **Event Listener Memory Leaks**: Verify all event listeners are removed in cleanup
+- **Legacy Method Calls**: Check for any remaining legacy API calls
+- **State Management**: Update how you manage and synchronize app state
+- **Error Handling**: Add proper error handling for improved robustness
+
+By following these steps, you can successfully migrate your legacy Hyperfy apps to the modern Hyp App API system.
+
+## API Reference
+
+```
+╔══════════════════════════════════════╗
+║           API REFERENCE               ║
+╚══════════════════════════════════════╝
+```
+
+This section provides detailed documentation for all API components available in the Hyperfy scripting system.
+
+### Global Objects
+
+- **`app`**: The main app instance for managing your application
+- **`world`**: World state and interactions with the environment and players
+- **`config`**: App configuration values (shorthand for app.config)
+- **`THREE`**: Three.js library for 3D operations and math
+- **`Vector3`**, **`Quaternion`**, **`Euler`**, **`Matrix4`**: Math utilities for spatial operations
+
+### App API
+
+The global `app` variable is always available within the app scripting runtime.
+
+#### Properties
+
+- **`.instanceId`**: String - The unique ID of the current app instance (shared across clients and server)
+- **`.version`**: String - The version of the app instance, incremented whenever the app is modified
+- **`.state`**: Object - Plain JavaScript object for storing state, synchronized between server and clients
+- **`.config`**: Object - Contains all configuration values defined in `app.configure()`
+
+#### Methods
+
+- **`.on(name, callback)`**: Subscribes to custom networked app events and engine update events. Note: Only subscribe to update events when needed - the engine is optimized to skip over apps that don't receive update events.
+- **`.off(name, callback)`**: Unsubscribes from custom events and update events. Important: Be sure to unsubscribe from update events when no longer needed.
+- **`.send(name, data, skipNetworkId)`**: Sends an event across the network. If called from a client, sends to the server. If called from the server, sends to all clients (with optional skipNetworkId to exclude a specific client).
+- **`.get(nodeId)`**: Node - Finds and returns any node with the matching ID from the model. For Blender models, this is the object "name". Note: The Blender GLTF exporter sometimes renames objects (removing spaces, etc.) - best practice is to name objects in UpperCamelCase.
+- **`.create(nodeName, options)`**: Node - Creates and returns a node of the specified type. The optional options object can contain initialization parameters like `id`.
+- **`.configure(fields)`**: Configures custom UI for your app with configuration options
+- **`.add(object)`**: Adds an object to the app scene hierarchy
+
+### World API
+
+The global `world` variable is always available within the app scripting runtime.
+
+#### Properties
+
+- **`.networkId`**: String - A unique ID for the current server or client
+- **`.isServer`**: Boolean - Whether the script is currently executing on the server
+- **`.isClient`**: Boolean - Whether the script is currently executing on the client
+
+#### Methods
+
+- **`.add(node)`**: Adds a node into world-space, outside of the app's local hierarchy
+- **`.remove(node)`**: Removes a node from world-space
+- **`.attach(node)`**: Adds a node into world-space, maintaining its current world transform
+- **`.on(event, callback)`**: Subscribes to world events like `enter` and `leave`
+- **`.off(event, callback)`**: Unsubscribes from world events
+- **`.raycast(origin, direction, maxDistance?, layerMask?)`**: Performs physics raycasting. If `maxDistance` is not specified, max distance is infinite. If `layerMask` is not specified, it will hit anything.
+- **`.createLayerMask(...groups)`**: Creates a bitmask for raycast layer filtering. Currently the only groups available are `environment` and `player`.
+- **`.getPlayer(playerId)`**: Player - Returns a player object (local player if no ID provided)
+- **`.chat(message)`**: Sends a chat message to all players
+- **`.getTimestamp()`**: Returns the current server timestamp
+
+```javascript
+// Example: Using raycast to detect objects in the world
+const origin = new Vector3(0, 1, 0)
+const direction = new Vector3(0, 0, -1)
+const maxDistance = 10
+const layerMask = world.createLayerMask('environment')
+
+const hit = world.raycast(origin, direction, maxDistance, layerMask)
+if (hit) {
+  console.log('Hit object:', hit.object.id, 'at distance:', hit.distance)
+}
+
+// Example: Listening for player join/leave events
+world.on('enter', (player) => {
+  console.log(`Player ${player.name} entered the world`)
+})
+
+world.on('leave', (player) => {
+  console.log(`Player ${player.name} left the world`)
+})
+```
+
+### Player API
+
+Represents a player in the world.
+
+#### Properties
+
+- **`.networkId`**: String - A completely unique ID that is given to every player each time they connect
+- **`.entityId`**: String - The entity's ID
+- **`.id`**: String - The player ID (same each time the player enters the world)
+- **`.name`**: String - The player's name
+- **`.position`**: Vector3 - The player's position in the world
+- **`.quaternion`**: Quaternion - The player's rotation in the world
+- **`.rotation`**: Euler - The player's rotation as Euler angles
+
+#### Methods
+
+- **`.teleport(position, rotationY)`**: Teleports the player instantly to a new position. The `rotationY` value is in radians and if omitted, the player will continue facing their current direction.
+- **`.getBoneTransform(boneName)`**: Matrix4 - Returns a matrix of the bone transform in world space (see Avatar API for details on available bones)
+
+```javascript
+// Example: Teleporting a player
+const player = world.getPlayer()
+player.teleport(new Vector3(0, 10, 0), Math.PI) // Teleport and face opposite direction
+
+// Example: Getting bone transform
+const handMatrix = player.getBoneTransform('rightHand')
+if (handMatrix) {
+  // Attach an object to the player's hand
+  object.position.setFromMatrixPosition(handMatrix)
+  object.quaternion.setFromRotationMatrix(handMatrix)
+}
+```
+
+### UI Components
+
+#### UI
+
+Creates a UI panel in the 3D world.
+
+##### Properties
+
+- **`.width`**: Number - The width of the UI canvas in pixels. Defaults to `100`.
+- **`.height`**: Number - The height of the UI canvas in pixels. Defaults to `100`.
+- **`.size`**: Number - Conversion factor from pixels to meters. This allows you to build UI while thinking in pixels instead of meters, and makes it easier to resize things later. Defaults to `0.01`.
+- **`.lit`**: Boolean - Whether the canvas is affected by lighting. Defaults to `false`.
+- **`.doubleside`**: Boolean - Whether the canvas is doublesided. Defaults to `false`.
+- **`.billboard`**: String - Makes the UI face the camera. Can be `null`, `full` or `y-axis`. Defaults to `null`.
+- **`.pivot`**: String - Determines where the "center" of the UI is. Options are: `top-left`, `top-center`, `top-right`, `center-left`, `center`, `center-right`, `bottom-left`, `bottom-center`, `bottom-right`. Defaults to `center`.
+- **`.backgroundColor`**: String - The background color of the UI. Can be hex (eg `#000000`) or rgba (eg `rgba(0, 0, 0, 0.5)`). Defaults to `null`.
+- **`.borderWidth`**: Number - The width of the border in pixels.
+- **`.borderColor`**: String - The color of the border.
+- **`.borderRadius`**: Number - The radius of the border in pixels.
+- **`.padding`**: Number - The inner padding of the UI in pixels. Defaults to `0`.
+- **`.flexDirection`**: String - The flex direction. Can be `column`, `column-reverse`, `row` or `row-reverse`. Defaults to `column`.
+- **`.justifyContent`**: String - Options: `flex-start`, `flex-end`, `center`. Defaults to `flex-start`.
+- **`.alignItems`**: String - Options: `stretch`, `flex-start`, `flex-end`, `center`, `baseline`. Defaults to `stretch`.
+- **`.alignContent`**: String - Options: `flex-start`, `flex-end`, `stretch`, `center`, `space-between`, `space-around`, `space-evenly`. Defaults to `flex-start`.
+- **`.flexWrap`**: String - Options: `no-wrap`, `wrap`. Defaults to `no-wrap`.
+- **`.gap`**: Number - Gap between child elements. Defaults to `0`.
+
+```javascript
+// Example: Creating a UI panel with various properties
+const ui = app.create('ui')
+ui.width = 300
+ui.height = 200
+ui.backgroundColor = 'rgba(0, 15, 30, 0.8)'
+ui.borderRadius = 20
+ui.padding = 15
+ui.billboard = 'full'
+ui.pivot = 'center'
+ui.justifyContent = 'center'
+ui.alignItems = 'center'
+ui.gap = 10
+app.add(ui)
+```
+
+#### UIView
+
+A container for other UI elements.
+
+##### Properties
+
+- **`.display`**: String - Either `none` or `flex`. Defaults to `flex`.
+- **`.width`**: Number - The width of the view in pixels. Defaults to `100`.
+- **`.height`**: Number - The height of the view in pixels. Defaults to `100`.
+- **`.backgroundColor`**: String - The background color of the view. Can be hex (eg `#000000`) or rgba (eg `rgba(0, 0, 0, 0.5)`). Defaults to `null`.
+- **`.borderWidth`**: Number - The width of the border in pixels.
+- **`.borderColor`**: String - The color of the border.
+- **`.borderRadius`**: Number - The radius of the border in pixels.
+- **`.margin`**: Number - The outer margin of the view in pixels. Defaults to `0`.
+- **`.padding`**: Number - The inner padding of the view in pixels. Defaults to `0`.
+- **`.flexDirection`**: String - The flex direction. Can be `column`, `column-reverse`, `row` or `row-reverse`. Defaults to `column`.
+- **`.justifyContent`**: String - Options: `flex-start`, `flex-end`, `center`. Defaults to `flex-start`.
+- **`.alignItems`**: String - Options: `stretch`, `flex-start`, `flex-end`, `center`, `baseline`. Defaults to `stretch`.
+- **`.alignContent`**: String - Options: `flex-start`, `flex-end`, `stretch`, `center`, `space-between`, `space-around`, `space-evenly`. Defaults to `flex-start`.
+- **`.flexBasis`**: Number - Defaults to `null`.
+- **`.flexGrow`**: Number - Defaults to `null`.
+- **`.flexShrink`**: Number - Defaults to `null`.
+- **`.flexWrap`**: String - Options: `no-wrap`, `wrap`. Defaults to `no-wrap`.
+- **`.gap`**: Number - Defaults to `0`.
+
+```javascript
+// Example: Creating a panel with various properties
+const panel = app.create('uiview')
+panel.width = 280
+panel.height = 150
+panel.backgroundColor = 'rgba(0, 15, 30, 0.8)'
+panel.borderRadius = 10
+panel.padding = 10
+panel.margin = 5
+panel.flexDirection = 'column'
+panel.justifyContent = 'center'
+panel.alignItems = 'center'
+panel.gap = 8
+ui.add(panel)
+```
+
+#### UIText
+
+Displays text within a UI element.
+
+##### Properties
+
+- **`.display`**: String - Either `none` or `flex`. Defaults to `flex`.
+- **`.value`**: String - The text to display.
+- **`.fontSize`**: Number - Font size in pixels. Defaults to `16`.
+- **`.color`**: String - The text color. Defaults to `#000000`.
+- **`.fontWeight`**: String/Number - Defaults to `normal`, can also be a number like `100` or string like `bold`.
+- **`.lineHeight`**: Number - Line height as a multiplier. Defaults to `1.2`.
+- **`.textAlign`**: String - Text alignment: `left`, `center`, `right`. Defaults to `left`.
+- **`.fontFamily`**: String - Font family. Defaults to `Rubik`.
+- **`.padding`**: Number - Inner padding in pixels. Defaults to `0`.
+- **`.margin`**: Number - Outer margin in pixels. Defaults to `0`.
+- **`.backgroundColor`**: String - Background color behind the text. Can be hex (eg `#000000`) or rgba (eg `rgba(0, 0, 0, 0.5)`). Defaults to `null`.
+- **`.borderRadius`**: Number - Border radius in pixels.
+
+##### Events
+
+- **`.onPointerDown`**: Function - Called when text is pressed
+- **`.onPointerUp`**: Function - Called when text is released
+- **`.onPointerOver`**: Function - Called when pointer enters
+- **`.onPointerOut`**: Function - Called when pointer leaves
+
+```javascript
+// Example: Creating a button-like text element
+const button = app.create('uitext')
+button.value = '[ ACCESS GRANTED ]'
+button.color = '#00ffaa'
+button.fontSize = 18
+button.fontWeight = 'bold'
+button.backgroundColor = 'rgba(0, 15, 30, 0.8)'
+button.padding = 12
+button.borderRadius = 6
+button.textAlign = 'center'
+
+// Adding interaction events
+button.onPointerOver = () => {
+  button.backgroundColor = 'rgba(0, 30, 60, 0.8)'
+}
+
+button.onPointerOut = () => {
+  button.backgroundColor = 'rgba(0, 15, 30, 0.8)'
+}
+
+button.onPointerDown = () => {
+  button.color = '#ffffff'
+}
+
+button.onPointerUp = () => {
+  button.color = '#00ffaa'
+  // Perform action
+}
+
+ui.add(button)
+```
+
+### Avatar API
+
+Represents an avatar in the world.
+
+#### Properties
+
+- **`.src`**: String - URL to a .vrm file, either an asset URL (from props) or an absolute URL
+- **`.emote`**: String - URL to a .glb file with an emote animation, either from props or an absolute URL
+- **`.head`**: Node - Reference to the avatar's head node
+- **`.leftHand`**: Node - Reference to the avatar's left hand
+- **`.rightHand`**: Node - Reference to the avatar's right hand
+- **`.position`**: Vector3 - The avatar's position
+- **`.quaternion`**: Quaternion - The avatar's rotation
+- **`.scale`**: Vector3 - The avatar's scale
+
+#### Methods
+
+- **`.setEmote(url)`**: Sets the current emote animation
+- **`.getBoneTransform(boneName)`**: Matrix4 - Returns bone transform in world space
+- **`.getHeight()`**: Number - Returns the height of the avatar in meters (may be null if avatar hasn't loaded yet)
+
+```javascript
+// Creating an avatar with src and emote
+const avatar = app.create('avatar', { 
+  src: config.avatar?.url,
+  emote: config.emote?.url 
+})
+app.add(avatar)
+
+// Getting bone transform for attaching objects
+const matrix = avatar.getBoneTransform('rightHand')
+if (matrix) {
+  weapon.position.setFromMatrixPosition(matrix)
+  weapon.quaternion.setFromRotationMatrix(matrix)
+}
+```
+
+Note: VRM avatars have required and optional bones. The VRM spec defines these bones as required:
+```
+hips, spine, chest, neck, head, leftShoulder, leftUpperArm, leftLowerArm, leftHand, rightShoulder, rightUpperArm, rightLowerArm, rightHand, leftUpperLeg, leftLowerLeg, leftFoot, leftToes, rightUpperLeg, rightLowerLeg, rightFoot, rightToes
+```
+
+### Nametag API
+
+Creates a floating nametag above objects, typically used for avatars.
+
+#### Properties
+
+- **`.label`**: String - The text to display
+- **`.color`**: String - Text color
+- **`.backgroundColor`**: String - Background color
+- **`.position`**: Vector3 - Position offset from parent
+- **`.scale`**: Vector3 - Scale of the nametag
+- **`.active`**: Boolean - Whether the nametag is visible
+
+#### Methods
+
+- **`.setLabel(text)`**: Updates the text displayed
+- **`.setColor(color)`**: Updates the text color
+
+### Audio API
+
+Sound management for your app.
+
+#### Properties
+
+- **`.src`**: String - URL for the audio file, either absolute or an asset URL from an embedded file. Currently only mp3 files are supported.
+- **`.volume`**: Number - Volume level from 0 to 1 (default: 1)
+- **`.loop`**: Boolean - Whether the audio should loop (default: false)
+- **`.autoplay`**: Boolean - Whether the audio should play automatically
+- **`.group`**: String - The type of audio: 'music' for ambient sounds/live event music or 'sfx' for short sound effects. Users can adjust volume for these groups independently. (default: 'music')
+- **`.spatial`**: Boolean - Whether sound should be played spatially and heard by people nearby (default: true)
+- **`.distanceModel`**: String - When spatial is enabled, the distance model to use: 'linear', 'inverse', or 'exponential' (default: 'inverse')
+- **`.refDistance`**: Number - When spatial is enabled, the reference distance (default: 1)
+- **`.maxDistance`**: Number - When spatial is enabled, the maximum distance (default: 40)
+- **`.rolloffFactor`**: Number - When spatial is enabled, the rolloff factor (default: 3)
+- **`.coneInnerAngle`**: Number - When spatial is enabled, the cone inner angle (default: 360)
+- **`.coneOuterAngle`**: Number - When spatial is enabled, the cone outer angle (default: 360)
+- **`.coneOuterGain`**: Number - When spatial is enabled, the cone outer gain (default: 0)
+- **`.currentTime`**: Number (read-only) - Current time position in seconds
+
+#### Methods
+
+- **`.play()`**: Starts playback. Note: If no click gesture has happened within the world, playback won't begin until it has.
+- **`.pause()`**: Pauses playback, retaining the current time
+- **`.stop()`**: Stops playback and resets position to beginning
+
+```javascript
+// Example of creating an audio node with spatial settings
+const ambience = app.create('audio')
+ambience.src = config.ambientSound?.url
+ambience.loop = true
+ambience.volume = 0.8
+ambience.group = 'music'
+ambience.spatial = true
+ambience.maxDistance = 50
+ambience.play()
+
+// Add to specific location in the world
+const soundSource = app.create('group')
+soundSource.position.set(10, 2, 15)
+soundSource.add(ambience)
+app.add(soundSource)
+```
+
+### Action API
+
+Creates an interactive action button in the world.
+
+#### Properties
+
+- **`.label`**: String - Text displayed on the action (defaults to "Interact")
+- **`.distance`**: Number - The distance in meters that the action should be displayed (defaults to 3)
+- **`.duration`**: Number - How long the player must hold down the interact button to trigger it, in seconds (defaults to 0.5)
+- **`.position`**: Vector3 - Position in 3D space
+- **`.rotation`**: Euler - Rotation in 3D space
+- **`.scale`**: Vector3 - Scale in 3D space
+- **`.active`**: Boolean - Whether the action is visible and interactive
+
+#### Methods
+
+- **`.onStart`**: Function - Called when the interact button is first pressed
+- **`.onTrigger`**: Function - Called when the interact button has been held down for the full duration
+- **`.onCancel`**: Function - Called if the interact button is released before the full duration
+
+```javascript
+// Example of creating an action with all properties
+const action = app.create('action')
+action.label = '[ PR3SS M3 ]'
+action.distance = 5
+action.duration = 1.0
+action.position.set(0, 1.5, 0)
+
+// Set up event handlers
+action.onStart = () => {
+  console.log('Interaction started')
+}
+
+action.onTrigger = () => {
+  console.log('Action triggered!')
+  performAction()
+}
+
+action.onCancel = () => {
+  console.log('Interaction canceled')
+}
+
+app.add(action)
+```
+
+### Node API
+
+The base class for all scene objects.
+
+#### Properties
+
+- **`.id`**: String - The ID of the node. Auto-generated when creating nodes via script. For GLTF models, it uses the same object name as in Blender.
+- **`.position`**: Vector3 - Position in local space
+- **`.rotation`**: Euler - Rotation in local space
+- **`.quaternion`**: Quaternion - Rotation as quaternion (updating this automatically updates rotation)
+- **`.scale`**: Vector3 - Scale in local space
+- **`.matrixWorld`**: Matrix4 - The world matrix of this node in global space
+- **`.parent`**: Node - Parent node
+- **`.visible`**: Boolean - Whether the node is visible
+- **`.children`**: Array[Node] - Child nodes
+
+> **Note:** Blender GLTF exporter sometimes renames objects (removing spaces, etc.) - best practice is to name objects in UpperCamelCase with no other characters.
+
+#### Methods
+
+- **`.add(childNode)`**: Adds a child node
+- **`.remove(childNode)`**: Removes a child node
+- **`.getWorldPosition(target)`**: Gets position in world space
+- **`.getWorldQuaternion(target)`**: Gets rotation in world space
+- **`.lookAt(vector)`**: Rotates to face a point in space
+- **`.traverse(callback)`**: Traverses this and all descendents calling `callback` with the node
+
+### RigidBody API
+
+Physical body component for physics simulations.
+
+#### Properties
+
+- **`.type`**: String - Body type: `static`, `dynamic`, or `kinematic`
+- **`.mass`**: Number - Mass of the body (affects physics)
+- **`.linearDamping`**: Number - Reduces linear velocity over time
+- **`.angularDamping`**: Number - Reduces angular velocity over time
+- **`.detectCollisions`**: Boolean - Whether collision detection is enabled
+- **`.onContactStart`**: Function (Experimental) - Called when a child collider generates contacts with another rigidbody
+- **`.onContactEnd`**: Function (Experimental) - Called when a child collider ends contacts with another rigidbody
+- **`.onTriggerEnter`**: Function (Experimental) - Called when a child trigger collider is entered
+- **`.onTriggerLeave`**: Function (Experimental) - Called when a child trigger collider is left
+
+#### Methods
+
+- **`.applyForce(force, worldPoint)`**: Applies a force at the specified point
+- **`.applyImpulse(impulse, worldPoint)`**: Applies an instantaneous impulse
+- **`.setLinearVelocity(velocity)`**: Sets the linear velocity directly
+- **`.setAngularVelocity(velocity)`**: Sets the angular velocity directly
+
+> **Note:** For performance reasons, if you plan to move the rigidbody with code without being dynamic, use `kinematic` as the type.
+
+### Collider API
+
+Collision detection shape for physics interactions.
+
+#### Properties
+
+- **`.type`**: String - Collider shape: `box`, `sphere`, or `geometry`. Defaults to `box`.
+- **`.convex`**: Boolean - When using a geometry type, determines whether the geometry should be considered "convex". If disabled, the mesh will act as a trimesh. Defaults to `false`. Convex meshes are more performant and allow two convex dynamic rigidbodies to collide.
+- **`.trigger`**: Boolean - Whether the collider is a trigger. Defaults to `false`. A trigger will not collide with anything, but will trigger the `onTriggerEnter` and `onTriggerLeave` functions on the parent rigidbody.
+
+#### Methods
+
+- **`.setFromNode(node)`**: Automatically sizes the collider to match a node
+- **`.setSize(width, height, depth)`**: When type is `box`, sets the size of the box. Defaults to `1, 1, 1`.
+
+```javascript
+// Example of creating different collider types
+const boxCollider = app.create('collider')
+boxCollider.type = 'box'
+boxCollider.setSize(2, 1, 3)  // width, height, depth
+
+const sphereCollider = app.create('collider')
+sphereCollider.type = 'sphere'
+sphereCollider.radius = 1.5   // Set sphere radius
+
+const triggerCollider = app.create('collider')
+triggerCollider.trigger = true  // Make it a trigger collider
+```
+
+> **Note:** Setting/modifying the geometry for a collider is only configurable within a GLTF (e.g., via Blender). Triggers are forced to act like convex shapes due to physics engine limitations.
+
+### Mesh API
+
+Represents a mesh to be rendered. Internally the mesh is automatically instanced for performance.
+
+#### Properties
+
+- **`.castShadow`**: Boolean - Whether the mesh casts shadows. Defaults to `true`.
+- **`.receiveShadow`**: Boolean - Whether the mesh receives shadows. Defaults to `true`.
+
+```javascript
+// Example: Creating and configuring a mesh
+const mesh = app.create('mesh')
+mesh.castShadow = true
+mesh.receiveShadow = false
+app.add(mesh)
+```
+
+> **Note:** Setting/modifying the geometry or materials are not currently supported, and can only be configured within a GLTF (e.g., via Blender).
+
+### Material API
+
+Surface appearance properties.
+
+#### Properties
+
+- **`.color`**: Color - Base color
+- **`.emissive`**: Color - Self-illumination color
+- **`.emissiveIntensity`**: Number - The emissive intensity of the material. Values greater than `1` will activate HDR Bloom, as long as the emissive color is not black.
+- **`.metalness`**: Number - How metallic the surface appears (0-1)
+- **`.roughness`**: Number - Surface roughness (0-1)
+- **`.map`**: Texture - Color texture map
+- **`.textureX`**: Number - The offset of the texture on the `x` axis. Useful for UV scrolling.
+- **`.textureY`**: Number - The offset of the texture on the `y` axis. Useful for UV scrolling.
+
+```javascript
+// Example: Creating a glowing neon material
+const material = app.create('material')
+material.color.set('#00ffaa')
+material.emissive.set('#00ffaa')
+material.emissiveIntensity = 2.5
+material.metalness = 0.7
+material.roughness = 0.2
+
+// Example: Creating scrolling texture effect
+const scrollingMaterial = app.create('material')
+scrollingMaterial.map = app.config.texture?.url
+app.on('update', (dt) => {
+  scrollingMaterial.textureX += dt * 0.05
+})
+```
+
+### Sky API
+
+Controls the sky appearance in the world.
+
+#### Properties
+
+- **`.bg`**: String - URL to the sky texture or background
+- **`.hdr`**: String - URL to the HDR (High Dynamic Range) environment map
+- **`.rotation`**: Number - Rotation of the sky in radians
+- **`.intensity`**: Number - Intensity of the sky lighting (default: 1.0)
+
+#### Methods
+
+- **`.setTexture(url)`**: Sets the sky texture directly
+- **`.setHDR(url)`**: Sets the HDR environment map directly
+
+### Anchor API
+
+Position reference for UI and other elements. Anchors can also be used to attach players to them, for example for seating or vehicles.
+
+#### Properties
+
+- **`.position`**: Vector3 - Position in local space
+- **`.rotation`**: Euler - Rotation in local space
+- **`.quaternion`**: Quaternion - Rotation as quaternion
+- **`.scale`**: Vector3 - Scale in local space
+- **`.visible`**: Boolean - Whether the anchor is visible
+
+#### Methods
+
+- **`.add(childNode)`**: Adds a child node to the anchor
+- **`.remove(childNode)`**: Removes a child node from the anchor
+
+```javascript
+// Example: Creating a seat using an anchor
+// Be sure to give it a unique ID to ensure that every client has the same ID
+const seat = app.create('anchor', { id: 'seat1' })
+seat.position.set(0, 0.5, 0)
+vehicle.add(seat)
+
+// Later, to attach a player to this seat:
+const control = app.create('controller')
+control.setEffect({ anchor: seat })
+```
+
+### Group API
+
+A regular node with no special behavior, useful for grouping objects together under one parent.
+
+#### Properties
+
+- **`.position`**: Vector3 - Position in local space
+- **`.rotation`**: Euler - Rotation in local space
+- **`.quaternion`**: Quaternion - Rotation as quaternion
+- **`.scale`**: Vector3 - Scale in local space
+- **`.visible`**: Boolean - Whether the group and its children are visible
+
+#### Methods
+
+- **`.add(childNode)`**: Adds a child node to the group
+- **`.remove(childNode)`**: Removes a child node from the group
+
+```javascript
+// Example: Organizing objects in a group
+const group = app.create('group')
+group.position.set(0, 1, 0)
+app.add(group)
+
+// Add multiple children to the group
+const object1 = app.create('mesh')
+const object2 = app.create('mesh')
+const light = app.create('light')
+
+group.add(object1)
+group.add(object2)
+group.add(light)
+
+// Now we can manipulate all objects together
+group.rotation.y = Math.PI / 4
+group.position.y += 1
+```
+
+### LOD API
+
+Level of Detail for optimization.
+
+#### Properties
+
+- **`.levels`**: Array - Array of level objects
+- **`.autoUpdate`**: Boolean - Whether LOD updates automatically based on distance
+
+#### Methods
+
+- **`.addLevel(object, distance)`**: Adds a detail level with an object and distance threshold
+- **`.getObjectForDistance(distance)`**: Returns the appropriate object for the given distance
+- **`.insert(node, maxDistance)`**: Adds `node` as a child of this LOD and also registers it to be activated/deactivated based on the `maxDistance` value.
+
+```javascript
+// Example: Creating an LOD system for different model detail levels
+const lod = app.create('lod')
+app.add(lod)
+
+// High detail model - visible up to 20 units away
+const highDetailModel = app.get('ModelHighDetail')
+lod.insert(highDetailModel, 20)
+
+// Medium detail model - visible from 20 to 50 units away
+const mediumDetailModel = app.get('ModelMediumDetail')
+lod.insert(mediumDetailModel, 50)
+
+// Low detail model - visible from 50+ units away
+const lowDetailModel = app.get('ModelLowDetail')
+lod.insert(lowDetailModel, Infinity)
+```
+
+### Controller API
+
+Used for controlling entities in the world, particularly avatars and other entities that need movement.
+
+#### Properties
+
+- **`.position`**: Vector3 - Position in world space
+- **`.quaternion`**: Quaternion - Rotation in world space
+- **`.velocity`**: Vector3 - Current velocity
+- **`.angularVelocity`**: Vector3 - Current rotational velocity
+
+#### Methods
+
+- **`.move(direction)`**: Moves the controller in the specified direction
+- **`.teleport(position)`**: Instantly moves the controller to a new position
+- **`.lookAt(target)`**: Rotates the controller to face a target
+- **`.rotate(angle)`**: Rotates the controller by the specified angle
+
+### Numeric Utilities
+
+The `num` helper provides useful numeric utilities, particularly for random number generation since `Math.random()` is not allowed in the app script runtime.
+
+#### Usage
+
+```javascript
+// Generate random integer between 0 and 10
+num(0, 10)
+
+// Generate random float between 100 and 1000 with 2 decimal places
+num(100, 1000, 2)
+```
+
+#### Methods
+
+- **`num(min, max, dp=0)`**: Generates random numbers between min and max with optional decimal places
+  - `min`: Minimum value (inclusive)
+  - `max`: Maximum value (inclusive)
+  - `dp`: Decimal places (default: 0 for integers)
+- **`.lerp(a, b, t)`**: Linear interpolation between a and b
+- **`.clamp(value, min, max)`**: Clamps a value between min and max
+- **`.degToRad(degrees)`**: Converts degrees to radians
+- **`.radToDeg(radians)`**: Converts radians to degrees
+
+### Props API
+
+Apps can expose a list of custom UI fields allowing non-technical people to configure or change the way your apps work.
+
+#### Configuration
+
+Props are defined using the `app.configure()` method with an array of field definitions:
+
+```javascript
+app.configure([
+  {
+    key: 'name',
+    type: 'text',
+    label: 'Name',
+    initial: 'Default Name'
+  },
+  // Additional fields...
+])
+
+// Or with a function
+app.configure(() => {
+  return [
+    {
+      key: 'name',
+      type: 'text',
+      label: 'Name',
+    },
+    // Additional fields...
+  ]
+})
+```
+
+#### Accessing Props
+
+Props values can be accessed through the global `props` object or the `app.config` object:
+
+```javascript
+const name = props.name || 'Default Name'
+// or
+const name = app.config.name || 'Default Name'
+```
+
+#### Field Types
+
+Props support a rich variety of field types:
+
+##### Text
+
+```javascript
+{
+  type: 'text',
+  key: 'fieldName',     // the key on `props` to set this value
+  label: 'Display Name', // the label for the text input
+  placeholder: 'Enter text...', // an optional placeholder displayed inside the input
+  initial: 'Default value', // the initial value to set if not configured
+}
+```
+
+##### Textarea
+
+```javascript
+{
+  type: 'textarea',
+  key: 'description',
+  label: 'Description',
+  placeholder: 'Enter details...',
+  initial: '',
+}
+```
+
+##### Number
+
+```javascript
+{
+  type: 'number',
+  key: 'quantity',
+  label: 'Quantity',
+  dp: 2,             // the number of decimal places allowed (default = 0)
+  min: 0,            // the minimum value allowed (default = -Infinity)
+  max: 100,          // the maximum value allowed (default = Infinity)
+  step: 0.5,         // the amount incremented/decremented when pressing up/down arrows (default = 1)
+  initial: 1,        // the initial value to set if not configured (default = 0)
+}
+```
+
+##### Range
+
+```javascript
+{
+  type: 'range',
+  key: 'opacity',
+  label: 'Opacity',
+  min: 0,            // the minimum value allowed (default = 0)
+  max: 1,            // the maximum value allowed (default = 1)
+  step: 0.05,        // the step amount when sliding (default = 0.05)
+  initial: 0.8,      // the initial value to set if not configured (default = 0)
+}
+```
+
+##### Switch
+
+```javascript
+{
+  type: 'switch',
+  key: 'theme',
+  label: 'Theme',
+  options: [
+    { value: 'light', label: 'Light Mode' },
+    { value: 'dark', label: 'Dark Mode' },
+    { value: 'neon', label: 'Neon Mode' }
+  ],
+  initial: 'dark',   // the initial value to set if not configured
+}
+```
+
+##### Dropdown
+
+```javascript
+{
+  type: 'dropdown',
+  key: 'language',
+  label: 'Language',
+  options: [
+    { value: 'en', label: 'English' },
+    { value: 'es', label: 'Spanish' },
+    { value: 'jp', label: 'Japanese' }
+  ],
+  initial: 'en',     // the initial value to set if not configured
+}
+```
+
+##### File
+
+```javascript
+{
+  type: 'file',
+  key: 'audioFile',
+  label: 'Audio File',
+  kind: 'audio',     // must be one of: avatar, emote, model, texture, hdr, audio
+}
+```
+
+File values are returned as an object:
+```javascript
+{
+  type: 'audio',      // the type of file (avatar, emote, model, texture, hdr, audio)
+  name: 'music.mp3',  // the original file's name
+  url: 'https://...'  // the url to the file
+}
+```
+
+Usage example:
+```javascript
+const audio = app.create('audio', {
+  src: props.audioFile?.url
+})
+audio.play()
+```
+
+##### Section
+
+```javascript
+{
+  type: 'section',
+  key: 'appearance',
+  label: 'Appearance Settings',
+}
+```
+
+##### Color
+
+```javascript
+{
+  type: 'color',
+  key: 'backgroundColor',
+  label: 'Background Color',
+  value: '#00ffaa',
+}
+```
+
+#### Conditional Fields
+
+Fields can be conditionally displayed based on other field values:
+
+```javascript
+{
+  key: 'customColor',
+  type: 'color',
+  label: 'Custom Color',
+  value: '#ff00ff',
+  when: [{ key: 'theme', op: 'eq', value: 'custom' }]
+}
+```
+
+This field will only appear when the 'theme' field is set to 'custom'.
+
+---
+
+## API Documentation Cross-Reference
+
+For more detailed information on each API component, refer to the following files:
+
+| API Component | Documentation File |
+|---------------|-------------------|
+| App           | [App.md](mdc:api/App.md) |
+| World         | [World.md](mdc:api/World.md) |
+| Node          | [Node.md](mdc:api/Node.md) |
+| UI            | [UI.md](mdc:api/UI.md) |
+| UIView        | [UIView.md](mdc:api/UIView.md) |
+| UIText        | [UIText.md](mdc:api/UIText.md) |
+| Player        | [Player.md](mdc:api/Player.md) |
+| Avatar        | [Avatar.md](mdc:api/Avatar.md) |
+| Audio         | [Audio.md](mdc:api/Audio.md) |
+| RigidBody     | [RigidBody.md](mdc:api/RigidBody.md) |
+| Collider      | [Collider.md](mdc:api/Collider.md) |
+| Action        | [Action.md](mdc:api/Action.md) |
+| Mesh          | [Mesh.md](mdc:api/Mesh.md) |
+| Material      | [Material.md](mdc:api/Material.md) |
+| Group         | [Group.md](mdc:api/Group.md) |
+| Anchor        | [Anchor.md](mdc:api/Anchor.md) |
+| LOD           | [LOD.md](mdc:api/LOD.md) |
+| Props         | [Props.md](mdc:api/Props.md) |
+| Numeric Utils | [num.md](mdc:api/num.md) |
+| Sky           | [Sky.md](mdc:../legacy/Hyperfy_DuhzDocs/core/nodes/Sky.md) |
+| Controller    | [Controller.md](mdc:../legacy/Hyperfy_DuhzDocs/core/nodes/Controller.md) |
+| Nametag       | [Nametag.md](mdc:../legacy/Hyperfy_DuhzDocs/core/nodes/Nametag.md) |
+
+*See also: [Developer Guide](mdc:../guides/for-developers.md) | [Examples](mdc:../examples/index.md)* 
