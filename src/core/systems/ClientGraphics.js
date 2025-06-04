@@ -417,6 +417,34 @@ export class ClientGraphics extends System {
       // console.log('occluders', stats.occluders)
       // console.log('draws', stats.draws)
     }
+    function showNode(node) {
+      const size = node.outer.getSize(new THREE.Vector3())
+      const geometry = new THREE.BoxGeometry(size.x, size.y, size.z)
+      const center = node.outer.getCenter(new THREE.Vector3())
+      // console.log(size.x, size.y, size.z, node.size * 4)
+      // console.log(center.toArray(), node.center.toArray())
+      // const color = '#' + Math.floor(Math.random() * 16777215).toString(16)
+      const color = 'red'
+      const material = new THREE.MeshBasicMaterial({ wireframe: true, color })
+      const mesh = new THREE.Mesh(geometry, material)
+      mesh.position.copy(center)
+      self.world.stage.scene.add(mesh)
+    }
+    function explain(top, node, msg) {
+      for (const item of node.items) {
+        if (item.node?.id === 'frills') {
+          // console.log(msg)
+          if (globalThis.foo) {
+            showNode(top)
+            globalThis.foo = false
+          }
+          // console.log(top.outer.containsPoint(cameraPos))
+        }
+      }
+      for (const child of node.children) {
+        explain(top, child, msg)
+      }
+    }
     function traverse(node) {
       stats.nodes++
       // initialize
@@ -425,11 +453,14 @@ export class ClientGraphics extends System {
       }
       // if node is outside frustum, skip all descendants
       if (!frustum.intersectsBox(node.outer)) {
+        // explain(node, node, 'outside frustum')
         return
       }
       if (self.occlusion) {
         // if node encapsulates frustum, render items without query (this node only) and recurse fresh
-        if (node.outer.containsPoint(cameraPos)) {
+        // if (node.outer.containsPoint(cameraPos)) {
+        // note: we have to do it like this because frustum is in front of cameraPos by camera.near amount!
+        if (node.outer.distanceToPoint(cameraPos) <= camera.near) {
           node.oc.visible = true
           renderItems(node.items)
           looseOctreeTraverse(cameraPos, node, traverse)
@@ -467,6 +498,7 @@ export class ClientGraphics extends System {
               // showSubtree(node)
             } else {
               node.oc.visible = false
+              // explain(node, node, 'query result hidden 1')
               // hideSubtree(node)
               return
             }
@@ -474,6 +506,7 @@ export class ClientGraphics extends System {
         }
         // not visible? skip entire tree
         if (!node.oc.visible) {
+          // explain(node, node, 'query result hidden 2')
           // hideSubtree(node)
           return
         }
