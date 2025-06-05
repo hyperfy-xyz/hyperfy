@@ -81,7 +81,7 @@ export function createVRMFactory(glb, setupMaterial) {
   skeleton.update()
 
   // get height
-  let height = 1 // minimum
+  let height = 0.5 // minimum
   for (const mesh of skinnedMeshes) {
     if (!mesh.boundingBox) mesh.computeBoundingBox()
     if (height < mesh.boundingBox.max.y) {

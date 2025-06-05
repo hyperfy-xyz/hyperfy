@@ -310,49 +310,53 @@ export class RigidBody extends Node {
   }
 
   addForce(force, mode) {
-    if (!force?.isVector3) {
-      throw new Error('[rigidbody] addForce force must be Vector3')
-    }
+    if (!force?.isVector3) throw new Error('[rigidbody] addForce force must be Vector3')
+    if (!force.toPxExtVec3) force = _v1.copy(force)
     mode = getForceMode(mode)
     this.actor?.addForce(force.toPxVec3(), mode, true)
   }
 
-  addForceAtPos(force, pos) {
+  addForceAtPos(force, pos, mode) {
     if (!force?.isVector3) throw new Error('[rigidbody] addForceAtPos force must be Vector3')
     if (!pos?.isVector3) throw new Error('[rigidbody] addForceAtPos force must be Vector3')
     if (!this.actor) return
     if (!this._pv1) this._pv1 = new PHYSX.PxVec3()
     if (!this._pv2) this._pv2 = new PHYSX.PxVec3()
+    if (!force.toPxExtVec3) force = _v1.copy(force)
+    if (!pos.toPxExtVec3) pos = _v2.copy(pos)
+    mode = getForceMode(mode)
     PHYSX.PxRigidBodyExt.prototype.addForceAtPos(
       this.actor,
       force.toPxExtVec3(this._pv1),
       pos.toPxExtVec3(this._pv2),
-      PHYSX.PxForceModeEnum.eFORCE,
+      mode,
       true
     )
   }
 
-  addForceAtLocalPos(force, pos) {
+  addForceAtLocalPos(force, pos, mode) {
     if (!force?.isVector3) throw new Error('[rigidbody] addForceAtLocalPos force must be Vector3')
     if (!pos?.isVector3) throw new Error('[rigidbody] addForceAtLocalPos force must be Vector3')
     if (!this.actor) return
     if (!this._pv1) this._pv1 = new PHYSX.PxVec3()
     if (!this._pv2) this._pv2 = new PHYSX.PxVec3()
+    if (!force.toPxExtVec3) force = _v1.copy(force)
+    if (!pos.toPxExtVec3) pos = _v2.copy(pos)
+    mode = getForceMode(mode)
     PHYSX.PxRigidBodyExt.prototype.addForceAtLocalPos(
       this.actor,
       force.toPxExtVec3(this._pv1),
       pos.toPxExtVec3(this._pv2),
-      PHYSX.PxForceModeEnum.eFORCE,
+      mode,
       true
     )
   }
 
   addTorque(torque, mode) {
-    if (!torque?.isVector3) {
-      throw new Error('[rigidbody] addForce torque must be Vector3')
-    }
-    // TODO: modes + enums injected into script
-    this.actor?.addTorque(torque.toPxVec3(), PHYSX.PxForceModeEnum.eFORCE, true)
+    if (!torque?.isVector3) throw new Error('[rigidbody] addForce torque must be Vector3')
+    if (!torque.toPxVec3) torque = _v1.copy(torque)
+    mode = getForceMode(mode)
+    this.actor?.addTorque(torque.toPxVec3(), mode, true)
   }
 
   getPosition(vec3) {

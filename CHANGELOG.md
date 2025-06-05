@@ -13,6 +13,33 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+## [v0.13.0]
+
+### Added
+- core: new loading screen and world image settings
+- core: open graph tag support + add to homescreen
+- core: vr controller interaction button support
+- core: experimental terrain (splatmaps) support
+- core: show reconnect button when disconnected
+- apps: support control.hideReticle() useful for vehicles etc
+
+### Changed
+- core: reduce default shadow quality on mobile/vr devices
+- core: Z toggles all UI including apps
+- core: reduced docker image size using multi-stage builds
+- core: skysphere only move with player horizontally, not vertically
+- core: increase mobile joystick threshold for running
+- core: improved vr billboarding to look more natural
+- core: update action button ui to match core ui
+- core: only apply emote throttling to remote players, local players now 60fps
+- core: set vr target framerate to 72Hz
+- core: more accurately detect touch devices
+- apps: mesh.visible disables render but maintains raycastability
+
+### Fixed
+- core: reduce minimum vrm height to support smaller avatars
+- apps: skinnedmesh bone handle remounting
+
 ## [v0.12.0]
 
 ### Added
@@ -386,7 +413,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Basic project structure
 - Core functionality from original project
 
-[Unreleased]: https://github.com/hyperfy-xyz/hyperfy/compare/v0.12.0...HEAD
+[Unreleased]: https://github.com/hyperfy-xyz/hyperfy/compare/v0.13.0...HEAD
+[0.13.0]: https://github.com/hyperfy-xyz/hyperfy/compare/v0.12.0...v0.13.0
 [0.12.0]: https://github.com/hyperfy-xyz/hyperfy/compare/v0.11.0...v0.12.0
 [0.11.0]: https://github.com/hyperfy-xyz/hyperfy/compare/v0.10.0...v0.11.0
 [0.10.0]: https://github.com/hyperfy-xyz/hyperfy/compare/v0.9.0...v0.10.0
