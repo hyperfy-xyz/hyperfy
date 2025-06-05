@@ -2,7 +2,8 @@
   "name": "hyperfy",
   "version": "0.13.0",
   "type": "module",
-  "main": "index.js",
+  "main": "build/index.js",
+  "types": "build/index.d.ts",
   "homepage": "https://github.com/hyperfy-xyz/hyperfy#readme",
   "bugs": {
     "url": "https://github.com/hyperfy-xyz/hyperfy/issues"
