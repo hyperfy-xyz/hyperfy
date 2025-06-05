@@ -32,10 +32,10 @@
     "lint:fix": "eslint . --ext .js,.jsx --fix",
     "format": "prettier --write .",
     "check": "npm run lint && npm run format",
-    "publish:node": "node scripts/build-node-client.mjs && cd dist/npm && npm publish"
+    "publish:node": "node scripts/build-node-client.mjs && npm publish"
   },
   "files": [
-    "dist/npm/",
+    "build/",
     "README.md",
     "LICENSE"
   ],

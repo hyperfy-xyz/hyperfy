@@ -1,37 +1,28 @@
 {
   "compilerOptions": {
-    "allowJs": true,
-    "declaration": true,
-    "emitDeclarationOnly": true,
+    "target": "ESNext",
+    "module": "ESNext",
+    "moduleResolution": "node",
     "esModuleInterop": true,
-    "moduleResolution": "bundler", // "bundler" or "node" are good choices. "bundler" is more modern.
-    "module": "esnext",
-    "target": "esnext",
-    "skipLibCheck": true, // Setting to true to be more robust against potential issues in dependencies' types
-    "jsx": "react", // Keep if any JSX is present, otherwise can be removed
-    "lib": ["esnext", "dom"],
-    "baseUrl": "./", // Set baseUrl to project root for simpler path definitions if needed
+    "allowJs": true,
+    "checkJs": false, // Optional: set to true to type-check JS files (can be noisy)
+    "strict": false, // dts-bundle-generator might work better with strict mode off for JS projects
+    "noEmit": true, // We don't want tsc to emit .js files, only dts-bundle-generator uses this for type info
+    "baseUrl": "./",
     "paths": {
-      // This assumes that imports like '../core/extras/three' or './extras/three'
-      // will be resolved correctly by node resolution, and that 'src/core/extras/three.js'
-      // itself correctly exports types from 'three' (e.g., via JSDoc or re-exporting).
-      // If 'three' types are not found, specific paths might be needed, e.g.:
-      // "three": ["node_modules/three/src/Three.d.ts"]
+      "*": ["node_modules/*", "src/*"]
     },
-    "resolveJsonModule": true,
-    "strict": false, // Be more lenient for .d.ts generation from JS source
-    "typeRoots": ["./node_modules/@types", "./node_modules/three/src"] // Ensure three's types are discoverable
-  },
-  "files": [
-    "src/node-client/index.js" // Entry file relative to this tsconfig.json (project root)
-  ],
-  "include": [
-    "src/**/*.js" // Broaden include to help tsc resolve all necessary files from src
-  ],
-  "exclude": [
-    "node_modules",
-    "dist",
-    "build", // Excluding other build directories
-    "scripts" // Excluding scripts
-  ]
+    // Include source files that dts-bundle-generator should analyze
+    // This should at least include the entry point and related core files.
+    // Be more specific if possible to speed up generation and reduce noise.
+    "include": [
+      "src/node-client/**/*.js",
+      "src/core/**/*.js"
+      // Add other paths if necessary for types used by the node-client
+    ],
+    "exclude": [
+      "node_modules",
+      "build",
+    ]
+  }
 }

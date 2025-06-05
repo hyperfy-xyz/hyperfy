@@ -16,7 +16,7 @@ export function cls(...args) {
 // export const isTouch = !!navigator.userAgent.match(/OculusBrowser|iPhone|iPad|iPod|Android/i)
 
 // if at least two indicators point to touch, consider it primarily touch-based:
-const coarse = window.matchMedia('(pointer: coarse)').matches
-const noHover = window.matchMedia('(hover: none)').matches
-const hasTouch = navigator.maxTouchPoints > 0
-export const isTouch = (coarse && hasTouch) || (noHover && hasTouch)
+const coarse = typeof window !== 'undefined' && typeof window.matchMedia === 'function' ? window.matchMedia('(pointer: coarse)').matches : false;
+const noHover = typeof window !== 'undefined' && typeof window.matchMedia === 'function' ? window.matchMedia('(hover: none)').matches : false;
+const hasTouch = typeof navigator !== 'undefined' && typeof navigator.maxTouchPoints === 'number' ? navigator.maxTouchPoints > 0 : false;
+export const isTouch = (coarse && hasTouch) || (noHover && hasTouch);
