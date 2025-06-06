@@ -20,7 +20,7 @@
   ],
   "scripts": {
     "dev": "node scripts/build.mjs --dev",
-    "build": "node scripts/build.mjs",
+    "build": "node scripts/build.mjs && node scripts/build-node-client.mjs",
     "start": "node build/index.js",
     "world:clean": "node scripts/clean-world.mjs",
     "viewer:dev": "node scripts/build-viewer.mjs --dev",
