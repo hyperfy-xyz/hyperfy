@@ -44,6 +44,7 @@ async function buildNodeClient() {
       bundle: true,
       treeShaking: true,
       minify: !dev,
+      keepNames: true,
       sourcemap: dev ? 'inline' : true,
       packages: 'external', // Externalize dependencies to be handled by package.json
       // loader: {}, // Add if specific loaders are needed
