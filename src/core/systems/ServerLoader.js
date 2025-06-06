@@ -64,12 +64,6 @@ export class ServerLoader extends System {
   async fetchArrayBuffer(url) {
     const isRemote = url.startsWith('http://') || url.startsWith('https://')
     
-    // Log específico para emote-idle
-    if (url.includes('emote-idle')) {
-      console.log(`[ServerLoader] EMOTE-IDLE DEBUG: Fetching ${url}`)
-      console.log(`[ServerLoader] EMOTE-IDLE DEBUG: isRemote=${isRemote}`)
-    }
-    
     if (isRemote) {
       try {
       const response = await fetch(url)
@@ -84,19 +78,9 @@ export class ServerLoader extends System {
         }
       const arrayBuffer = await response.arrayBuffer()
         
-        // Log específico para emote-idle
-        if (url.includes('emote-idle')) {
-          console.log(`[ServerLoader] EMOTE-IDLE DEBUG: Successfully fetched ${arrayBuffer.byteLength} bytes`)
-        }
-        
       return arrayBuffer
       } catch (error) {
         console.error(`Error fetching ${url}:`, error.message)
-        
-        // Log específico para emote-idle
-        if (url.includes('emote-idle')) {
-          console.error(`[ServerLoader] EMOTE-IDLE DEBUG: FAILED to fetch - ${error.message}`)
-        }
         
         throw error
       }
@@ -105,21 +89,10 @@ export class ServerLoader extends System {
       try {
         const filePath = url.startsWith('file://') ? url.slice(7) : url
         
-        // Log específico para emote-idle
-        if (url.includes('emote-idle')) {
-          console.log(`[ServerLoader] EMOTE-IDLE DEBUG: Loading local file ${filePath}`)
-        }
-        
         const buffer = await fs.readFile(filePath)
         return buffer.buffer
       } catch (error) {
-        console.error(`Error reading local file ${url}:`, error.message)
-        
-        // Log específico para emote-idle
-        if (url.includes('emote-idle')) {
-          console.error(`[ServerLoader] EMOTE-IDLE DEBUG: FAILED to read local file - ${error.message}`)
-        }
-        
+        console.error(`Error reading local file ${url}:`, error.message)        
         throw error
       }
     }
@@ -139,26 +112,11 @@ export class ServerLoader extends System {
 
   async loadModel(url) {
     const resolvedUrl = this.world.resolveURL(url, true)
-    console.log(`[ServerLoader] Loading model: ${url} -> ${resolvedUrl}`)
-    
-    // Log específico para emote-idle
-    if (url.includes('emote-idle') || resolvedUrl.includes('emote-idle')) {
-      console.log(`[ServerLoader] EMOTE-IDLE DEBUG: Original URL: ${url}`)
-      console.log(`[ServerLoader] EMOTE-IDLE DEBUG: Resolved URL: ${resolvedUrl}`)
-      console.log(`[ServerLoader] EMOTE-IDLE DEBUG: World assetsUrl: ${this.world.assetsUrl}`)
-      console.log(`[ServerLoader] EMOTE-IDLE DEBUG: World assetsDir: ${this.world.assetsDir}`)
-    }
-    
+    console.log(`[ServerLoader] Loading model: ${url} -> ${resolvedUrl}`)    
     console.log(`[ServerLoader] Fetching model from: ${resolvedUrl}`)
     
     try {
-      const arrayBuffer = await this.fetchArrayBuffer(resolvedUrl)
-      
-      // Log específico para emote-idle
-      if (url.includes('emote-idle') || resolvedUrl.includes('emote-idle')) {
-        console.log(`[ServerLoader] EMOTE-IDLE DEBUG: Successfully loaded, size: ${arrayBuffer.byteLength} bytes`)
-      }
-      
+      const arrayBuffer = await this.fetchArrayBuffer(resolvedUrl)      
       const loader = new THREE.GLTFLoader()
       
       const gltf = await new Promise((resolve, reject) => {
