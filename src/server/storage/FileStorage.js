@@ -1,5 +1,5 @@
-import fs from 'fs-extra'
 import path from 'path'
+import fs from 'fs-extra'
 
 export class FileStorage {
   constructor(config = {}) {
@@ -171,7 +171,28 @@ export class FileStorage {
    */
   async listCollections() {
     try {
-      return await fs.readdir(this.collectionsDir)
+      const files = []
+      const folders = await fs.readdir(this.collectionsDir)
+      
+      for (const folder of folders) {
+        const folderPath = path.join(this.collectionsDir, folder)
+        const stat = await fs.stat(folderPath)
+        
+        if (stat.isDirectory()) {
+          // List files in the collection folder
+          const folderFiles = await fs.readdir(folderPath)
+          for (const file of folderFiles) {
+            const filePath = path.join(folderPath, file)
+            const fileStat = await fs.stat(filePath)
+            if (fileStat.isFile()) {
+              // Return in S3-style format: "foldername/filename"
+              files.push(`${folder}/${file}`)
+            }
+          }
+        }
+      }
+      
+      return files
     } catch (error) {
       console.error('Error listing collections:', error)
       return []

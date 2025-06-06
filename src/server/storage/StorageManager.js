@@ -1,10 +1,18 @@
+import path from 'path'
+import { throttle } from 'lodash-es'
+
+import { AwsS3Storage } from './AwsS3Storage.js'
 import { FileStorage } from './FileStorage.js'
-import { S3Storage } from './S3Storage.js'
 
 export class StorageManager {
   constructor() {
     this.storage = null
     this.isS3 = false
+    this.storageData = {}
+    this.storageLoaded = false
+    
+    // Throttle saves to avoid too many writes
+    this.saveStorageData = throttle(() => this.persistStorageData(), 1000, { leading: true, trailing: true })
   }
 
   /**
@@ -14,7 +22,7 @@ export class StorageManager {
     if (process.env.S3_BUCKET_NAME) {
       // Initialize S3 storage
       this.isS3 = true
-      this.storage = new S3Storage({
+      this.storage = new AwsS3Storage({
         bucketName: process.env.S3_BUCKET_NAME,
         region: process.env.S3_REGION || 'us-east-1',
         assetsPrefix: process.env.S3_ASSETS_PREFIX || 'assets/',
@@ -36,6 +44,123 @@ export class StorageManager {
       console.log('Initializing local file storage...')
       await this.storage.initialize()
     }
+
+    // Initialize storage data
+    await this.initStorageData()
+  }
+
+  /**
+   * Initialize the storage data by loading existing storage.json
+   */
+  async initStorageData() {
+    try {
+      this.storageData = await this.storage.loadStorageData()
+      this.storageLoaded = true
+      console.log('Storage data loaded successfully')
+    } catch (err) {
+      console.error('Error loading storage data:', err)
+      this.storageData = {}
+      this.storageLoaded = true
+    }
+  }
+
+  /**
+   * Get a value from storage.json data
+   * @param {string} key - The key to retrieve
+   * @returns {any} The stored value
+   */
+  getStorageValue(key) {
+    if (!this.storageLoaded) {
+      console.warn('Storage not yet loaded, returning undefined')
+      return undefined
+    }
+    return this.storageData[key]
+  }
+
+  /**
+   * Set a value in storage.json data
+   * @param {string} key - The key to set
+   * @param {any} value - The value to store
+   */
+  setStorageValue(key, value) {
+    if (!this.storageLoaded) {
+      console.warn('Storage not yet loaded, cannot set value')
+      return
+    }
+    
+    try {
+      // Ensure value is serializable
+      value = JSON.parse(JSON.stringify(value))
+      this.storageData[key] = value
+      this.saveStorageData()
+    } catch (err) {
+      console.error('Error setting storage value:', err)
+    }
+  }
+
+  /**
+   * Persist storage data (throttled)
+   */
+  async persistStorageData() {
+    if (!this.storageLoaded) {
+      console.warn('Storage not yet loaded, cannot persist')
+      return
+    }
+    
+    try {
+      await this.storage.saveStorageData(this.storageData)
+      // console.log('Storage data persisted successfully')
+    } catch (err) {
+      console.error('Failed to persist storage:', err)
+    }
+  }
+
+  /**
+   * Force an immediate save of storage data (bypass throttling)
+   */
+  async forceStorageDataPersist() {
+    return await this.persistStorageData()
+  }
+
+  /**
+   * Get a value from storage.json data (interface for world system)
+   * @param {string} key - The key to retrieve
+   * @returns {any} The stored value
+   */
+  get(key) {
+    return this.getStorageValue(key)
+  }
+
+  /**
+   * Set a value in storage.json data (interface for world system)
+   * @param {string} key - The key to set
+   * @param {any} value - The value to store
+   */
+  set(key, value) {
+    this.setStorageValue(key, value)
+  }
+
+  /**
+   * Configure Fastify instance with appropriate static file serving
+   * @param {object} fastify - The Fastify instance
+   * @param {object} statics - The @fastify/static plugin
+   */
+  configureStaticServing(fastify, statics) {
+    if (!this.isS3) {
+      // Only register local assets serving when not using S3
+      const paths = this.storage.getPaths()
+      fastify.register(statics, {
+        root: paths.assetsDir,
+        prefix: '/assets/',
+        decorateReply: false,
+        setHeaders: res => {
+          // all assets are hashed & immutable so we can use aggressive caching
+          res.setHeader('Cache-Control', 'public, max-age=31536000, immutable') // 1 year
+          res.setHeader('Expires', new Date(Date.now() + 31536000000).toUTCString()) // older browsers
+        },
+      })
+    }
+    // For S3, files are served directly from S3/CloudFront, no local serving needed
   }
 
   /**
@@ -72,11 +197,12 @@ export class StorageManager {
   }
 
   /**
-   * Check if using S3 storage
-   * @returns {boolean}
+   * Get the database path based on storage type
+   * @returns {string} The database path
    */
-  isUsingS3() {
-    return this.isS3
+  getDbPath() {
+    const paths = this.getPaths()
+    return paths ? path.join(paths.worldDir, '/db.sqlite') : './world/db.sqlite'
   }
 
   /**
@@ -186,29 +312,6 @@ export class StorageManager {
       throw new Error('Storage not initialized')
     }
     return await this.storage.listCollections()
-  }
-
-  /**
-   * Save storage.json data
-   * @param {object} data - The storage data
-   * @returns {Promise<void>}
-   */
-  async saveStorageData(data) {
-    if (!this.storage) {
-      throw new Error('Storage not initialized')
-    }
-    return await this.storage.saveStorageData(data)
-  }
-
-  /**
-   * Load storage.json data
-   * @returns {Promise<object>} The storage data
-   */
-  async loadStorageData() {
-    if (!this.storage) {
-      throw new Error('Storage not initialized')
-    }
-    return await this.storage.loadStorageData()
   }
 
   /**

@@ -1,9 +1,10 @@
-import { S3Client, PutObjectCommand, GetObjectCommand, HeadObjectCommand, ListObjectsV2Command, DeleteObjectCommand } from '@aws-sdk/client-s3'
-import { getSignedUrl } from '@aws-sdk/s3-request-presigner'
-import fs from 'fs-extra'
 import path from 'path'
+import fs from 'fs-extra'
 
-export class S3Storage {
+import { getSignedUrl } from '@aws-sdk/s3-request-presigner'
+import { S3Client, PutObjectCommand, GetObjectCommand, HeadObjectCommand, ListObjectsV2Command, DeleteObjectCommand } from '@aws-sdk/client-s3'
+
+export class AwsS3Storage {
   constructor(config) {
     this.bucketName = config.bucketName
     this.region = config.region || 'us-east-1'
@@ -243,8 +244,9 @@ export class S3Storage {
    * @returns {string} The public URL
    */
   getPublicUrl(filename) {
-    const assetsPrefix = this.assetsPrefix.endsWith('/') ? this.assetsPrefix.slice(0, -1) : this.assetsPrefix
-    return `${this.getAssetsBaseUrl()}/${assetsPrefix}/${filename}`
+    const baseUrl = this.getAssetsBaseUrl()
+    const assetsPrefix = this.assetsPrefix.replace(/\/$/, '') // Remove trailing slash
+    return `${baseUrl}/${assetsPrefix}/${filename}`
   }
 
   /**

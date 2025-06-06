@@ -4,7 +4,6 @@ import './bootstrap'
 
 import fs from 'fs-extra'
 import path from 'path'
-import { pipeline } from 'stream/promises'
 import Fastify from 'fastify'
 import ws from '@fastify/websocket'
 import cors from '@fastify/cors'
@@ -15,9 +14,8 @@ import multipart from '@fastify/multipart'
 import { createServerWorld } from '../core/createServerWorld'
 import { hashFile } from '../core/utils-server'
 import { getDB } from './db'
-import { CloudStorage } from './CloudStorage'
-import { StorageManager } from './StorageManager'
-import { initCollections } from './collectionsManager'
+import { StorageManager } from './storage/StorageManager'
+import { initCollections } from './storage/collectionsManager'
 
 const port = process.env.PORT
 
@@ -29,21 +27,18 @@ await storageManager.initialize()
 const collections = await initCollections({ storageManager })
 
 // init db
-const paths = storageManager.getPaths()
-const dbPath = paths ? path.join(paths.worldDir, '/db.sqlite') : './world/db.sqlite'
+const dbPath = storageManager.getDbPath()
 const db = await getDB(dbPath)
-
-// init storage
-const storage = new CloudStorage(storageManager)
-await storage.init()
 
 // create world
 const world = createServerWorld()
 world.assetsUrl = storageManager.getAssetsUrl()
 world.collections.deserialize(collections)
+
+const paths = storageManager.getPaths()
 world.init({ 
   db, 
-  storage, 
+  storage: storageManager,
   assetsDir: paths?.assetsDir || null, 
   storageManager 
 })
@@ -65,6 +60,7 @@ fastify.get('/', async (req, reply) => {
   html = html.replaceAll('{image}', image)
   reply.type('text/html').send(html)
 })
+
 fastify.register(statics, {
   root: path.join(__dirname, 'public'),
   prefix: '/',
@@ -76,20 +72,8 @@ fastify.register(statics, {
   },
 })
 
-// Only register local assets serving if not using S3
-if (!storageManager.isUsingS3()) {
-  const assetsDir = paths.assetsDir
-  fastify.register(statics, {
-    root: assetsDir,
-    prefix: '/assets/',
-    decorateReply: false,
-    setHeaders: res => {
-      // all assets are hashed & immutable so we can use aggressive caching
-      res.setHeader('Cache-Control', 'public, max-age=31536000, immutable') // 1 year
-      res.setHeader('Expires', new Date(Date.now() + 31536000000).toUTCString()) // older browsers
-    },
-  })
-}
+// Configure static file serving through StorageManager
+storageManager.configureStaticServing(fastify, statics)
 
 fastify.register(multipart, {
   limits: {

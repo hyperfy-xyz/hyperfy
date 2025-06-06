@@ -1,32 +1,48 @@
-import fs from 'fs-extra'
 import path from 'path'
-import { importApp } from '../core/extras/appTools'
+import fs from 'fs-extra'
+
+import { importApp } from '../../core/extras/appTools'
 
 export async function initCollections({ storageManager }) {
+  console.log('[Collections] Starting collections initialization...')
   const collections = []
   
-  if (storageManager.isUsingS3()) {
-    // Load collections from S3
-    await initCollectionsFromS3(storageManager, collections)
-  } else {
-    // Load collections from local filesystem
-    const paths = storageManager.getPaths()
-    await initCollectionsFromLocal(paths.collectionsDir, paths.assetsDir, collections)
+  try {
+    // Load from collections storage (both S3 and local now use the same logic)
+    await initCollectionsFromStorage(storageManager, collections)
+    console.log(`[Collections] Total collections loaded: ${collections.length}`)
+  } catch (error) {
+    console.error('[Collections] Error initializing collections:', error)
+    // Ensure we always return an array, even if empty
   }
   
+  console.log('[Collections] Collections initialization complete')
   return collections
 }
 
-async function initCollectionsFromS3(storageManager, collections) {
+async function initCollectionsFromStorage(storageManager, collections) {
   try {
-    console.log('[Collections] Loading collections from S3...')
-    // List all collection files in S3
+    console.log('[Collections] Loading collections from storage...')
+    
+    // List all collection files
     const collectionFiles = await storageManager.listCollections()
-    console.log(`[Collections] Found ${collectionFiles.length} files in S3`)
+    console.log(`[Collections] Found ${collectionFiles.length} files in storage:`, collectionFiles)
+    
+    // If no files found, just return - the main function will handle fallback
+    if (collectionFiles.length === 0) {
+      console.log('[Collections] No collection files found in storage')
+      return
+    }
     
     // Group files by collection (manifest files indicate collection folders)
     const collectionManifests = collectionFiles.filter(file => file.endsWith('/manifest.json'))
-    console.log(`[Collections] Found ${collectionManifests.length} manifest files`)
+    console.log(`[Collections] Found ${collectionManifests.length} manifest files:`, collectionManifests)
+    
+    // If no manifests found, return
+    if (collectionManifests.length === 0) {
+      console.log('[Collections] No manifest files found')
+      return
+    }
     
     for (const manifestFile of collectionManifests) {
       const collectionId = manifestFile.replace('/manifest.json', '')
@@ -54,7 +70,7 @@ async function initCollectionsFromS3(storageManager, collections) {
             const appBuffer = await storageManager.readCollection(appFile)
             
             if (!appBuffer) {
-              console.warn(`[Collections] App file not found in S3: ${appFile}`)
+              console.warn(`[Collections] App file not found in storage: ${appFile}`)
               continue
             }
             
@@ -62,48 +78,37 @@ async function initCollectionsFromS3(storageManager, collections) {
               type: 'application/octet-stream',
             })
             
-            // FOR BUILT-IN COLLECTIONS (like "default"), don't process assets - keep simple references
-            // Only process assets for user-uploaded collections
-            if (collectionId === 'default' || collectionId.startsWith('built-in')) {
-              // For built-in collections, import but don't upload/process assets - they should already exist as built-ins
-              const app = await importApp(file)
-              console.log(`[Collections] Built-in app ${appFilename} imported with ${app.assets?.length || 0} assets (keeping original references)`)
+            // Process assets for ALL collections (built-in and user collections)
+            // All collections need their assets to be properly saved to storage
+            const app = await importApp(file)
+            console.log(`[Collections] Collection ${collectionId} app ${appFilename} imported with ${app.assets?.length || 0} assets`)
+            
+            // Upload/save assets to storage if they don't exist  
+            for (const asset of app.assets || []) {
+              const assetFilename = asset.url.slice(8) // remove 'asset://' prefix
+              console.log(`[Collections] Processing asset: ${assetFilename} for collection ${collectionId}`)
               
-              // Don't upload/process assets for built-in collections - they should reference built-in assets directly
-              // The assets should already be available as simple names like emote-idle.glb, crash-block.glb, etc.
-              
-              blueprints.push(app.blueprint)
-            } else {
-              // For user collections, process assets normally (with hashing)
-              const app = await importApp(file)
-              console.log(`[Collections] User app ${appFilename} imported successfully, has ${app.assets?.length || 0} assets`)
-              
-              // Upload assets to S3 if they don't exist
-              for (const asset of app.assets || []) {
-                const assetFilename = asset.url.slice(8) // remove 'asset://' prefix
-                console.log(`[Collections] Checking asset: ${assetFilename}`)
+              try {
+                const exists = await storageManager.fileExists(assetFilename)
+                console.log(`[Collections] Asset ${assetFilename} exists: ${exists}`)
                 
-                try {
-                  const exists = await storageManager.fileExists(assetFilename)
-                  
-                  if (!exists) {
-                    console.log(`[Collections] Uploading missing asset: ${assetFilename}`)
-                    const arrayBuffer = await asset.file.arrayBuffer()
-                    const buffer = Buffer.from(arrayBuffer)
-                    const contentType = asset.file.type || 'application/octet-stream'
-                    await storageManager.uploadFile(assetFilename, buffer, contentType)
-                    console.log(`[Collections] Asset uploaded successfully: ${assetFilename}`)
-                  } else {
-                    console.log(`[Collections] Asset already exists: ${assetFilename}`)
-                  }
-                } catch (assetError) {
-                  console.error(`[Collections] Error handling asset ${assetFilename}:`, assetError.message)
-                  // Continue with other assets even if one fails
+                if (!exists) {
+                  console.log(`[Collections] Uploading missing asset: ${assetFilename}`)
+                  const arrayBuffer = await asset.file.arrayBuffer()
+                  const buffer = Buffer.from(arrayBuffer)
+                  const contentType = asset.file.type || 'application/octet-stream'
+                  await storageManager.uploadFile(assetFilename, buffer, contentType)
+                  console.log(`[Collections] Asset uploaded successfully: ${assetFilename}`)
+                } else {
+                  console.log(`[Collections] Asset already exists: ${assetFilename}`)
                 }
+              } catch (assetError) {
+                console.error(`[Collections] Error handling asset ${assetFilename}:`, assetError.message)
+                // Continue with other assets even if one fails
               }
-              
-              blueprints.push(app.blueprint)
             }
+            
+            blueprints.push(app.blueprint)
             
           } catch (appError) {
             console.error(`[Collections] Error processing app ${appFile}:`, appError.message)
@@ -114,12 +119,18 @@ async function initCollectionsFromS3(storageManager, collections) {
         if (blueprints.length > 0) {
           collections.push({
             id: collectionId,
-            name: manifest.name,
-            blueprints,
+            name: manifest.name || collectionId,
+            blueprints: blueprints || [],
           })
           console.log(`[Collections] Successfully loaded collection ${collectionId} with ${blueprints.length} blueprints`)
         } else {
           console.warn(`[Collections] Collection ${collectionId} has no valid blueprints`)
+          // Still add the collection but with empty blueprints array
+          collections.push({
+            id: collectionId,
+            name: manifest.name || collectionId,
+            blueprints: [],
+          })
         }
         
       } catch (error) {
@@ -134,10 +145,10 @@ async function initCollectionsFromS3(storageManager, collections) {
       return a.id.localeCompare(b.id)
     })
     
-    console.log(`[Collections] Successfully loaded ${collections.length} collections from S3`)
+    console.log(`[Collections] Successfully loaded ${collections.length} collections from storage`)
     
   } catch (error) {
-    console.error('[Collections] Error loading collections from S3:', error)
+    console.error('[Collections] Error loading collections from storage:', error)
   }
 }
 
@@ -220,12 +231,18 @@ async function initCollectionsFromLocal(collectionsDir, assetsDir, collections) 
         if (blueprints.length > 0) {
           collections.push({
             id: folderName,
-            name: manifest.name,
-            blueprints,
+            name: manifest.name || folderName,
+            blueprints: blueprints || [],
           })
           console.log(`[Collections] Successfully loaded local collection ${folderName} with ${blueprints.length} blueprints`)
         } else {
           console.warn(`[Collections] Local collection ${folderName} has no valid blueprints`)
+          // Still add the collection but with empty blueprints array
+          collections.push({
+            id: folderName,
+            name: manifest.name || folderName,
+            blueprints: [],
+          })
         }
         
       } catch (error) {
