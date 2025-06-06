@@ -162,7 +162,7 @@ export class ClientGraphics extends System {
   }
 
   commit() {
-    console.log('---')
+    // console.log('---')
     this.render()
   }
 
@@ -271,6 +271,7 @@ export class ClientGraphics extends System {
     const stats = {}
     const gl = this.renderer.getContext()
     const batches = new WeakMap() // renderable -> batch { renderable, items, count, pass } { imesh }
+    const screenSpaceTester = createScreenSpaceTester()
     let pass = 0
     let scene
     let camera
@@ -299,12 +300,12 @@ export class ClientGraphics extends System {
       depthTest: true,
       side: THREE.DoubleSide, // Match your geometry needs
     })
-    const occlusionFBO = new THREE.WebGLRenderTarget(512, 512, {
-      depthBuffer: true,
-      depthTexture: new THREE.DepthTexture(512, 512, THREE.UnsignedShortType),
-    })
-    occlusionFBO.texture.minFilter = THREE.NearestFilter
-    occlusionFBO.texture.magFilter = THREE.NearestFilter
+    // const occlusionFBO = new THREE.WebGLRenderTarget(512, 512, {
+    //   depthBuffer: true,
+    //   depthTexture: new THREE.DepthTexture(512, 512, THREE.UnsignedShortType),
+    // })
+    // occlusionFBO.texture.minFilter = THREE.NearestFilter
+    // occlusionFBO.texture.magFilter = THREE.NearestFilter
     renderer.projectSpatial = (
       _scene,
       _camera,
@@ -334,6 +335,9 @@ export class ClientGraphics extends System {
       stats.skipRenderSubtreeNoCount = 0
       stats.occluders = 0
       stats.draws = 0
+      stats.micro = 0
+
+      screenSpaceTester.update(self.height, camera)
 
       // const prevRT = renderer.getRenderTarget()
       // const prevColorMask = gl.getParameter(gl.COLOR_WRITEMASK) // [r,g,b,a]
@@ -358,6 +362,27 @@ export class ClientGraphics extends System {
       // }
       // renderer.setRenderTarget(prevRT)
 
+      // renderer.clearDepth()
+      // const prevColorMask = gl.getParameter(gl.COLOR_WRITEMASK) // [r,g,b,a]
+      // const prevDepthMask = gl.getParameter(gl.DEPTH_WRITEMASK) // Boolean
+      // const prevDepthTest = gl.getParameter(gl.DEPTH_TEST) // Boolean
+      // gl.colorMask(false, false, false, false) // no color writes
+      // gl.depthMask(false) // no depth writes
+      // traverse(octree.root)
+      // gl.colorMask(
+      //   prevColorMask[0], // r
+      //   prevColorMask[1], // g
+      //   prevColorMask[2], // b
+      //   prevColorMask[3] // a
+      // )
+      // gl.depthMask(prevDepthMask)
+      // if (prevDepthTest) {
+      //   gl.enable(gl.DEPTH_TEST)
+      // } else {
+      //   gl.disable(gl.DEPTH_TEST)
+      // }
+      // renderer.clearDepth()
+
       renderer.clearDepth()
       gl.colorMask(false, false, false, false)
       // console.time('traverse')
@@ -366,6 +391,15 @@ export class ClientGraphics extends System {
       gl.colorMask(true, true, true, true)
       gl.depthMask(true)
       renderer.clearDepth()
+
+      // let n = 0
+      // for (const batch of active) {
+      //   n += batch.items.length
+      // }
+      // console.log(n)
+
+      // console.log(active.length)
+      // console.log(stats.micro)
 
       // console.time('render')
       for (const batch of active) {
@@ -464,9 +498,6 @@ export class ClientGraphics extends System {
           node.oc.visible = true
           renderItems(node.items)
           looseOctreeTraverse(cameraPos, node, traverse)
-          // for (const child of sortNodes(node.children)) {
-          //   traverse(child)
-          // }
           return
         }
         // allow visible nodes to skip frames and reduce query workload
@@ -474,9 +505,6 @@ export class ClientGraphics extends System {
           node.oc.skips--
           renderItems(node.items)
           looseOctreeTraverse(cameraPos, node, traverse)
-          // for (const child of sortNodes(node.children)) {
-          //   traverse(child)
-          // }
           return
         }
         // no pending queries? issue one!
@@ -498,9 +526,6 @@ export class ClientGraphics extends System {
               // showSubtree(node)
             } else {
               node.oc.visible = false
-              // explain(node, node, 'query result hidden 1')
-              // hideSubtree(node)
-              return
             }
           }
         }
@@ -511,10 +536,10 @@ export class ClientGraphics extends System {
           return
         }
         // don't recurse into tiny nodes, just force visible
-        if (node.size < 4) {
-          renderSubtree(node)
-          return
-        }
+        // if (node.size < 4) {
+        //   renderSubtree(node)
+        //   return
+        // }
       }
       // render items
       renderItems(node.items)
@@ -633,8 +658,20 @@ export class ClientGraphics extends System {
         const mesh = renderable.mesh
         mesh.matrixWorld.copy(item.matrix)
 
+        // calculateScreenSpace(mesh)
+
+        // if (screenSpaceTester.test(item, mesh) < 5) {
+        //   stats.micro++
+        //   return
+        // }
+
+        // if (mesh.screenSpacePx < 15) {
+        //   stats.micro++
+        //   return
+        // }
+
         // check if we should render depth as an occluder
-        if (self.occlusion && isOccluder(mesh)) {
+        if (self.occlusion && isOccluder(item, mesh)) {
           const geometry = objects.update(mesh)
           stats.occluders++
           mesh.modelViewMatrix.multiplyMatrices(camera.matrixWorldInverse, mesh.matrixWorld)
@@ -714,33 +751,70 @@ export class ClientGraphics extends System {
         }
       }
     }
-    function isOccluder(mesh) {
+    function calculateScreenSpace(mesh) {
+      let sphere = mesh.geometry.boundingSphere
+      if (!sphere) {
+        mesh.geometry.computeBoundingSphere()
+        sphere = mesh.geometry.boundingSphere
+      }
+      const worldCenter = v1.copy(sphere.center).applyMatrix4(mesh.matrixWorld)
+      const worldRadius = (sphere.radius * v2.setFromMatrixScale(mesh.matrixWorld).length()) / Math.sqrt(3)
+      const toCenter = v2.subVectors(worldCenter, cameraPos)
+      const dist = toCenter.length()
+      if (dist <= 0) {
+        mesh.screenSpacePx = 999 // this.width * this.height
+        return
+      } else {
+        // angular radius (in radians) ≈ asin( radius / distance )
+        const angularRadius = Math.asin(worldRadius / dist)
+        // Now convert angular‐radius to screen‐space (in pixels):
+        //   On a perspective camera, fov = vertical field of view (degrees)
+        //   A point at angular offset θ from camera‐forward will land at
+        //   y_ndc = tan(θ) / tan(fov/2), in normalized device coords (vertically).
+        //
+        // We can approximate the projected “screen‐radius” (in pixels) by:
+        const fovInRadians = (camera.fov * Math.PI) / 180
+        // If angularRadius is small, tan(angularRadius) ≈ angularRadius, so:
+        const projectedRadiusNdc = Math.tan(angularRadius) / Math.tan(fovInRadians / 2)
+        // NDC coordinates run from –1..+1 in y, so NDC→pixel: pixel_y = (NDC_y * 0.5 + 0.5) * window.innerHeight.
+        // The factor “.5 * window.innerHeight” converts an NDC half‐height to actual pixel half‐height.
+        const radiusPixels = projectedRadiusNdc * (self.height / 2)
+        const diameterPixels = 2 * radiusPixels
+        mesh.screenSpacePx = diameterPixels
+        // For a (rough) pixel‐area, assume a circle:
+        // const estimatedPixelArea = Math.PI * radiusPixels * radiusPixels
+        // mesh.screenSpacePx = estimatedPixelArea
+      }
+      // // Get bounding sphere - prefer object's cached one
+      // let boundingSphere = mesh.boundingSphere
+      // if (!boundingSphere) {
+      //   if (!mesh.geometry.boundingSphere) {
+      //     mesh.geometry.computeBoundingSphere()
+      //   }
+      //   boundingSphere = mesh.geometry.boundingSphere
+      // }
+      // if (!boundingSphere) return false
+      // // Transform bounding sphere center to world space
+      // const worldCenter = v1.copy(boundingSphere.center).applyMatrix4(mesh.matrixWorld)
+      // // Calculate distance from camera to mesh
+      // const distance = cameraPos.distanceTo(worldCenter)
+      // // Get the world-space radius (accounting for mesh scaling)
+      // const worldRadius = boundingSphere.radius * v2.setFromMatrixScale(mesh.matrixWorld).length() // rough approximation
+      // // Calculate projected size in pixels
+      // const fovRadians = camera.fov * (Math.PI / 180)
+      // const projectedRadius = (worldRadius / distance) * (1 / Math.tan(fovRadians / 2)) * (self.height / 2)
+      // mesh.screenSpacePx = projectedRadius
+    }
+    function isOccluder(item, mesh) {
       // if its transparent/alpha-clip it cant occlude!
       if (mesh.material.transparent || mesh.material.alphaTest) {
         return false
       }
-
-      // Get bounding sphere - prefer object's cached one
-      let boundingSphere = mesh.boundingSphere
-      if (!boundingSphere) {
-        if (!mesh.geometry.boundingSphere) {
-          mesh.geometry.computeBoundingSphere()
-        }
-        boundingSphere = mesh.geometry.boundingSphere
-      }
-      if (!boundingSphere) return false
-      // Transform bounding sphere center to world space
-      const worldCenter = v1.copy(boundingSphere.center).applyMatrix4(mesh.matrixWorld)
-      // Calculate distance from camera to mesh
-      const distance = cameraPos.distanceTo(worldCenter)
-      // Get the world-space radius (accounting for mesh scaling)
-      const worldRadius = boundingSphere.radius * v2.setFromMatrixScale(mesh.matrixWorld).length() // rough approximation
-      // Calculate projected size in pixels
-      const fovRadians = camera.fov * (Math.PI / 180)
-      const projectedRadius = (worldRadius / distance) * (1 / Math.tan(fovRadians / 2)) * (self.height / 2)
+      // return true
+      return screenSpaceTester.test(item, mesh) > 50
       // Only render as occluder if projected size is above threshold
-      const minOccluderSizePixels = 64 // Adjust this threshold as needed
-      return projectedRadius >= minOccluderSizePixels
+      // const minOccluderSizePixels = 50 // Adjust this threshold as needed
+      // return mesh.screenSpacePx >= minOccluderSizePixels
     }
   }
 
@@ -1167,125 +1241,69 @@ export class ClientGraphics extends System {
   }
 }
 
-class PriorityQueue {
-  constructor() {
-    this._heap = []
-  }
-  get size() {
-    return this._heap.length
-  }
-  isEmpty() {
-    return this.size === 0
-  }
+function createScreenSpaceTester() {
+  let camera
+  let halfHeight
+  let tanHalfFov
 
-  enqueue(node, priority) {
-    // store both the node and its priority
-    this._heap.push({ node, priority })
-    this._siftUp()
-  }
+  const tempVec = new THREE.Vector3()
+  const tempMatrix = new THREE.Matrix4()
 
-  dequeue() {
-    if (this.isEmpty()) return null
-    const top = this._heap[0].node
-    const last = this._heap.pop()
-    if (!this.isEmpty()) {
-      this._heap[0] = last
-      this._siftDown()
-    }
-    return top
-  }
+  let viewMatrix
+  let projMatrix
 
-  _siftUp() {
-    let idx = this._heap.length - 1
-    while (idx > 0) {
-      const parent = Math.floor((idx - 1) / 2)
-      if (this._heap[parent].priority <= this._heap[idx].priority) break
-      ;[this._heap[parent], this._heap[idx]] = [this._heap[idx], this._heap[parent]]
-      idx = parent
-    }
-  }
+  const largeSize = 100 // Objects this size or larger get minSkips
+  const minSkips = 15 // 0.25 seconds for large objects
+  const tinySize = 30 // Objects this size or smaller get maxSkips
+  const maxSkips = 180 // 3 seconds for tiny objects
 
-  _siftDown() {
-    let idx = 0,
-      left,
-      right,
-      smallest
-    const n = this._heap.length
-    while ((left = 2 * idx + 1) < n) {
-      right = left + 1
-      smallest = left
-      if (right < n && this._heap[right].priority < this._heap[left].priority) {
-        smallest = right
+  return {
+    update(screenHeight, _camera) {
+      camera = _camera
+      halfHeight = screenHeight * 0.5
+      tanHalfFov = Math.tan((camera.fov * Math.PI) / 360)
+
+      viewMatrix = camera.matrixWorldInverse
+      projMatrix = camera.projectionMatrix
+      tempMatrix.multiplyMatrices(projMatrix, viewMatrix)
+    },
+    test(item, mesh) {
+      if (!item._ss) {
+        item._ss = { skips: 0 }
       }
-      if (this._heap[smallest].priority >= this._heap[idx].priority) break
-      ;[this._heap[idx], this._heap[smallest]] = [this._heap[smallest], this._heap[idx]]
-      idx = smallest
-    }
+      if (item._ss.skips > 0) {
+        item._ss.skips--
+        return item._ss.pixelSize
+      }
+      let sphere = mesh.geometry.boundingSphere
+      if (!sphere) {
+        mesh.geometry.computeBoundingSphere()
+        sphere = mesh.geometry.boundingSphere
+      }
+      // World space center
+      tempVec.copy(sphere.center)
+      tempVec.applyMatrix4(mesh.matrixWorld)
+      // View space z (avoid full projection)
+      const viewZ = -(
+        viewMatrix.elements[2] * tempVec.x +
+        viewMatrix.elements[6] * tempVec.y +
+        viewMatrix.elements[10] * tempVec.z +
+        viewMatrix.elements[14]
+      )
+      let pixelSize
+      // Behind camera or too close
+      if (viewZ < camera.near || viewZ > camera.far) {
+        pixelSize = 999
+      } else {
+        // Screen size estimation
+        const scale = mesh.matrixWorld.getMaxScaleOnAxis()
+        pixelSize = (sphere.radius * scale * halfHeight) / (tanHalfFov * viewZ)
+      }
+      // temporal coherence
+      const skipScale = Math.max(0, Math.min(1, (largeSize - pixelSize) / (largeSize - tinySize)))
+      item._ss.skips = Math.floor(minSkips + (maxSkips - minSkips) * skipScale)
+      item._ss.pixelSize = pixelSize
+      return pixelSize
+    },
   }
-}
-
-/**
- * Creates a THREE.LineSegments wireframe that visualizes the volume
- * defined by the given projection‐view matrix (P·V).
- *
- * @param {THREE.Matrix4} projViewMatrix  – the same matrix you passed into frustum.setFromProjectionMatrix(...)
- * @param {Number} color                  – (optional) line color, default = 0xffffff
- * @returns {THREE.LineSegments}          – a LineSegments object you can add() to your scene
- */
-function createFrustumWireframe(projViewMatrix, color = 0xffffff) {
-  // 1. Invert P·V so we can go from NDC → world space
-  const invPV = projViewMatrix.clone().invert()
-
-  // 2. Define the 8 corners in NDC (x,y,z) at {±1,±1,±1}
-  const ndcCorners = [
-    new THREE.Vector3(-1, -1, -1), // near‐bottom‐left
-    new THREE.Vector3(+1, -1, -1), // near‐bottom‐right
-    new THREE.Vector3(+1, +1, -1), // near‐top‐right
-    new THREE.Vector3(-1, +1, -1), // near‐top‐left
-    new THREE.Vector3(-1, -1, +1), // far‐bottom‐left
-    new THREE.Vector3(+1, -1, +1), // far‐bottom‐right
-    new THREE.Vector3(+1, +1, +1), // far‐top‐right
-    new THREE.Vector3(-1, +1, +1), // far‐top‐left
-  ]
-
-  // 3. Unproject each NDC corner into world‐space
-  const worldCorners = ndcCorners.map(c => c.clone().applyMatrix4(invPV))
-
-  // 4. Specify which pairs of corners form the 12 edges of the frustum
-  const edgeIndices = [
-    // near‐plane rectangle
-    [0, 1],
-    [1, 2],
-    [2, 3],
-    [3, 0],
-    // far‐plane rectangle
-    [4, 5],
-    [5, 6],
-    [6, 7],
-    [7, 4],
-    // spokes from near to far
-    [0, 4],
-    [1, 5],
-    [2, 6],
-    [3, 7],
-  ]
-
-  // 5. Build a BufferGeometry of line segments
-  const geometry = new THREE.BufferGeometry()
-  const posArray = []
-  for (let [i, j] of edgeIndices) {
-    posArray.push(
-      worldCorners[i].x,
-      worldCorners[i].y,
-      worldCorners[i].z,
-      worldCorners[j].x,
-      worldCorners[j].y,
-      worldCorners[j].z
-    )
-  }
-  geometry.setAttribute('position', new THREE.Float32BufferAttribute(posArray, 3))
-
-  // 6. Create a simple LineBasicMaterial and return the LineSegments
-  const mat = new THREE.LineBasicMaterial({ color })
-  return new THREE.LineSegments(geometry, mat)
 }
