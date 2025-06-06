@@ -61,13 +61,10 @@ async function buildNodeClient() {
 
               console.log('Build successful. Finalizing package...')
 
-              // 1. Copy PhysX assets
-              const vendorDir = path.join(npmPackageDir, 'vendor')
-              await fs.ensureDir(vendorDir)
               const physxFiles = ['physx-js-webidl.js', 'physx-js-webidl.wasm']
               for (const file of physxFiles) {
                 const src = path.join(rootDir, 'src/core', file)
-                const dest = path.join(vendorDir, file)
+                const dest = path.join(npmPackageDir, file)
                 if (await fs.pathExists(src)) {
                   await fs.copy(src, dest)
                   console.log(`Copied ${file} to ${dest}`)
