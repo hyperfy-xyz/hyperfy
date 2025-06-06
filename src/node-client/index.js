@@ -6,16 +6,32 @@ import { fileURLToPath } from 'url'
 // support `__dirname` in ESM
 globalThis.__dirname = path.dirname(fileURLToPath(import.meta.url))
 
+
+export * as THREE from 'three';
+
 export { createNodeClientWorld } from '../core/createNodeClientWorld'
-export { System } from '../core/systems/System'
 export { storage } from '../core/storage'
 export { World } from '../core/World.js'
-export { Node } from '../core/nodes/Node.js'
+export { loadPhysX } from '../core/loadPhysX.js'
+export { uuid } from '../core/utils.js'
+
+export { System } from '../core/systems/System'
 export { NodeClient } from '../core/systems/NodeClient.js'
 export { ClientControls } from '../core/systems/ClientControls.js'
 export { ClientNetwork } from '../core/systems/ClientNetwork.js'
 export { ServerLoader } from '../core/systems/ServerLoader.js'
 export { NodeEnvironment } from '../core/systems/NodeEnvironment.js'
+
+export { Node } from '../core/nodes/Node.js'
+
+export { Emotes } from '../core/extras/playerEmotes.js'
+export { createEmoteFactory } from '../core/extras/createEmoteFactory.js'
+export { createNode } from '../core/extras/createNode.js'
+export { glbToNodes } from '../core/extras/glbToNodes.js'
+export { Vector3Enhanced } from '../core/extras/Vector3Enhanced.js'
+
+export { GLTFLoader } from '../core/libs/gltfloader/GLTFLoader.js'
+export { CSM } from '../core/libs/csm/CSM'
 
 /**
  * Returns the absolute path to a PhysX asset within the packaged 'vendor' directory.
