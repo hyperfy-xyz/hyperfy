@@ -69,6 +69,10 @@
     "three-mesh-bvh": "^0.8.3",
     "yoga-layout": "^3.2.1"
   },
+  "optionalDependencies": {
+    "@aws-sdk/client-s3": "^3.685.0",
+    "@aws-sdk/s3-request-presigner": "^3.685.0"
+  },
   "devDependencies": {
     "@babel/eslint-parser": "^7.23.10",
     "@babel/preset-react": "^7.23.10",
