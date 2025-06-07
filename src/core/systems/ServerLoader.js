@@ -65,36 +65,13 @@ export class ServerLoader extends System {
     const isRemote = url.startsWith('http://') || url.startsWith('https://')
     
     if (isRemote) {
-      try {
       const response = await fetch(url)
-        if (!response.ok) {
-          throw new Error(`HTTP ${response.status}: ${response.statusText} for ${url}`)
-        }
-        const contentType = response.headers.get('content-type') || ''
-        if (contentType.includes('text/xml') || contentType.includes('application/xml')) {
-          const text = await response.text()
-          console.error(`Received XML response instead of binary file for ${url}:`, text.substring(0, 200))
-          throw new Error(`File not found or access denied: ${url}`)
-        }
       const arrayBuffer = await response.arrayBuffer()
-        
       return arrayBuffer
-      } catch (error) {
-        console.error(`Error fetching ${url}:`, error.message)
-        
-        throw error
-      }
     } else {
-      // Local file access
-      try {
-        const filePath = url.startsWith('file://') ? url.slice(7) : url
-        
-        const buffer = await fs.readFile(filePath)
-        return buffer.buffer
-      } catch (error) {
-        console.error(`Error reading local file ${url}:`, error.message)        
-        throw error
-      }
+      const buffer = await fs.readFile(url)
+      const arrayBuffer = buffer.buffer.slice(buffer.byteOffset, buffer.byteOffset + buffer.byteLength)
+      return arrayBuffer
     }
   }
 
@@ -108,81 +85,6 @@ export class ServerLoader extends System {
       const text = await fs.readFile(url, { encoding: 'utf8' })
       return text
     }
-  }
-
-  async loadModel(url) {
-    const resolvedUrl = this.world.resolveURL(url, true)
-    console.log(`[ServerLoader] Loading model: ${url} -> ${resolvedUrl}`)    
-    console.log(`[ServerLoader] Fetching model from: ${resolvedUrl}`)
-    
-    try {
-      const arrayBuffer = await this.fetchArrayBuffer(resolvedUrl)      
-      const loader = new THREE.GLTFLoader()
-      
-      const gltf = await new Promise((resolve, reject) => {
-        loader.parse(arrayBuffer, '', resolve, reject)
-      })
-      
-      return gltf
-      
-    } catch (error) {
-      console.error(`[ServerLoader] Error loading model ${url}:`, error.message)
-      
-      // FALLBACK: If it's a hasheaded asset that failed, try to find a built-in equivalent
-      if (resolvedUrl.includes('.glb') && error.message.includes('404') || error.message.includes('403')) {
-        const fallbackUrl = this.tryGetBuiltInFallback(url, resolvedUrl)
-        if (fallbackUrl && fallbackUrl !== resolvedUrl) {
-          console.log(`[ServerLoader] Trying fallback for ${url}: ${fallbackUrl}`)
-          try {
-            const fallbackBuffer = await this.fetchArrayBuffer(fallbackUrl)
-            const loader = new THREE.GLTFLoader()
-            const gltf = await new Promise((resolve, reject) => {
-              loader.parse(fallbackBuffer, '', resolve, reject)
-            })
-            console.log(`[ServerLoader] Fallback successful for ${url}`)
-            return gltf
-          } catch (fallbackError) {
-            console.error(`[ServerLoader] Fallback also failed for ${url}:`, fallbackError.message)
-          }
-        }
-      }
-      
-      throw error
-    }
-  }
-
-  /**
-   * Try to find a built-in asset fallback for a failed hasheaded asset
-   */
-  tryGetBuiltInFallback(originalUrl, resolvedUrl) {
-    // If it's already a built-in asset (not hasheaded), don't try fallback
-    if (!resolvedUrl.match(/[a-f0-9]{64}\.glb/)) {
-      return null
-    }
-    
-    // Common built-in assets that might be used as fallbacks
-    const builtInAssets = [
-      'crash-block.glb',
-      'emote-idle.glb', 
-      'emote-walk.glb',
-      'emote-run.glb',
-      'emote-jump.glb',
-      'emote-fall.glb',
-      'emote-flip.glb',
-      'emote-float.glb',
-      'emote-talk.glb'
-    ]
-    
-    // For emote-related assets, try to match by name
-    for (const builtIn of builtInAssets) {
-      if (originalUrl.includes('emote') && builtIn.includes('emote-idle')) {
-        // Default emote fallback
-        return this.world.resolveURL(`asset://${builtIn}`, true)
-      }
-    }
-    
-    // Generic fallback for any .glb - use crash-block as a placeholder
-    return this.world.resolveURL('asset://crash-block.glb', true)
   }
 
   load(type, url) {
