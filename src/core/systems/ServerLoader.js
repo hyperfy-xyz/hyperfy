@@ -63,7 +63,7 @@ export class ServerLoader extends System {
 
   async fetchArrayBuffer(url) {
     const isRemote = url.startsWith('http://') || url.startsWith('https://')
-    
+
     if (isRemote) {
       const response = await fetch(url)
       const arrayBuffer = await response.arrayBuffer()
