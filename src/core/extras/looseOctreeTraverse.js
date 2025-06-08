@@ -69,6 +69,8 @@ function LooseOctreeTraverse() {
   }
 
   return function sort(cameraPos, node, callback) {
+    if (!node.children.length) return
+
     // 1) Determine which “octant” the camera is in relative to this node.center
     const dx = cameraPos.x >= node.center.x ? 1 : 0
     const dy = cameraPos.y >= node.center.y ? 1 : 0
@@ -80,13 +82,16 @@ function LooseOctreeTraverse() {
     // ordering is an array of eight indices [i0, i1, …, i7]
 
     // 3) Walk exactly in that order—no full sort() call
-    for (let k = 0; k < 8; k++) {
-      const childIndex = ordering[k]
-      const childNode = node.children[childIndex]
-      if (childNode) {
-        callback(childNode)
-      }
+    for (const idx of ordering) {
+      callback(node.children[idx])
     }
+    // for (let k = 0; k < 8; k++) {
+    //   const childIndex = ordering[k]
+    //   const childNode = node.children[childIndex]
+    //   if (childNode) {
+    //     callback(childNode)
+    //   }
+    // }
   }
 }
 

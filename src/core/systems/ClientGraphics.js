@@ -23,6 +23,7 @@ import { looseOctreeTraverse } from '../extras/looseOctreeTraverse'
 
 const v1 = new THREE.Vector3()
 const v2 = new THREE.Vector3()
+const m1 = new THREE.Matrix4()
 
 let renderer
 function getRenderer() {
@@ -695,10 +696,10 @@ export class ClientGraphics extends System {
         }
 
         // collect items in batches to render later
-        let batch = batches.get(renderable)
+        let batch = renderable._renderBatch
         if (!batch) {
           batch = { renderable, items: [], count: 0, pass }
-          batches.set(renderable, batch)
+          renderable._renderBatch = batch
           active.push(batch)
         }
         if (batch.pass !== pass) {
@@ -836,6 +837,9 @@ export class ClientGraphics extends System {
     // const iMeshes = new Map() // model -> InstanceMesh
     const batches = new WeakMap() // renderable -> batch { renderable, items, count, pass } { imesh }
     const active = []
+    const objs = []
+    const superFrustum = new THREE.Frustum()
+    let frame = -1
     let pass = 0
     let scene
     let camera
@@ -875,9 +879,84 @@ export class ClientGraphics extends System {
       active.length = 0
       // console.time('sTraverse')
       // renderer.clearDepth()
-      // gl.colorMask(false, false, false, false)
-      // gl.depthMask(true)
-      traverse(octree.root)
+
+      // console.log(renderer.info.render.frame)
+
+      if (frame !== renderer.info.render.frame) {
+        const lastCam = self.world.environment.csm.lights[self.world.environment.csm.lights.length - 1].shadow.camera
+        const bigMatrix = m1.multiplyMatrices(lastCam.projectionMatrix, lastCam.matrixWorldInverse)
+        superFrustum.setFromProjectionMatrix(bigMatrix)
+
+        objs.length = 0
+
+        // console.time('sTraverse')
+        traverse(octree.root)
+        // console.timeEnd('sTraverse')
+        // console.log('sTraverse #active', active.length)
+
+        // console.time('sBatch')
+        for (const batch of active) {
+          // single objects
+          if (batch.count === 1) {
+            const mesh = batch.renderable.mesh
+            mesh.matrixWorld.copy(batch.items[0].matrix)
+            objs.push(mesh)
+          }
+          // instanced objects
+          else {
+            let imesh = batch.imesh
+            const size = imesh ? imesh.instanceMatrix.array.length / 16 : 0
+            const count = batch.count
+            // if imesh isn't big enough, create a bigger one
+            if (size < count) {
+              // free up instanceMatrix on GPU from any previous imesh
+              imesh?.dispose()
+              // create a new one
+              const mesh = batch.renderable.mesh
+              imesh = new THREE.InstancedMesh(mesh.geometry, mesh.material, count)
+              imesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage)
+              imesh.castShadow = mesh.castShadow
+              imesh.receiveShadow = mesh.receiveShadow
+              imesh.matrixAutoUpdate = false
+              imesh.matrixWorldAutoUpdate = false
+              imesh.frustumCulled = false
+              batch.imesh = imesh
+              batch.changed = true
+            }
+            // count can shrink without batch change
+            imesh.count = count
+            // if items changed since last time, repopulate and push to gpu!
+            if (batch.changed) {
+              for (let i = 0; i < count; i++) {
+                imesh.setMatrixAt(i, batch.items[i].matrix)
+              }
+              imesh.instanceMatrix.needsUpdate = true
+              // HACK: threejs only allows pushing instanceMatrix changes to the GPU once per frame
+              // but since we build the instances manually on each pass (multiple per frame) we need to force push this to the GPU.
+              // this could be more efficient with a `renderer.pushAttribute()` or something that does it more directly.
+              // see: WebGLObjects
+              const currFrame = renderer.info.render.frame
+              renderer.info.render.frame = -1
+              objects.update(imesh)
+              renderer.info.render.frame = currFrame
+              //
+              batch.changed = false
+            }
+            objs.push(imesh)
+            renderObject(imesh)
+          }
+        }
+        // console.timeEnd('sBatch')
+        // console.log('sBatch #batches', objs.length)
+
+        frame = renderer.info.render.frame
+      } else {
+        // console.time('sRender')
+        for (const obj of objs) {
+          renderObject(obj)
+        }
+        // console.timeEnd('sRender')
+      }
 
       // if (globalThis.lol >= 0 && globalThis.lol < 3) {
       //   const _projScreenMatrix = /*@__PURE__*/ new THREE.Matrix4()
@@ -910,50 +989,6 @@ export class ClientGraphics extends System {
       // }
 
       // console.timeEnd('sTraverse')
-
-      // console.time('sRender')
-      for (const batch of active) {
-        let imesh = batch.imesh
-        const size = imesh ? imesh.instanceMatrix.array.length / 16 : 0
-        const count = batch.count
-        // if imesh isn't big enough, create a bigger one
-        if (size < count) {
-          // free up instanceMatrix on GPU from any previous imesh
-          imesh?.dispose()
-          // create a new one
-          const mesh = batch.renderable.mesh
-          imesh = new THREE.InstancedMesh(mesh.geometry, mesh.material, count)
-          imesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage)
-          imesh.castShadow = mesh.castShadow
-          imesh.receiveShadow = mesh.receiveShadow
-          imesh.matrixAutoUpdate = false
-          imesh.matrixWorldAutoUpdate = false
-          imesh.frustumCulled = false
-          batch.imesh = imesh
-          batch.changed = true
-        }
-        // count can shrink without batch change
-        imesh.count = count
-        // if items changed since last time, repopulate and push to gpu!
-        if (batch.changed) {
-          for (let i = 0; i < count; i++) {
-            imesh.setMatrixAt(i, batch.items[i].matrix)
-          }
-          imesh.instanceMatrix.needsUpdate = true
-          // HACK: threejs only allows pushing instanceMatrix changes to the GPU once per frame
-          // but since we build the instances manually on each pass (multiple per frame) we need to force push this to the GPU.
-          // this could be more efficient with a `renderer.pushAttribute()` or something that does it more directly.
-          // see: WebGLObjects
-          const currFrame = renderer.info.render.frame
-          renderer.info.render.frame = -1
-          objects.update(imesh)
-          renderer.info.render.frame = currFrame
-          //
-          batch.changed = false
-        }
-        renderObject(imesh)
-      }
-      // console.timeEnd('sRender')
     }
     // function check(node) {
     //   if (frustum.intersectsBox(node.outer)) {
@@ -1024,20 +1059,34 @@ export class ClientGraphics extends System {
     //     check(child)
     //   }
     // }
-    function traverse(node) {
+    function traverse(node, fullyContained) {
       // if (!node.sc) {
       //   initNode(node)
       // }
-      // if node is outside frustum, skip all descendants
       // const expandedOuter = node.outer.clone().expandByScalar(30)
       // if (!frustum.intersectsBox(expandedOuter)) {
-      if (!frustum.intersectsBox(node.outer)) {
-        // check(node)
+      // if (!superFrustum.intersectsSphere(node.sphere)) {
+
+      // if this node and all descendant have no objects, we can just skip it all
+      if (!node.count) {
         return
+      }
+      if (!fullyContained) {
+        // if node is outside frustum, skip all descendants
+        if (!superFrustum.intersectsBox(node.outer)) {
+          // check(node)
+          return
+        }
+        // if this entire node is inside the frustum, render all descendants without any more frustum checks
+        if (frustumContainsSphere(superFrustum, node.sphere)) {
+          fullyContained = true
+          // collectSubtree(node)
+          // return
+        }
       }
       // // if node encapsulates frustum, render items without query (this node only) and recurse fresh
       // if (node.outer.containsPoint(shadowCameraPos)) {
-      //   renderItems(node.items)
+      //   collectItems(node.items)
       //   for (const child of sortNodes(node.children)) {
       //     traverse(child)
       //   }
@@ -1046,7 +1095,7 @@ export class ClientGraphics extends System {
       // // allow visible nodes to skip frames and reduce query workload
       // if (node.sc.visible && node.sc.skips) {
       //   node.sc.skips--
-      //   renderItems(node.items)
+      //   collectItems(node.items)
       //   for (const child of sortNodes(node.children)) {
       //     traverse(child)
       //   }
@@ -1078,17 +1127,29 @@ export class ClientGraphics extends System {
       // }
       // // don't recurse into tiny nodes, just force visible
       // if (node.size < 4) {
-      //   renderSubtree(node)
+      //   collectSubtree(node)
       //   return
       // }
       // render items
-      renderItems(node.items)
-      // continue traversal into children
-      looseOctreeTraverse(shadowCameraPos, node, traverse)
-      // for (const child of sortNodes(node.children)) {
-      //   // for (const child of node.children) {
-      //   traverse(child)
+      // for (let i = 0; i < node.items.length; i++) {
+      //   const item = node.items[i]
+      //   if (
+      //     item.renderable &&
+      //     (item.renderable.mesh.castShadow || (item.renderable.mesh.receiveShadow && type === THREE.VSMShadowMap))
+      //   ) {
+      //     items.push(items)
+      //   }
       // }
+      collectItems(node.items)
+      // continue traversal into children
+      // looseOctreeTraverse(shadowCameraPos, node, traverse)
+      // for (const child of sortNodes(node.children)) {
+      // for (let i = 0; i < node.children.length; i++) {
+      //   traverse(node.children[i])
+      // }
+      for (const child of node.children) {
+        traverse(child)
+      }
       // NOTE: if in frustum dont have to test all children or sort nodes just insta-render everything asap
     }
     function initNode(node) {
@@ -1110,19 +1171,19 @@ export class ClientGraphics extends System {
         skips: 0,
       }
     }
-    function renderSubtree(node) {
-      // if this node and all descendant have no objects, we can just skip it all
-      if (!node.count) {
-        // stats.skipRenderSubtreeNoCount++
-        return
-      }
-      if (!node.sc) {
-        initNode(node)
-      }
-      renderItems(node.items)
-      node.sc.visible = true
+    function collectSubtree(node) {
+      // if (!node.sc) {
+      //   initNode(node)
+      // }
+      collectItems(node.items)
+      // for (let i = 0; i < node.items.length; i++) {
+      //   items.push(node.items[i])
+      // }
+      // for (let i = 0; i < node.children.length; i++) {
+      //   collectSubtree(node.children[i])
+      // }
       for (const child of node.children) {
-        renderSubtree(child)
+        collectSubtree(child)
       }
     }
     function hasQueryResult(node) {
@@ -1156,96 +1217,74 @@ export class ClientGraphics extends System {
       // gl.colorMask(true, true, true, true)
       // gl.depthMask(true)
     }
-    function renderItems(items) {
-      for (const item of items) {
-        renderItem(item)
+    function collectItems(_items) {
+      for (const item of _items) {
+        collectItem(item)
       }
     }
-    function renderItem(item) {
+    function collectItem(item) {
       // if (item._shadowPass === pass) return console.log('DUPE')
       // item._shadowPass = pass
 
-      // // NOTE: this render single mesh works fine but if we try to do the instanced mesh collection to reduce draws it does something weird af
-      // renderObject(item._mesh)
-      // return
-
-      // if (item.node?.id === 'Cube310') {
-      //   console.log('boop')
-      //   console.log(`Shadow pass ${pass}: rendering item`, item.node.id)
-      // }
-
       // collect instances to render later
       const renderable = item.renderable
-      if (renderable) {
-        let batch = batches.get(renderable)
-        // no batch yet? init and mark active
-        if (!batch) {
-          batch = { renderable, items: [], count: 0, pass }
-          batches.set(renderable, batch)
-          active.push(batch)
-        }
-        // new pass? reset count and mark active
-        if (batch.pass !== pass) {
-          batch.pass = pass
-          batch.count = 0
-          active.push(batch)
-        }
-        // if next item is different, flag changed.
-        // this lets us know if we need to rebuild the entire instanceMatrix later.
-        if (batch.items[batch.count] !== item) {
-          batch.items[batch.count] = item
-          batch.changed = true
-        }
-        // track moved items
-        if (item.move !== item._shadowMove) {
-          item._shadowMove = item.move
-          batch.changed = true
-        }
-        // keep count
-        batch.count++
-      }
 
-      // if (item._mesh) {
-      //   renderObject(item._mesh)
-      // }
+      // skip if not a shadow caster
+      const valid =
+        renderable && (renderable.mesh.castShadow || (renderable.mesh.receiveShadow && type === THREE.VSMShadowMap))
+      if (!valid) return
+
+      let batch = renderable._shadowBatch
+      // no batch yet? init and mark active
+      if (!batch) {
+        batch = { renderable, items: [], count: 0, pass }
+        renderable._shadowBatch = batch
+        active.push(batch)
+      }
+      // new pass? reset count and mark active
+      if (batch.pass !== pass) {
+        batch.pass = pass
+        batch.count = 0
+        active.push(batch)
+      }
+      // if next item is different, flag changed.
+      // this lets us know if we need to rebuild the entire instanceMatrix later.
+      if (batch.items[batch.count] !== item) {
+        batch.items[batch.count] = item
+        batch.changed = true
+      }
+      // track moved items
+      if (item.move !== item._shadowMove) {
+        item._shadowMove = item.move
+        batch.changed = true
+      }
+      // keep count
+      batch.count++
     }
     function renderObject(object) {
-      // if (!object) return
-      // if (object.visible === false) return
-      // const visible = object.layers.test(camera.layers)
-      // if (visible && (object.isMesh || object.isLine || object.isPoints)) {
       if (object.isMesh || object.isLine || object.isPoints) {
-        if (object.castShadow || (object.receiveShadow && type === THREE.VSMShadowMap)) {
-          object.modelViewMatrix.multiplyMatrices(shadowCamera.matrixWorldInverse, object.matrixWorld)
-          const geometry = objects.update(object)
-          const material = object.material
-          if (Array.isArray(material)) {
-            const groups = geometry.groups
-            for (let k = 0, kl = groups.length; k < kl; k++) {
-              const group = groups[k]
-              const groupMaterial = material[group.materialIndex]
-              if (groupMaterial && groupMaterial.visible) {
-                const depthMaterial = getDepthMaterial(object, groupMaterial, light, type)
-                object.onBeforeShadow(renderer, object, camera, shadowCamera, geometry, depthMaterial, group)
-                renderer.renderBufferDirect(shadowCamera, null, geometry, depthMaterial, object, group)
-                object.onAfterShadow(renderer, object, camera, shadowCamera, geometry, depthMaterial, group)
-              }
+        object.modelViewMatrix.multiplyMatrices(shadowCamera.matrixWorldInverse, object.matrixWorld)
+        const geometry = objects.update(object)
+        const material = object.material
+        if (Array.isArray(material)) {
+          const groups = geometry.groups
+          for (let k = 0, kl = groups.length; k < kl; k++) {
+            const group = groups[k]
+            const groupMaterial = material[group.materialIndex]
+            if (groupMaterial && groupMaterial.visible) {
+              const depthMaterial = getDepthMaterial(object, groupMaterial, light, type)
+              object.onBeforeShadow(renderer, object, camera, shadowCamera, geometry, depthMaterial, group)
+              renderer.renderBufferDirect(shadowCamera, null, geometry, depthMaterial, object, group)
+              object.onAfterShadow(renderer, object, camera, shadowCamera, geometry, depthMaterial, group)
             }
-          } else if (material.visible) {
-            const depthMaterial = getDepthMaterial(object, material, light, type)
-            object.onBeforeShadow(renderer, object, camera, shadowCamera, geometry, depthMaterial, null)
-            renderer.renderBufferDirect(shadowCamera, null, geometry, depthMaterial, object, null)
-            object.onAfterShadow(renderer, object, camera, shadowCamera, geometry, depthMaterial, null)
           }
+        } else if (material.visible) {
+          const depthMaterial = getDepthMaterial(object, material, light, type)
+          object.onBeforeShadow(renderer, object, camera, shadowCamera, geometry, depthMaterial, null)
+          renderer.renderBufferDirect(shadowCamera, null, geometry, depthMaterial, object, null)
+          object.onAfterShadow(renderer, object, camera, shadowCamera, geometry, depthMaterial, null)
         }
       }
-    }
-    function sortNodes(nodes) {
-      // todo: avoid slice :/
-      return nodes.slice().sort(sortNodesFn)
-    }
-    function sortNodesFn(a, b) {
-      return a.center.distanceToSquared(shadowCameraPos) - b.center.distanceToSquared(shadowCameraPos)
     }
   }
 }
@@ -1315,4 +1354,40 @@ function createScreenSpaceTester() {
       return pixelSize
     },
   }
+}
+
+function getFrustumSize(camera) {
+  if (camera.isPerspectiveCamera) {
+    // For perspective: bigger FOV + bigger far distance = bigger frustum
+    const fov = camera.fov
+    const far = camera.far
+    const aspect = camera.aspect
+
+    // Simple size metric: FOV * far distance * aspect ratio
+    return fov * far * aspect
+  }
+
+  if (camera.isOrthographicCamera) {
+    // For ortho: just the box volume
+    const width = camera.right - camera.left
+    const height = camera.top - camera.bottom
+    const depth = camera.far - camera.near
+
+    return width * height * depth
+  }
+
+  return 0
+}
+
+function frustumContainsSphere(frustum, sphere) {
+  // sphere.center is a Vector3, sphere.radius is a Number
+  for (let i = 0; i < 6; i++) {
+    const plane = frustum.planes[i]
+    // plane.distanceToPoint(c) is plane.normal.dot(c) + plane.constant
+    if (plane.distanceToPoint(sphere.center) < sphere.radius) {
+      // if center is closer than radius to *any* plane, it sticks out
+      return false
+    }
+  }
+  return true
 }

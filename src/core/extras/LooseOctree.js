@@ -8,8 +8,8 @@ const _m1 = new THREE.Matrix4()
 const _intersects = []
 const _mesh = new THREE.Mesh()
 
-const NODE_MIN_SIZE_FOR_ITEMS = 4 // items should go into nodes no larger than this unless they're too big
-const NODE_MIN_SIZE = 0.25
+const NODE_MIN_SIZE_FOR_ITEMS = 2 // items should go into nodes no larger than this unless they're too big
+const NODE_MIN_SIZE = 2
 const BUCKET_SIZE = 8
 
 // https://anteru.net/blog/2008/loose-octrees/
@@ -172,6 +172,7 @@ class LooseOctreeNode {
     this.parent = parent
     this.center = center
     this.size = size
+    this.sphere = new THREE.Sphere(center, size * 2)
     this.inner = new THREE.Box3(
       new THREE.Vector3(center.x - size, center.y - size, center.z - size),
       new THREE.Vector3(center.x + size, center.y + size, center.z + size)
