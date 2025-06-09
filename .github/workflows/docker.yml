@@ -8,6 +8,7 @@ on:
       - 'main'
       - 'dev'
       - 'solana-v2'
+      - 'feat/full-storage-and-db-support'
     tags:
       - 'v*.*.*'
 
