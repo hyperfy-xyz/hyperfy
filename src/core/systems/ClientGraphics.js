@@ -346,6 +346,7 @@ export class ClientGraphics extends System {
       stats.occluders = 0
       stats.draws = 0
       stats.micro = 0
+      stats.oculled = 0
 
       screenSpaceTester.update(self.height, camera)
 
@@ -410,6 +411,7 @@ export class ClientGraphics extends System {
 
       // console.log(active.length)
       // console.log(stats.micro)
+      // console.log(stats.oculled)
 
       // console.time('render')
       for (const batch of active) {
@@ -541,6 +543,7 @@ export class ClientGraphics extends System {
         }
         // not visible? skip entire tree
         if (!node.oc.visible) {
+          stats.oculled += node.count
           // explain(node, node, 'query result hidden 2')
           // hideSubtree(node)
           return

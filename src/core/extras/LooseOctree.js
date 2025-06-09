@@ -418,6 +418,7 @@ class LooseOctreeNode {
           const intersect = _intersects[i]
           intersect.getEntity = item.getEntity
           intersect.node = item.node
+          intersect.octreeNode = this
           intersects.push(intersect)
         }
         _intersects.length = 0
