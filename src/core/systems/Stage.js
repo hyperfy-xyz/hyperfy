@@ -247,6 +247,25 @@ export class Stage extends System {
     return this.raycastHits
   }
 
+  debugOctreeNodeAtReticle() {
+    const hit = this.raycastReticle()[0]
+    if (!hit) return
+    const node = hit.octreeNode
+    if (this._lastOctreeNodeAtReticle) {
+      this.scene.remove(this._lastOctreeNodeAtReticle)
+      this._lastOctreeNodeAtReticle.geometry.dispose()
+      this._lastOctreeNodeAtReticle.material.dispose()
+    }
+    const size = node.outer.getSize(new THREE.Vector3())
+    const geometry = new THREE.BoxGeometry(size.x, size.y, size.z)
+    const center = node.outer.getCenter(new THREE.Vector3())
+    const material = new THREE.MeshBasicMaterial({ wireframe: true, color: 'red' })
+    const mesh = new THREE.Mesh(geometry, material)
+    mesh.position.copy(center)
+    this.scene.add(mesh)
+    this._lastOctreeNodeAtReticle = mesh
+  }
+
   destroy() {
     this.models.clear()
   }
