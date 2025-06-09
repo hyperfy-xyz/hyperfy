@@ -6,6 +6,24 @@ import moment from 'moment'
 import { fileURLToPath } from 'url'
 import { S3Client, ListObjectsV2Command, DeleteObjectCommand } from '@aws-sdk/client-s3'
 
+/**
+ * Clean World S3 Script
+ * Removes unused blueprints and S3 assets from the world database and AWS S3 storage.
+ * Supports SQLite3 (default), PostgreSQL, and MySQL databases.
+ * 
+ * This script specifically targets AWS S3 storage cleanup.
+ * Use regular clean-world.mjs for local file system cleanup.
+ * 
+ * Database configuration is read from environment variables:
+ * - DB_TYPE: 'pg' (PostgreSQL), 'mysql2' (MySQL), or 'better-sqlite3' (SQLite - default)
+ * - For PostgreSQL/MySQL: DB_HOST, DB_PORT, DB_USER, DB_PASSWORD, DB_NAME
+ * - For SQLite: Uses local ./[world]/db.sqlite file
+ * 
+ * Storage configuration:
+ * - STORAGE_TYPE must be set to 'aws'
+ * - S3_BUCKET_NAME, AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY required
+ */
+
 const DRY_RUN = false
 
 const world = process.env.WORLD || 'world'
@@ -14,34 +32,90 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const rootDir = path.join(__dirname, '../')
 const worldDir = path.join(rootDir, world)
 
+function getDBConfig() {
+  const { DB_HOST, DB_PORT, DB_USER, DB_PASSWORD, DB_NAME, DB_TYPE } = process.env;
+
+  const config = {
+    client: DB_TYPE || 'better-sqlite3',
+  }
+
+  if (DB_TYPE === 'pg' && DB_HOST && DB_PORT && DB_USER && DB_PASSWORD && DB_NAME) {
+    config.connection = {
+      host: DB_HOST,
+      port: parseInt(DB_PORT),
+      user: DB_USER,
+      database: DB_NAME,
+      password: DB_PASSWORD,
+    }
+    config.pool = {
+      min: 2,
+      max: 10
+    }
+  } else if (DB_TYPE === 'mysql2' && DB_HOST && DB_PORT && DB_USER && DB_PASSWORD && DB_NAME) {
+    config.connection = {
+      host: DB_HOST,
+      port: parseInt(DB_PORT),
+      user: DB_USER,
+      database: DB_NAME,
+      password: DB_PASSWORD,
+      charset: 'utf8mb4',
+      timezone: 'UTC'
+    }
+    config.pool = {
+      min: 2,
+      max: 10
+    }
+  } else {
+    // SQLite fallback
+    config.connection = {
+      filename: `./${world}/db.sqlite`,
+    }
+    config.useNullAsDefault = true
+  }
+
+  return config;
+}
+
 // Initialize S3 if configured
 let s3Client = null
 let bucketName = null
 let assetsPrefix = null
 
-if (process.env.S3_BUCKET_NAME) {
-  console.log('Using S3 storage for cleanup')
-  s3Client = new S3Client({
-    region: process.env.S3_REGION || 'us-east-1',
-    credentials: {
-      accessKeyId: process.env.AWS_ACCESS_KEY_ID,
-      secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
-    },
-  })
-  bucketName = process.env.S3_BUCKET_NAME
-  assetsPrefix = process.env.S3_ASSETS_PREFIX || 'assets/'
-} else {
-  console.log('S3 not configured, exiting...')
+const storageType = process.env.STORAGE_TYPE || 'local'
+
+if (storageType !== 'aws') {
+  console.error('Error: This script requires STORAGE_TYPE=aws')
+  console.error('For local file system cleanup, use clean-world.mjs instead')
   process.exit(1)
 }
 
-const db = Knex({
-  client: 'better-sqlite3',
-  connection: {
-    filename: `./${world}/db.sqlite`,
+if (!process.env.S3_BUCKET_NAME) {
+  console.error('Error: S3_BUCKET_NAME is required when STORAGE_TYPE=aws')
+  process.exit(1)
+}
+
+console.log('Using AWS S3 storage for cleanup')
+s3Client = new S3Client({
+  region: process.env.S3_REGION || 'us-east-1',
+  credentials: {
+    accessKeyId: process.env.AWS_ACCESS_KEY_ID,
+    secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
   },
-  useNullAsDefault: true,
 })
+bucketName = process.env.S3_BUCKET_NAME
+assetsPrefix = process.env.S3_ASSETS_PREFIX || 'assets/'
+
+const dbConfig = getDBConfig()
+const db = Knex(dbConfig)
+
+console.log(`Using database: ${dbConfig.client}`)
+if (dbConfig.client === 'better-sqlite3') {
+  console.log(`SQLite file: ${dbConfig.connection.filename}`)
+} else {
+  console.log(`Database: ${dbConfig.connection.database} on ${dbConfig.connection.host}:${dbConfig.connection.port}`)
+}
+console.log(`S3 Bucket: ${bucketName}`)
+console.log(`Assets Prefix: ${assetsPrefix}`)
 
 // TODO: run any missing migrations first?
 
@@ -188,5 +262,8 @@ for (const s3Asset of s3FilesToDelete) {
   console.log('delete S3 asset:', s3Asset)
 }
 
-console.log('Cleanup completed')
+console.log('S3 cleanup completed')
+
+// Close database connection before exiting
+await db.destroy()
 process.exit() 
