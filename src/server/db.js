@@ -3,15 +3,44 @@ import moment from 'moment'
 
 let db
 
-export async function getDB(path) {
+function getDBConfig(sqlitePath) {
+  const { DB_HOST, DB_PORT, DB_USER, DB_PASSWORD, DB_NAME, DB_TYPE, DB_SCHEMA } = process.env;
+
+  const config = {
+    client: DB_TYPE || 'better-sqlite3',
+  }
+
+  if (DB_TYPE === 'pg' && DB_HOST && DB_PORT && DB_USER && DB_PASSWORD && DB_NAME && DB_SCHEMA) {
+    config.connection = {
+      host: DB_HOST,
+      port: parseInt(DB_PORT),
+      user: DB_USER,
+      database: DB_NAME,
+      password: DB_PASSWORD,
+      ...(DB_TYPE === 'mysql2' && {
+        charset: 'utf8mb4',
+        timezone: 'UTC'
+      })
+    }
+    config.searchPath = [DB_SCHEMA]
+    config.pool = {
+      min: 2,
+      max: 10
+    }
+  } else {
+    config.connection = {
+      filename: sqlitePath,
+    }
+    config.useNullAsDefault = true
+  }
+
+  return config;
+}
+
+export async function getDB(sqlitePath) {
   if (!db) {
-    db = Knex({
-      client: 'better-sqlite3',
-      connection: {
-        filename: path,
-      },
-      useNullAsDefault: true,
-    })
+    const config = getDBConfig(sqlitePath)
+    db = Knex(config)
     await migrate(db)
   }
   return db
