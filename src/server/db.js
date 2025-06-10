@@ -4,7 +4,7 @@ import moment from 'moment'
 let db
 
 function getDBConfig(sqlitePath) {
-  const { DB_HOST, DB_PORT, DB_USER, DB_PASSWORD, DB_NAME, DB_TYPE } = process.env;
+  const { DB_HOST, DB_PORT, DB_USER, DB_PASSWORD, DB_NAME, DB_TYPE, DB_SCHEMA } = process.env;
 
   if (DB_HOST && DB_PORT && DB_USER && DB_PASSWORD && DB_NAME) {
     return {
