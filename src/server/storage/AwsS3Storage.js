@@ -13,13 +13,15 @@ export class AwsS3Storage {
     this.storagePrefix = config.storagePrefix || 'storage/'
     this.cloudfrontUrl = config.cloudfrontUrl // Optional CloudFront URL
     
-    this.client = new S3Client({
+    const clientConfig = {
       region: this.region,
-      credentials: config.credentials || {
-        accessKeyId: process.env.AWS_ACCESS_KEY_ID,
-        secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
-      },
-    })
+    }
+    
+    if (config.credentials) {
+      clientConfig.credentials = config.credentials
+    }
+    
+    this.client = new S3Client(clientConfig)
   }
 
   /**

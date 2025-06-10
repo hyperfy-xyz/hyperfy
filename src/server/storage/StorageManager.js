@@ -22,14 +22,23 @@ export class StorageManager {
     if (process.env.S3_BUCKET_NAME) {
       // Initialize S3 storage
       this.isS3 = true
-      this.storage = new AwsS3Storage({
+      const s3Config = {
         bucketName: process.env.S3_BUCKET_NAME,
         region: process.env.S3_REGION || 'us-east-1',
         assetsPrefix: process.env.S3_ASSETS_PREFIX || 'assets/',
         collectionsPrefix: process.env.S3_COLLECTIONS_PREFIX || 'collections/',
         storagePrefix: process.env.S3_STORAGE_PREFIX || 'storage/',
-        cloudfrontUrl: process.env.CLOUDFRONT_URL, // Optional CloudFront URL
-      })
+        cloudfrontUrl: process.env.CLOUDFRONT_URL,
+      }
+      
+      if (process.env.AWS_ACCESS_KEY_ID && process.env.AWS_SECRET_ACCESS_KEY) {
+        s3Config.credentials = {
+          accessKeyId: process.env.AWS_ACCESS_KEY_ID,
+          secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
+        }
+      }
+      
+      this.storage = new AwsS3Storage(s3Config)
       
       console.log('Initializing S3 storage...')
       await this.storage.initialize()
