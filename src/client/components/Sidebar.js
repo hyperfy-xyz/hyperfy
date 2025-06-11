@@ -608,6 +608,7 @@ function World({ world, hidden }) {
   const [model, setModel] = useState(world.settings.model)
   const [avatar, setAvatar] = useState(world.settings.avatar)
   const [playerLimit, setPlayerLimit] = useState(world.settings.playerLimit)
+  const [occlusion, setOcclusion] = useState(world.settings.occlusion)
   const [ao, setAO] = useState(world.settings.ao)
   const [publicc, setPublic] = useState(world.settings.public)
   useEffect(() => {
@@ -618,6 +619,7 @@ function World({ world, hidden }) {
       if (changes.model) setModel(changes.model.value)
       if (changes.avatar) setAvatar(changes.avatar.value)
       if (changes.playerLimit) setPlayerLimit(changes.playerLimit.value)
+      if (changes.occlusion) setOcclusion(changes.occlusion.value)
       if (changes.ao) setAO(changes.ao.value)
       if (changes.public) setPublic(changes.public.value)
     }
@@ -703,6 +705,14 @@ function World({ world, hidden }) {
             hint='Set a maximum number of players that can be in the world at one time. Zero means unlimited.'
             value={playerLimit}
             onChange={value => world.settings.set('playerLimit', value, true)}
+          />
+          <FieldToggle
+            label='Occlusion Culling'
+            hint={`Improves performance for worlds with lots of occluders, eg walls that hide many other objects behind them. Worlds with large open spaces and not many occluders may get better performance by disabling this.`}
+            trueLabel='On'
+            falseLabel='Off'
+            value={occlusion}
+            onChange={value => world.settings.set('occlusion', value, true)}
           />
           <FieldToggle
             label='Ambient Occlusion'

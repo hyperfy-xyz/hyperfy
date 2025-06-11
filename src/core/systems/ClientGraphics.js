@@ -104,23 +104,11 @@ export class ClientGraphics extends System {
       blendFunction: BlendFunction.ADD,
       mipmapBlur: true,
       luminanceThreshold: 1,
+      luminanceSmoothing: 0.3,
       intensity: 0.5,
       radius: 0.8,
     })
     this.bloomEnabled = this.world.prefs.bloom
-    // this.bloom = new SelectiveBloomEffect(this.world.stage.scene, this.world.camera, {
-    //   blendFunction: BlendFunction.ADD,
-    //   mipmapBlur: true,
-    //   luminanceThreshold: 1,
-    //   luminanceSmoothing: 0.3,
-    //   intensity: 0.5,
-    //   radius: 0.8,
-    // })
-    // this.bloom.inverted = true
-    // this.bloom.selection.layer = 14 // NO_BLOOM layer
-    // this.bloomPass = new EffectPass(this.world.camera, this.bloom)
-    // this.bloomPass.enabled = this.world.prefs.bloom
-    // this.composer.addPass(this.bloomPass)
     this.smaa = new SMAAEffect({
       preset: SMAAPreset.HIGH,
     })
@@ -129,7 +117,6 @@ export class ClientGraphics extends System {
     })
     this.effectPass = new EffectPass(this.world.camera)
     this.updatePostProcessingEffects()
-    // this.effectPass.setEffects([this.bloom, this.smaa, this.tonemapping])
     this.composer.addPass(this.effectPass)
     this.world.prefs.on('change', this.onPrefsChange)
     this.resizer = new ResizeObserver(() => {
@@ -145,6 +132,7 @@ export class ClientGraphics extends System {
 
   start() {
     this.world.on('xrSession', this.onXRSession)
+    this.occlusion = this.world.settings.occlusion
     this.world.settings.on('change', this.onSettingsChange)
   }
 
@@ -260,9 +248,11 @@ export class ClientGraphics extends System {
   }
 
   onSettingsChange = changes => {
+    if (changes.occlusion) {
+      this.occlusion = changes.occlusion.value
+    }
     if (changes.ao) {
       this.aoPass.enabled = changes.ao.value && this.world.prefs.ao
-      console.log(this.aoPass.enabled)
     }
   }
 
@@ -318,6 +308,12 @@ export class ClientGraphics extends System {
       depthTest: true,
       side: THREE.DoubleSide, // Match your geometry needs
     })
+    const occlusionFBO = new THREE.WebGLRenderTarget(512, 512, {
+      depthBuffer: true,
+      depthTexture: new THREE.DepthTexture(512, 512, THREE.UnsignedShortType),
+    })
+    occlusionFBO.texture.minFilter = THREE.NearestFilter
+    occlusionFBO.texture.magFilter = THREE.NearestFilter
     renderer.projectSpatial = (
       _scene,
       _camera,
@@ -347,6 +343,30 @@ export class ClientGraphics extends System {
       stats.skipRenderSubtreeNoCount = 0
       stats.occluders = 0
       stats.draws = 0
+
+      // const prevRT = renderer.getRenderTarget()
+      // const prevColorMask = gl.getParameter(gl.COLOR_WRITEMASK) // [r,g,b,a]
+      // const prevDepthMask = gl.getParameter(gl.DEPTH_WRITEMASK) // Boolean
+      // const prevDepthTest = gl.getParameter(gl.DEPTH_TEST) // Boolean
+      // renderer.setRenderTarget(occlusionFBO)
+      // renderer.clearDepth() // clear depth to “far”
+      // gl.colorMask(false, false, false, false) // no color writes
+      // gl.depthMask(false) // no depth writes
+      // traverse(octree.root)
+      // gl.colorMask(
+      //   prevColorMask[0], // r
+      //   prevColorMask[1], // g
+      //   prevColorMask[2], // b
+      //   prevColorMask[3] // a
+      // )
+      // gl.depthMask(prevDepthMask)
+      // if (prevDepthTest) {
+      //   gl.enable(gl.DEPTH_TEST)
+      // } else {
+      //   gl.disable(gl.DEPTH_TEST)
+      // }
+      // renderer.setRenderTarget(prevRT)
+
       renderer.clearDepth()
       gl.colorMask(false, false, false, false)
       // console.time('traverse')
@@ -398,10 +418,6 @@ export class ClientGraphics extends System {
           }
           renderObject(imesh)
         }
-
-        // for (const item of iMesh._items) {
-        //   renderObject(item._mesh)
-        // }
       }
       // console.timeEnd('render')
 
@@ -420,67 +436,66 @@ export class ClientGraphics extends System {
       if (!frustum.intersectsBox(node.outer)) {
         return
       }
-      // if node encapsulates frustum, render items without query (this node only) and recurse fresh
-      if (node.outer.containsPoint(cameraPos)) {
-        node.oc.visible = true
-        renderItems(node.items)
-        looseOctreeTraverse(cameraPos, node, traverse)
-        // for (const child of sortNodes(node.children)) {
-        //   traverse(child)
-        // }
-        return
-      }
-      // allow visible nodes to skip frames and reduce query workload
-      if (node.oc.visible && node.oc.skips) {
-        node.oc.skips--
-        renderItems(node.items)
-        looseOctreeTraverse(cameraPos, node, traverse)
-        // for (const child of sortNodes(node.children)) {
-        //   traverse(child)
-        // }
-        return
-      }
-      // no pending queries? issue one!
-      if (!node.oc.pending) {
-        const exhausted = node.oc.visible ? stats.queries > 100 : false
-        if (!exhausted) {
-          issueOcclusionQuery(node)
+      if (self.occlusion) {
+        // if node encapsulates frustum, render items without query (this node only) and recurse fresh
+        if (node.outer.containsPoint(cameraPos)) {
+          node.oc.visible = true
+          renderItems(node.items)
+          looseOctreeTraverse(cameraPos, node, traverse)
+          // for (const child of sortNodes(node.children)) {
+          //   traverse(child)
+          // }
+          return
         }
-        // return
-      }
-      // if query is pending check for result (important: we use else here so we dont read immediately after issue)
-      else if (node.oc.pending) {
-        if (hasQueryResult(node)) {
-          const visible = getQueryResult(node)
-          if (visible) {
-            node.oc.visible = true
-            node.oc.skips = 5
-            // mark tree visible + give skips
-            // showSubtree(node)
-          } else {
-            node.oc.visible = false
-            // hideSubtree(node)
-            return
+        // allow visible nodes to skip frames and reduce query workload
+        if (node.oc.visible && node.oc.skips) {
+          node.oc.skips--
+          renderItems(node.items)
+          looseOctreeTraverse(cameraPos, node, traverse)
+          // for (const child of sortNodes(node.children)) {
+          //   traverse(child)
+          // }
+          return
+        }
+        // no pending queries? issue one!
+        if (!node.oc.pending) {
+          const exhausted = node.oc.visible ? stats.queries > 100 : false
+          if (!exhausted) {
+            issueOcclusionQuery(node)
+          }
+          // return
+        }
+        // if query is pending check for result (important: we use else here so we dont read immediately after issue)
+        else if (node.oc.pending) {
+          if (hasQueryResult(node)) {
+            const visible = getQueryResult(node)
+            if (visible) {
+              node.oc.visible = true
+              node.oc.skips = 5
+              // mark tree visible + give skips
+              // showSubtree(node)
+            } else {
+              node.oc.visible = false
+              // hideSubtree(node)
+              return
+            }
           }
         }
-      }
-      // not visible? skip entire tree
-      if (!node.oc.visible) {
-        // hideSubtree(node)
-        return
-      }
-      // don't recurse into tiny nodes, just force visible
-      if (node.size < 4) {
-        renderSubtree(node)
-        return
+        // not visible? skip entire tree
+        if (!node.oc.visible) {
+          // hideSubtree(node)
+          return
+        }
+        // don't recurse into tiny nodes, just force visible
+        if (node.size < 4) {
+          renderSubtree(node)
+          return
+        }
       }
       // render items
       renderItems(node.items)
       // continue traversal into children
       looseOctreeTraverse(cameraPos, node, traverse)
-      // for (const child of sortNodes(node.children)) {
-      //   traverse(child)
-      // }
     }
     function renderItems(items) {
       for (const item of items) {
@@ -589,32 +604,13 @@ export class ClientGraphics extends System {
       if (item._renderPass === pass) return
       item._renderPass = pass
 
-      // const object = item._mesh
-      // if (object) {
-      //   object.matrixWorld.copy(item.matrix)
-
-      //   // render depth immediately
-      //   const geometry = objects.update(object)
-      //   if (isOccluder(object, geometry)) {
-      //     stats.occluders++
-      //     object.modelViewMatrix.multiplyMatrices(camera.matrixWorldInverse, object.matrixWorld)
-      //     renderer.renderBufferDirect(
-      //       camera,
-      //       null, // scene (null for direct rendering)
-      //       geometry,
-      //       occluderMat,
-      //       object,
-      //       null // group
-      //     )
-      //   }
-      // }
-
       const renderable = item.renderable
       if (renderable) {
-        // check if we should render depth as an occluder
         const mesh = renderable.mesh
         mesh.matrixWorld.copy(item.matrix)
-        if (isOccluder(mesh)) {
+
+        // check if we should render depth as an occluder
+        if (self.occlusion && isOccluder(mesh)) {
           const geometry = objects.update(mesh)
           stats.occluders++
           mesh.modelViewMatrix.multiplyMatrices(camera.matrixWorldInverse, mesh.matrixWorld)
@@ -627,10 +623,6 @@ export class ClientGraphics extends System {
             null // group
           )
         }
-
-        // if (mesh.material.transmission) {
-        //   console.log(item.getEntity()?.blueprint?.name)
-        // }
 
         // collect items in batches to render later
         let batch = batches.get(renderable)
@@ -699,7 +691,7 @@ export class ClientGraphics extends System {
       }
     }
     function isOccluder(mesh) {
-      // if its transparent anywhere it cant occlude!
+      // if its transparent/alpha-clip it cant occlude!
       if (mesh.material.transparent || mesh.material.alphaTest) {
         return false
       }

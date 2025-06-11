@@ -12,6 +12,7 @@ export class Settings extends System {
     this.avatar = null
     this.public = null
     this.playerLimit = null
+    this.occlusion = null
     this.ao = null
 
     this.changes = null
@@ -25,6 +26,7 @@ export class Settings extends System {
     this.avatar = data.avatar
     this.public = data.public
     this.playerLimit = data.playerLimit
+    this.occlusion = isBoolean(data.occlusion) ? data.occlusion : true // default true
     this.ao = isBoolean(data.ao) ? data.ao : true // default true
     this.emit('change', {
       title: { value: this.title },
@@ -34,6 +36,7 @@ export class Settings extends System {
       avatar: { value: this.avatar },
       public: { value: this.public },
       playerLimit: { value: this.playerLimit },
+      occlusion: { value: this.occlusion },
       ao: { value: this.ao },
     })
   }
@@ -47,6 +50,7 @@ export class Settings extends System {
       avatar: this.avatar,
       public: this.public,
       playerLimit: this.playerLimit,
+      occlusion: this.occlusion,
       ao: this.ao,
     }
   }
