@@ -3,6 +3,8 @@ import { isNumber } from 'lodash-es'
 
 import { System } from './System'
 import { LooseOctree } from '../extras/LooseOctree'
+import { BVHTree } from '../extras/BVH'
+import { uuid } from '../utils'
 
 const vec2 = new THREE.Vector2()
 
@@ -20,6 +22,7 @@ export class Stage extends System {
     super(world)
     this.scene = new THREE.Scene()
     this.models = new Map() // id -> Model
+    this.bvh = new BVHTree(this.world, 16)
     this.octree = new LooseOctree({
       scene: this.scene,
       center: new THREE.Vector3(0, 0, 0),
@@ -275,6 +278,8 @@ class Model {
   constructor(stage, geometry, material, castShadow, receiveShadow) {
     material = stage.createMaterial({ raw: material })
 
+    this.fooId = uuid()
+
     this.stage = stage
     this.geometry = geometry
     this.material = material
@@ -305,13 +310,24 @@ class Model {
       renderable: this.renderable,
     }
     this.stage.octree.insert(sItem)
+    const bItem = {
+      matrix,
+      geometry: this.geometry,
+      renderable: this.renderable,
+    }
+    this.stage.bvh.insert(bItem)
     return {
+      fooId: this.fooId,
       material: this.material.proxy,
       move: matrix => {
         this.stage.octree.move(sItem)
+        // todo: refit + tree rotation
+        this.stage.bvh.remove(bItem)
+        this.stage.bvh.insert(bItem)
       },
       destroy: () => {
         this.stage.octree.remove(sItem)
+        this.stage.bvh.remove(bItem)
       },
     }
   }

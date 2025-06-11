@@ -323,6 +323,9 @@ export class Mesh extends Node {
     if (!this.proxy) {
       const self = this
       let proxy = {
+        get fooId() {
+          return self.handle?.fooId
+        },
         get type() {
           return self.type
         },
