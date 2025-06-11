@@ -8,8 +8,9 @@ const _m1 = new THREE.Matrix4()
 const _intersects = []
 const _mesh = new THREE.Mesh()
 
-const MIN_RADIUS = 0.5
-const BUCKET_SIZE = 16
+const NODE_MIN_SIZE_FOR_ITEMS = 4 // items should go into nodes no larger than this unless they're too big
+const NODE_MIN_SIZE = 0.25
+const BUCKET_SIZE = 8
 
 // https://anteru.net/blog/2008/loose-octrees/
 
@@ -25,7 +26,7 @@ export class LooseOctree {
     if (!item.geometry.boundingSphere) item.geometry.computeBoundingSphere()
     if (!item.move) item.move = 0
     item.sphere.copy(item.geometry.boundingSphere).applyMatrix4(item.matrix)
-    if (item.sphere.radius < MIN_RADIUS) item.sphere.radius = MIN_RADIUS // prevent huge subdivisions
+    // if (item.sphere.radius < MIN_RADIUS) item.sphere.radius = MIN_RADIUS // prevent huge subdivisions
     let added = this.root.insert(item)
     if (!added) {
       while (!this.root.canContain(item)) {
@@ -139,12 +140,29 @@ export class LooseOctree {
     }
   }
 
+  toggleWireframe(enabled) {
+    this.wireframe = isBoolean(enabled) ? enabled : !this.wireframe
+    const traverse = node => {
+      for (const item of node.items) {
+        if (item.material) item.material.wireframe = this.wireframe
+      }
+      for (const child of node.children) {
+        traverse(child)
+      }
+    }
+    traverse(this.root)
+  }
+
   getDepth() {
     return this.root.getDepth()
   }
 
   getCount() {
     return this.root.getCount()
+  }
+
+  getMinSize() {
+    return this.root.getMinSize()
   }
 }
 
@@ -165,37 +183,85 @@ class LooseOctreeNode {
     this.items = []
     this.count = 0
     this.children = []
-    this.mountHelper()
+    // this.mountHelper()
   }
 
   insert(item) {
-    // the following rules (using MIN_RADIUS and bucket size) allows us to keep the tree balanced by occupancy, not by item size.
-    // this prevents creating unnecessary deep nodes just to hold a single/few items.
+    // if this node cannot even contain the item, bail out immediately.
     if (!this.canContain(item)) {
       return false
     }
-
-    // if leaf and not too many items, just stash it here
-    if (!this.children.length && this.items.length < BUCKET_SIZE) {
-      this.items.push(item)
-      item._node = this
-      this.inc(1)
-      return true
+    // decide whether we are allowed to split further (i.e. is half‐size ≥ NODE_MIN_SIZE?)
+    const canSplitBySize = this.size / 2 >= NODE_MIN_SIZE
+    // if this node is larger than NODE_MIN_SIZE_FOR_ITEMS and the item can fit in a smaller node
+    const shouldForceSubdivide = canSplitBySize && this.size > NODE_MIN_SIZE_FOR_ITEMS && this.size / 2 >= item.sphere.radius // prettier-ignore
+    // if we're a leaf (no children yet), decide if we should subdivide.
+    if (!this.children.length) {
+      // NEW: Force subdivision if node is too large for the item
+      if (shouldForceSubdivide) {
+        this.subdivide()
+      }
+      //   a) if we already have fewer than BUCKET_SIZE items, just keep it here—
+      //      OR if we are too small to split any further (size/2 < NODE_MIN_SIZE),
+      //      we also must keep it here, even if items.length ≥ BUCKET_SIZE.
+      else if (this.items.length < BUCKET_SIZE || !canSplitBySize) {
+        this.addItem(item)
+        return true
+      } else {
+        //   b) otherwise, items.length ≥ BUCKET_SIZE AND we are still big enough to split;
+        //      so subdivide now, and let the “fall‐through” code below try pushing it into a child.
+        this.subdivide()
+      }
     }
-    // otherwise, if we’re still allowed to split...
+    //    at this point, we either have children (just subdivided), or we were already subdivided.
+    //    Try to push the item down into exactly one child—*but only if* the child's half‐size
+    //    is still ≥ the item’s bounding‐sphere radius.
+    //
+    //    (If size/2 < item.sphere.radius, that means the item is too large for any single child,
+    //     so we must keep it here.)
     if (this.size / 2 >= item.sphere.radius) {
-      if (!this.children.length) this.subdivide()
       for (const child of this.children) {
         if (child.insert(item)) {
           return true
         }
       }
     }
-    // fallback: keep it here
-    this.items.push(item)
-    item._node = this
-    this.inc(1)
+    // 5) if no child could take it (either because it's too big, or no child's inner‐box contained it),
+    //    then we keep it in THIS node as a “fallback.”
+    this.addItem(item)
     return true
+
+    // ====
+
+    // // the following rules (using MIN_RADIUS and bucket size) allows us to keep the tree balanced by occupancy, not by item size.
+    // // this prevents creating unnecessary deep nodes just to hold a single/few items.
+    // if (!this.canContain(item)) {
+    //   return false
+    // }
+
+    // // if leaf and not too many items, just stash it here
+    // if (!this.children.length && this.items.length < BUCKET_SIZE) {
+    //   this.items.push(item)
+    //   item._node = this
+    //   this.inc(1)
+    //   return true
+    // }
+    // // otherwise, if we’re still allowed to split...
+    // if (this.size / 2 >= item.sphere.radius) {
+    //   if (!this.children.length) this.subdivide()
+    //   for (const child of this.children) {
+    //     if (child.insert(item)) {
+    //       return true
+    //     }
+    //   }
+    // }
+    // // fallback: keep it here
+    // this.items.push(item)
+    // item._node = this
+    // this.inc(1)
+    // return true
+
+    // ====
 
     // if (this.size / 2 < item.sphere.radius) {
     //   this.items.push(item)
@@ -220,9 +286,23 @@ class LooseOctreeNode {
 
   remove(item) {
     const idx = this.items.indexOf(item)
-    this.items.splice(idx, 1)
-    item._node = null
-    this.dec(1)
+    if (idx !== -1) {
+      this.items.splice(idx, 1)
+      item._node = null
+      this.dec(1)
+      if (!this.items.length) {
+        this.unmountHelper()
+      }
+    }
+  }
+
+  addItem(item) {
+    this.items.push(item)
+    item._node = this
+    this.inc(1)
+    if (this.items.length === 1) {
+      this.mountHelper()
+    }
   }
 
   inc(amount) {
@@ -302,6 +382,7 @@ class LooseOctreeNode {
     this.items = []
     // decrement counts for the items we’re about to reassign
     this.dec(oldItems.length)
+    this.unmountHelper()
 
     // 3) try to shove each one into a child
     for (const item of oldItems) {
@@ -314,10 +395,11 @@ class LooseOctreeNode {
       }
       // 4) if it still doesn’t fit any child, put it back here
       if (!wentDown) {
-        this.items.push(item)
-        item._node = this
-        this.inc(1)
+        this.addItem(item)
       }
+    }
+    if (this.items.length) {
+      this.mountHelper()
     }
   }
 
@@ -417,6 +499,15 @@ class LooseOctreeNode {
     return count
   }
 
+  getMinSize() {
+    let minSize = this.size
+    for (const child of this.children) {
+      const size = child.getMinSize()
+      if (size < minSize) minSize = size
+    }
+    return minSize
+  }
+
   mountHelper() {
     this.octree.helper?.insert(this)
   }
@@ -478,6 +569,7 @@ function createHelper(octree) {
   mesh.frustumCulled = false
   const items = []
   function insert(node) {
+    if (node._helperItem) return
     const idx = mesh.geometry.instanceCount
     mesh.geometry.instanceCount++
     const position = _v1.copy(node.center)
@@ -492,6 +584,7 @@ function createHelper(octree) {
   }
   function remove(node) {
     const item = node._helperItem
+    if (!item) return
     const last = items[items.length - 1]
     const isOnly = items.length === 1
     const isLast = item === last
@@ -521,6 +614,7 @@ function createHelper(octree) {
       items.pop()
       mesh.geometry.instanceCount--
     }
+    node._helperItem = null
     iMatrix.needsUpdate = true
   }
   function traverse(node, callback) {
@@ -530,14 +624,19 @@ function createHelper(octree) {
     }
   }
   function destroy() {
+    traverse(octree.root, node => {
+      node._helperItem = null
+    })
     octree.scene.remove(mesh)
   }
   function init() {
     traverse(octree.root, node => {
-      node.mountHelper()
+      if (node.items.length) {
+        node.mountHelper()
+      }
     })
+    octree.scene.add(mesh)
   }
-  octree.scene.add(mesh)
   return {
     init,
     insert,
