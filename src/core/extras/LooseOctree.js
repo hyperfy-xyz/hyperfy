@@ -9,6 +9,7 @@ const _intersects = []
 const _mesh = new THREE.Mesh()
 
 const MIN_RADIUS = 0.2
+const BUCKET_SIZE = 4
 
 // https://anteru.net/blog/2008/loose-octrees/
 
@@ -165,28 +166,51 @@ class LooseOctreeNode {
   }
 
   insert(item) {
+    // the following rules (using MIN_RADIUS and bucket size) allows us to keep the tree balanced by occupancy, not by item size.
+    // this prevents creating unnecessary deep nodes just to hold a single/few items.
     if (!this.canContain(item)) {
       return false
     }
-    if (this.size / 2 < item.sphere.radius) {
+    // if leaf and not too many items, just stash it here
+    if (!this.children.length && this.items.length < BUCKET_SIZE) {
       this.items.push(item)
       item._node = this
       this.inc(1)
       return true
     }
-    if (!this.children.length) {
-      this.subdivide()
-    }
-    for (const child of this.children) {
-      if (child.insert(item)) {
-        return true
+    // otherwise, if we’re still allowed to split...
+    if (this.size / 2 >= item.sphere.radius) {
+      if (!this.children.length) this.subdivide()
+      for (const child of this.children) {
+        if (child.insert(item)) {
+          return true
+        }
       }
     }
-    // this should never happen
-    console.error('octree insert fail')
-    // this.items.push(item)
-    // item._node = this
-    return false
+    // fallback: keep it here
+    this.items.push(item)
+    item._node = this
+    this.inc(1)
+    return true
+    // if (this.size / 2 < item.sphere.radius) {
+    //   this.items.push(item)
+    //   item._node = this
+    //   this.inc(1)
+    //   return true
+    // }
+    // if (!this.children.length) {
+    //   this.subdivide()
+    // }
+    // for (const child of this.children) {
+    //   if (child.insert(item)) {
+    //     return true
+    //   }
+    // }
+    // // this should never happen
+    // console.error('octree insert fail')
+    // // this.items.push(item)
+    // // item._node = this
+    // return false
   }
 
   remove(item) {
@@ -236,20 +260,58 @@ class LooseOctreeNode {
     this.children = []
   }
 
+  // subdivide() {
+  //   if (this.children.length) return // Ensure we don't subdivide twice
+  //   const halfSize = this.size / 2
+  //   for (let x = 0; x < 2; x++) {
+  //     for (let y = 0; y < 2; y++) {
+  //       for (let z = 0; z < 2; z++) {
+  //         const center = new THREE.Vector3(
+  //           this.center.x + halfSize * (2 * x - 1),
+  //           this.center.y + halfSize * (2 * y - 1),
+  //           this.center.z + halfSize * (2 * z - 1)
+  //         )
+  //         const child = new LooseOctreeNode(this.octree, this, center, halfSize)
+  //         this.children.push(child)
+  //       }
+  //     }
+  //   }
+  // }
+
   subdivide() {
-    if (this.children.length) return // Ensure we don't subdivide twice
-    const halfSize = this.size / 2
-    for (let x = 0; x < 2; x++) {
-      for (let y = 0; y < 2; y++) {
-        for (let z = 0; z < 2; z++) {
-          const center = new THREE.Vector3(
-            this.center.x + halfSize * (2 * x - 1),
-            this.center.y + halfSize * (2 * y - 1),
-            this.center.z + halfSize * (2 * z - 1)
-          )
-          const child = new LooseOctreeNode(this.octree, this, center, halfSize)
-          this.children.push(child)
+    if (this.children.length) return // only once
+
+    // 1) carve eight children exactly as you do now…
+    const half = this.size / 2
+    for (let x = -1; x <= 1; x += 2) {
+      for (let y = -1; y <= 1; y += 2) {
+        for (let z = -1; z <= 1; z += 2) {
+          const c = new THREE.Vector3(this.center.x + x * half, this.center.y + y * half, this.center.z + z * half)
+          this.children.push(new LooseOctreeNode(this.octree, this, c, half))
         }
+      }
+    }
+
+    // 2) pull all the items you’d previously stored here…
+    const oldItems = this.items
+    this.items = []
+    // decrement counts for the items we’re about to reassign
+    this.dec(oldItems.length)
+
+    // 3) try to shove each one into a child
+    for (const item of oldItems) {
+      let wentDown = false
+      for (const child of this.children) {
+        if (child.insert(item)) {
+          wentDown = true
+          break
+        }
+      }
+      // 4) if it still doesn’t fit any child, put it back here
+      if (!wentDown) {
+        this.items.push(item)
+        item._node = this
+        this.inc(1)
       }
     }
   }

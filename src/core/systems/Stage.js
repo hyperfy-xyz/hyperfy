@@ -97,7 +97,7 @@ export class Stage extends System {
       getEntity: () => node.ctx.entity,
       node,
     }
-    this.scene.add(mesh)
+    // this.scene.add(mesh)
     this.octree.insert(sItem)
     return {
       material: material.proxy,
@@ -106,7 +106,7 @@ export class Stage extends System {
         this.octree.move(sItem)
       },
       destroy: () => {
-        this.scene.remove(mesh)
+        // this.scene.remove(mesh)
         this.octree.remove(sItem)
       },
     }
@@ -273,6 +273,14 @@ class Model {
     // this.mesh.matrixAutoUpdate = false
     // this.mesh.matrixWorldAutoUpdate = false
 
+    // new: used after occlusion culling to construct visible instances
+    this._iMesh = new THREE.InstancedMesh(this.geometry, this.material.raw, 10)
+    this._iMesh.castShadow = this.castShadow
+    this._iMesh.receiveShadow = this.receiveShadow
+    this._iMesh.matrixAutoUpdate = false
+    this._iMesh.matrixWorldAutoUpdate = false
+    this._iMesh.frustumCulled = false
+
     this.iMesh = new THREE.InstancedMesh(this.geometry, this.material.raw, 10)
     // this.iMesh.name = this.mesh.name
     this.iMesh.castShadow = this.castShadow
@@ -295,12 +303,20 @@ class Model {
     this.items.push(item)
     this.iMesh.setMatrixAt(item.idx, item.matrix) // silently fails if too small, gets increased in clean()
     this.dirty = true
+    const _mesh = new THREE.Mesh(this.geometry, this.material.raw)
+    // const _mesh = new THREE.Mesh(this.geometry, new THREE.MeshNormalMaterial())
+    _mesh.castShadow = true // TODO: actual
+    _mesh.receiveShadow = true
+    _mesh.matrixAutoUpdate = false
+    _mesh.matrixWorldAutoUpdate = false
     const sItem = {
       matrix,
       geometry: this.geometry,
       material: this.material.raw,
       getEntity: () => this.items[item.idx]?.node.ctx.entity,
       node,
+      _mesh,
+      _iMesh: this._iMesh,
     }
     this.stage.octree.insert(sItem)
     return {
@@ -357,12 +373,12 @@ class Model {
     }
     this.iMesh.count = count
     if (this.iMesh.parent && !count) {
-      this.stage.scene.remove(this.iMesh)
+      // this.stage.scene.remove(this.iMesh)
       this.dirty = false
       return
     }
     if (!this.iMesh.parent && count) {
-      this.stage.scene.add(this.iMesh)
+      // this.stage.scene.add(this.iMesh)
     }
     this.iMesh.instanceMatrix.needsUpdate = true
     // this.iMesh.computeBoundingSphere()
