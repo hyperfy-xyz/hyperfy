@@ -318,7 +318,7 @@ export class UI extends Node {
       const camPosition = v1.setFromMatrixPosition(camera.matrixWorld)
       const uiPosition = v2.setFromMatrixPosition(this.matrixWorld)
       const distance = camPosition.distanceTo(uiPosition)
-      this.mesh.renderOrder = -distance // Same ordering as particles
+      // this.mesh.renderOrder = -distance // Same ordering as particles
 
       const pos = v3
       const qua = q1
@@ -468,8 +468,7 @@ export class UI extends Node {
       : new THREE.MeshBasicMaterial({})
     material.color.set('white')
     material.transparent = transparent
-    // material.depthTest = true
-    // material.depthWrite = false
+    material.depthWrite = false
     material.map = texture
     material.side = doubleside ? THREE.DoubleSide : THREE.FrontSide
     this.ctx.world.setupMaterial(material)
