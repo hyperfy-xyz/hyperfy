@@ -208,17 +208,6 @@ export class ClientGraphics extends System {
     }
   }
 
-  updatePostProcessingEffects() {
-    const effects = []
-    if (this.bloomEnabled) {
-      effects.push(this.bloom)
-    }
-    effects.push(this.smaa)
-    effects.push(this.tonemapping)
-    this.effectPass.setEffects(effects)
-    this.effectPass.recompile()
-  }
-
   checkXRDimensions = () => {
     // Get the current XR reference space
     const referenceSpace = this.renderer.xr.getReferenceSpace()
