@@ -289,7 +289,7 @@ export class ClientGraphics extends System {
     const renderer = this.renderer
     const stats = {}
     const gl = this.renderer.getContext()
-    const batches = new Map() // renderable -> batch { renderable, items, count, pass } { imesh }
+    const batches = new WeakMap() // renderable -> batch { renderable, items, count, pass } { imesh }
     let pass = 0
     let scene
     let camera
@@ -371,19 +371,18 @@ export class ClientGraphics extends System {
           const count = batch.count
           // if imesh isn't big enough, make it bigger
           if (size < count) {
-            if (!imesh) {
-              const mesh = batch.renderable.mesh
-              imesh = new THREE.InstancedMesh(mesh.geometry, mesh.material, count)
-              imesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage)
-              imesh.castShadow = mesh.castShadow
-              imesh.receiveShadow = mesh.receiveShadow
-              imesh.matrixAutoUpdate = false
-              imesh.matrixWorldAutoUpdate = false
-              imesh.frustumCulled = false
-              batch.imesh = imesh
-            } else {
-              imesh.resize(count)
-            }
+            // free up instanceMatrix on GPU from any previous imesh
+            imesh?.dispose()
+            // create a new one
+            const mesh = batch.renderable.mesh
+            imesh = new THREE.InstancedMesh(mesh.geometry, mesh.material, count)
+            imesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage)
+            imesh.castShadow = mesh.castShadow
+            imesh.receiveShadow = mesh.receiveShadow
+            imesh.matrixAutoUpdate = false
+            imesh.matrixWorldAutoUpdate = false
+            imesh.frustumCulled = false
+            batch.imesh = imesh
             batch.changed = true
           }
           // count can shrink without batch change
@@ -629,6 +628,10 @@ export class ClientGraphics extends System {
           )
         }
 
+        // if (mesh.material.transmission) {
+        //   console.log(item.getEntity()?.blueprint?.name)
+        // }
+
         // collect items in batches to render later
         let batch = batches.get(renderable)
         if (!batch) {
@@ -696,7 +699,10 @@ export class ClientGraphics extends System {
       }
     }
     function isOccluder(mesh) {
-      if (mesh.material.transparent) return false
+      // if its transparent anywhere it cant occlude!
+      if (mesh.material.transparent || mesh.material.alphaTest) {
+        return false
+      }
 
       // Get bounding sphere - prefer object's cached one
       let boundingSphere = mesh.boundingSphere
@@ -729,7 +735,7 @@ export class ClientGraphics extends System {
     const proxyMat = new THREE.MeshBasicMaterial({ colorWrite: false, depthWrite: false, depthTest: true })
     // this.world.setupMaterial(proxyMat)
     // const iMeshes = new Map() // model -> InstanceMesh
-    const batches = new Map() // renderable -> batch { renderable, items, count, pass } { imesh }
+    const batches = new WeakMap() // renderable -> batch { renderable, items, count, pass } { imesh }
     const active = []
     let pass = 0
     let scene
@@ -813,6 +819,9 @@ export class ClientGraphics extends System {
         const count = batch.count
         // if imesh isn't big enough, create a bigger one
         if (size < count) {
+          // free up instanceMatrix on GPU from any previous imesh
+          imesh?.dispose()
+          // create a new one
           const mesh = batch.renderable.mesh
           imesh = new THREE.InstancedMesh(mesh.geometry, mesh.material, count)
           imesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage)
