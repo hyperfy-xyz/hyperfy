@@ -12,6 +12,7 @@ import { TextureLoader } from 'three'
 import { formatBytes } from '../extras/formatBytes'
 import { emoteUrls } from '../extras/playerEmotes'
 import Hls from 'hls.js/dist/hls.js'
+import { isNumber } from 'lodash-es'
 
 // THREE.Cache.enabled = true
 
@@ -163,6 +164,7 @@ export class ClientLoader extends System {
       if (type === 'model') {
         const buffer = await file.arrayBuffer()
         const glb = await this.gltfLoader.parseAsync(buffer)
+        await checkNeedleLightmaps(glb)
         const node = glbToNodes(glb, this.world)
         const model = {
           toNodes() {
@@ -268,7 +270,8 @@ export class ClientLoader extends System {
       })
     }
     if (type === 'model') {
-      promise = this.gltfLoader.loadAsync(localUrl).then(glb => {
+      promise = this.gltfLoader.loadAsync(localUrl).then(async glb => {
+        await checkNeedleLightmaps(glb)
         const node = glbToNodes(glb, this.world)
         const model = {
           toNodes() {
@@ -534,4 +537,87 @@ function createVideoFactory(world, url) {
       return source.createHandle()
     },
   }
+}
+
+async function checkNeedleLightmaps(glb) {
+  const needleLightmap = glb.userData?.gltfExtensions?.NEEDLE_lightmaps
+  if (!needleLightmap) return
+  // find the lightmap texture
+  let texture
+  for (const { pointer } of needleLightmap.textures) {
+    const idx = +pointer.split('/').pop()
+    texture = await glb.parser.getDependency('texture', idx)
+  }
+  if (!texture) return
+  // apply custom needle engine lightmap shader
+  const getMeshRenderer = node => {
+    const components = node.userData?.gltfExtensions?.NEEDLE_components?.builtin_components
+    if (!components) return null
+    return components.find(c => c.name === 'MeshRenderer')
+  }
+  glb.scene.traverse(node => {
+    if (!node.isMesh) return
+    // get component (note: sometimes its on a parent because it a mesh with multiple materials)
+    // BUG: i dont think the parent scenario is correct, those meshes look like they're mapped wrong
+    const mr = getMeshRenderer(node) || getMeshRenderer(node.parent)
+    const offset = mr.lightmapScaleOffset
+    node.material = node.material.clone()
+    node.material.lightMap = texture.clone()
+    node.material.lightMap.colorSpace = THREE.SRGBColorSpace
+    node.material.lightMap.channel = 1
+    node.material.lightMap.needsUpdate = true
+    node.material.lightMapIntensity = 8
+    node.material.needsUpdate = true
+    const obc = node.material.onBeforeCompile
+    node.material.onBeforeCompile = shader => {
+      obc?.(shader)
+      shader.uniforms.lightmapScaleOffset = { value: new THREE.Vector4(offset.x, offset.y, offset.z, offset.w) }
+      // NOTE: currently tuned for three v0.173.0
+      shader.fragmentShader = shader.fragmentShader.replace(
+        `#include <lightmap_pars_fragment>`,
+        `
+        #ifdef USE_LIGHTMAP
+            uniform sampler2D lightMap;
+            uniform float lightMapIntensity;
+            uniform vec4 lightmapScaleOffset;
+            
+            // took from threejs 05fc79cd52b79e8c3e8dec1e7dca72c5c39983a4
+            vec4 conv_sRGBToLinear( in vec4 value ) {
+                return vec4( mix( pow( value.rgb * 0.9478672986 + vec3( 0.0521327014 ), vec3( 2.4 ) ), value.rgb * 0.0773993808, vec3( lessThanEqual( value.rgb, vec3( 0.04045 ) ) ) ), value.a );
+            }
+        #endif
+        `
+      )
+      shader.fragmentShader = shader.fragmentShader.replace(
+        `#include <lights_fragment_maps>`,
+        `
+        #if defined( RE_IndirectDiffuse )
+          #ifdef USE_LIGHTMAP
+            vec2 lUv = vLightMapUv.xy * lightmapScaleOffset.xy + vec2(lightmapScaleOffset.z, (1. - (lightmapScaleOffset.y + lightmapScaleOffset.w)));
+            vec4 lightMapTexel = texture2D( lightMap, lUv);
+            // The range of RGBM lightmaps goes from 0 to 34.49 (5^2.2) in linear space, and from 0 to 5 in gamma space.
+            lightMapTexel.rgb *= lightMapTexel.a * 8.;
+            lightMapTexel.a = 1.;
+            lightMapTexel = conv_sRGBToLinear(lightMapTexel);
+            vec3 lightMapIrradiance = lightMapTexel.rgb * lightMapIntensity;
+            irradiance += lightMapIrradiance;
+          #endif
+          #if defined( USE_ENVMAP ) && defined( STANDARD ) && defined( ENVMAP_TYPE_CUBE_UV )
+            iblIrradiance += getIBLIrradiance( geometryNormal );
+          #endif
+        #endif
+        #if defined( USE_ENVMAP ) && defined( RE_IndirectSpecular )
+          #ifdef USE_ANISOTROPY
+            radiance += getIBLAnisotropyRadiance( geometryViewDir, geometryNormal, material.roughness, material.anisotropyB, material.anisotropy );
+          #else
+            radiance += getIBLRadiance( geometryViewDir, geometryNormal, material.roughness );
+          #endif
+          #ifdef USE_CLEARCOAT
+            clearcoatRadiance += getIBLRadiance( geometryViewDir, geometryClearcoatNormal, material.clearcoatRoughness );
+          #endif
+        #endif
+        `
+      )
+    }
+  })
 }
