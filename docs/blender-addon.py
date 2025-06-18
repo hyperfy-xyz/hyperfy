@@ -13,6 +13,10 @@ bl_info = {
     "category": "3D View",
 }
 
+import struct
+import json
+import base64
+import tempfile
 import os
 import bpy
 from bpy.types import Panel, Operator, PropertyGroup
@@ -29,6 +33,175 @@ NODE_SNAP = 'snap'
 TYPE_STATIC = 'static'
 TYPE_KINEMATIC = 'kinematic'
 TYPE_DYNAMIC = 'dynamic'
+
+class GLBHDRPostProcessor:
+    """Post-process exported GLB files to inject HDR texture data"""
+    
+    @staticmethod
+    def process_glb_with_hdr(glb_path, hdr_textures):
+        """
+        Modify an existing GLB file to include HDR texture data
+        as a custom extension in the JSON chunk
+        """
+        
+        # Read the GLB file
+        with open(glb_path, 'rb') as f:
+            glb_data = f.read()
+        
+        # Parse GLB structure
+        header = struct.unpack('<4s2I', glb_data[:12])
+        magic, version, length = header
+        
+        if magic != b'glTF':
+            raise ValueError("Not a valid GLB file")
+        
+        # Read JSON chunk
+        json_chunk_header = struct.unpack('<2I', glb_data[12:20])
+        json_length, json_type = json_chunk_header
+        
+        if json_type != 0x4E4F534A:  # JSON chunk type
+            raise ValueError("Expected JSON chunk")
+        
+        # Extract JSON data
+        json_start = 20
+        json_end = json_start + json_length
+        json_bytes = glb_data[json_start:json_end]
+        
+        # Remove padding and parse JSON
+        json_str = json_bytes.rstrip(b'\x20\x00').decode('utf-8')
+        gltf_json = json.loads(json_str)
+        
+        # Add HDR extension
+        GLBHDRPostProcessor._add_hdr_extension(gltf_json, hdr_textures)
+        
+        # Serialize modified JSON
+        new_json_str = json.dumps(gltf_json, separators=(',', ':'))
+        new_json_bytes = new_json_str.encode('utf-8')
+        
+        # Pad to 4-byte boundary
+        padding_needed = (4 - (len(new_json_bytes) % 4)) % 4
+        new_json_bytes += b'\x20' * padding_needed
+        
+        # Calculate new lengths
+        new_json_length = len(new_json_bytes)
+        
+        # Get binary chunk (if exists)
+        binary_chunk_start = json_end
+        binary_data = b''
+        
+        if binary_chunk_start < len(glb_data):
+            binary_chunk_header = struct.unpack('<2I', glb_data[binary_chunk_start:binary_chunk_start + 8])
+            binary_length, binary_type = binary_chunk_header
+            
+            if binary_type == 0x004E4942:  # BIN chunk type
+                binary_data = glb_data[binary_chunk_start:binary_chunk_start + 8 + binary_length]
+        
+        # Calculate new total length
+        new_total_length = 12 + 8 + new_json_length + len(binary_data)
+        
+        # Write new GLB
+        with open(glb_path, 'wb') as f:
+            # GLB header
+            f.write(struct.pack('<4s2I', b'glTF', 2, new_total_length))
+            
+            # JSON chunk header
+            f.write(struct.pack('<2I', new_json_length, 0x4E4F534A))
+            
+            # JSON data
+            f.write(new_json_bytes)
+            
+            # Binary chunk (if exists)
+            if binary_data:
+                f.write(binary_data)
+    
+    @staticmethod
+    def _add_hdr_extension(gltf_json, hdr_textures):
+        """Add HDR texture data as a custom glTF extension"""
+        
+        if "extensions" not in gltf_json:
+            gltf_json["extensions"] = {}
+        
+        # Create our custom extension
+        hdr_extension = {
+            "textures": []
+        }
+        
+        # Create a mapping of texture indices for each material
+        lightmap_indices = {}
+        
+        for idx, hdr_data in enumerate(hdr_textures):
+            image = hdr_data['image']
+            material_name = hdr_data['material']
+            uv_index = hdr_data.get('uv_index', 0)  # Default to UV channel 0
+            
+            # Store the lightmap index for this material
+            lightmap_indices[material_name] = idx
+            
+            # Convert image to EXR bytes
+            with tempfile.NamedTemporaryFile(suffix='.hdr', delete=False) as tmp_file:
+                try:
+                    # Get the current scene to temporarily change settings
+                    scene = bpy.context.scene
+                    original_format = scene.render.image_settings.file_format
+                    original_color_mode = scene.render.image_settings.color_mode
+                    original_color_depth = scene.render.image_settings.color_depth
+                    
+                    # Set EXR format settings
+                    scene.render.image_settings.file_format = 'HDR'
+                    scene.render.image_settings.color_mode = 'RGB'
+                    
+                    # Save the image using the scene settings
+                    image.save_render(tmp_file.name, scene=scene)
+                    
+                    # Restore original settings
+                    scene.render.image_settings.file_format = original_format
+                    scene.render.image_settings.color_mode = original_color_mode
+                    scene.render.image_settings.color_depth = original_color_depth
+                    
+                    # Read EXR data
+                    with open(tmp_file.name, 'rb') as hdr_file:
+                        hdr_bytes = hdr_file.read()
+                    
+                    # Encode as base64
+                    encoded_data = base64.b64encode(hdr_bytes).decode('utf-8')
+                    
+                    hdr_extension["textures"].append({
+                        "name": image.name,
+                        "material": material_name,
+                        "originalTexture": hdr_data.get('texture_index', -1),
+                        "uvIndex": uv_index,  # Add UV index here
+                        "data": encoded_data,
+                        "format": "hdr",
+                        "encoding": "base64"
+                    })
+                    
+                finally:
+                    # Clean up temp file
+                    if os.path.exists(tmp_file.name):
+                        os.unlink(tmp_file.name)
+        
+        gltf_json["extensions"]["HYPERFY_lightmaps"] = hdr_extension
+        
+        # Also register the extension as used
+        if "extensionsUsed" not in gltf_json:
+            gltf_json["extensionsUsed"] = []
+        
+        if "HYPERFY_lightmaps" not in gltf_json["extensionsUsed"]:
+            gltf_json["extensionsUsed"].append("HYPERFY_lightmaps")
+        
+        # Add lightmap indices and UV indices to materials' extras
+        if "materials" in gltf_json:
+            for mat_idx, material in enumerate(gltf_json["materials"]):
+                mat_name = material.get("name", "")
+                if mat_name in lightmap_indices:
+                    if "extras" not in material:
+                        material["extras"] = {}
+                    material["extras"]["lightmapIdx"] = lightmap_indices[mat_name]
+                    # Find the UV index for this material
+                    for hdr_data in hdr_textures:
+                        if hdr_data['material'] == mat_name:
+                            material["extras"]["uvIdx"] = hdr_data.get('uv_index', 0)
+                            break
 
 class SplatmapProcessor:
     """Helper class to handle splatmap export processing"""
@@ -447,6 +620,54 @@ class OBJECT_OT_hyperfy_export_all(Operator):
         
         filepath = os.path.join(directory, filename)
 
+        # Collect HDR textures before export
+        hdr_textures = []
+        for material in bpy.data.materials:
+            if material.use_nodes:
+                for node in material.node_tree.nodes:
+                    if node.type == 'TEX_IMAGE' and node.image and node.label == 'LIGHTMAP':
+                        image = node.image
+                        is_hdr = (
+                            image.depth == 32 or 
+                            image.is_float or 
+                            image.file_format in ['OPEN_EXR', 'HDR'] or
+                            image.color_depth == '32'
+                        )
+                        if is_hdr:
+                            # Find the UV index by checking if a UV Map node is connected
+                            uv_index = 0  # Default to first UV channel
+                            
+                            # Check if the image texture node has its Vector input connected
+                            vector_input = node.inputs.get('Vector')
+                            if vector_input and vector_input.is_linked:
+                                # Follow the link to see if it's connected to a UV Map node
+                                for link in vector_input.links:
+                                    from_node = link.from_node
+                                    if from_node.type == 'UVMAP':
+                                        # The UV Map node has a uv_map property that contains the name
+                                        uv_map_name = from_node.uv_map
+                                        # Find the index of this UV map in the mesh's UV layers
+                                        # We'll need to find which mesh uses this material
+                                        for obj in bpy.data.objects:
+                                            if obj.type == 'MESH':
+                                                # Check if this object uses the material
+                                                material_names = [mat.name for mat in obj.data.materials if mat]
+                                                if material.name in material_names:
+                                                    uv_layers = obj.data.uv_layers
+                                                    for idx, uv_layer in enumerate(uv_layers):
+                                                        if uv_layer.name == uv_map_name:
+                                                            uv_index = idx
+                                                            break
+                                                    break
+                                        break
+                            
+                            hdr_textures.append({
+                                'image': node.image,
+                                'material': material.name,
+                                'node': node,
+                                'uv_index': uv_index
+                            })
+
         # Process splatmap objects
         splatmap_objects = SplatmapProcessor.find_splatmap_objects()
         splatmap_clones = []
@@ -481,6 +702,17 @@ class OBJECT_OT_hyperfy_export_all(Operator):
                 else:
                     # If it's some other error, re-raise it
                     raise e
+
+            # Post-process to embed HDR data
+            if hdr_textures:
+                try:
+                    GLBHDRPostProcessor.process_glb_with_hdr(filepath, hdr_textures)
+                    self.report({'INFO'}, f"Exported {filepath} with {len(hdr_textures)} embedded HDR textures")
+                except Exception as e:
+                    self.report({'ERROR'}, f"Failed to embed HDR textures: {e}")
+                    return {'CANCELLED'}
+            else:
+                self.report({'INFO'}, f"Exported {filepath} (no HDR textures found)")
 
             self.report({'INFO'}, f"Exported to {filepath}")
             

@@ -1,6 +1,7 @@
 import * as THREE from '../extras/three'
 import { RGBELoader } from 'three/examples/jsm/loaders/RGBELoader.js'
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js'
+import { EXRLoader } from 'three/examples/jsm/loaders/EXRLoader.js'
 import { VRMLoaderPlugin } from '@pixiv/three-vrm'
 
 import { System } from './System'
@@ -12,6 +13,7 @@ import { TextureLoader } from 'three'
 import { formatBytes } from '../extras/formatBytes'
 import { emoteUrls } from '../extras/playerEmotes'
 import Hls from 'hls.js/dist/hls.js'
+import { isNumber } from 'lodash-es'
 
 // THREE.Cache.enabled = true
 
@@ -163,6 +165,7 @@ export class ClientLoader extends System {
       if (type === 'model') {
         const buffer = await file.arrayBuffer()
         const glb = await this.gltfLoader.parseAsync(buffer)
+        await checkLightmaps(glb, this.rgbeLoader)
         const node = glbToNodes(glb, this.world)
         const model = {
           toNodes() {
@@ -268,7 +271,8 @@ export class ClientLoader extends System {
       })
     }
     if (type === 'model') {
-      promise = this.gltfLoader.loadAsync(localUrl).then(glb => {
+      promise = this.gltfLoader.loadAsync(localUrl).then(async glb => {
+        await checkLightmaps(glb, this.rgbeLoader)
         const node = glbToNodes(glb, this.world)
         const model = {
           toNodes() {
@@ -534,4 +538,55 @@ function createVideoFactory(world, url) {
       return source.createHandle()
     },
   }
+}
+
+async function checkLightmaps(glb, rgbeLoader) {
+  console.log('glb', glb)
+
+  if (glb.parser.json.extensions?.HYPERFY_lightmaps) {
+    const hdrExtension = glb.parser.json.extensions.HYPERFY_lightmaps
+
+    const lightmaps = []
+
+    for (let i = 0; i < hdrExtension.textures.length; i++) {
+      const hdrTexture = hdrExtension.textures[i]
+      const dataUrl = `data:image/vnd.radiance;base64,${hdrTexture.data}`
+      const texture = await rgbeLoader.loadAsync(dataUrl)
+      lightmaps[i] = texture
+      // texture.channel = 1
+      texture.colorSpace = THREE.NoColorSpace
+      texture.flipY = false
+      texture.needsUpdate = true
+      console.log('tex', texture)
+
+      downloadHDR(hdrTexture.data, `hdr_lightmap_${i}.hdr`)
+    }
+
+    glb.scene.traverse(node => {
+      if (isNumber(node.material?.userData?.lightmapIdx)) {
+        const lightmap = lightmaps[node.material.userData.lightmapIdx]
+        console.log('APPL-LM', lightmap)
+        node.material.lightMap = lightmap
+        node.material.lightMap.channel = node.material.userData.uvIdx
+        node.material.lightMapIntensity = 1
+        // node.material.needsUpdate = true
+        console.log('APPL', node)
+      }
+    })
+  }
+}
+
+function downloadHDR(base64Data, filename = 'debug.hdr') {
+  // Create a data URL
+  const dataUrl = `data:image/vnd.radiance;base64,${base64Data}`
+
+  // Create a temporary anchor element
+  const link = document.createElement('a')
+  link.href = dataUrl
+  link.download = filename
+
+  // Trigger the download
+  document.body.appendChild(link)
+  link.click()
+  document.body.removeChild(link)
 }
