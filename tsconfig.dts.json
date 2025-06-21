@@ -1,0 +1,28 @@
+{
+  "compilerOptions": {
+    "target": "ESNext",
+    "module": "ESNext",
+    "moduleResolution": "node",
+    "esModuleInterop": true,
+    "allowJs": true,
+    "checkJs": false, // Optional: set to true to type-check JS files (can be noisy)
+    "strict": false, // dts-bundle-generator might work better with strict mode off for JS projects
+    "noEmit": true, // We don't want tsc to emit .js files, only dts-bundle-generator uses this for type info
+    "baseUrl": "./",
+    "paths": {
+      "*": ["node_modules/*", "src/*"]
+    },
+    // Include source files that dts-bundle-generator should analyze
+    // This should at least include the entry point and related core files.
+    // Be more specific if possible to speed up generation and reduce noise.
+    "include": [
+      "src/node-client/**/*.js",
+      "src/core/**/*.js"
+      // Add other paths if necessary for types used by the node-client
+    ],
+    "exclude": [
+      "node_modules",
+      "build",
+    ]
+  }
+}
