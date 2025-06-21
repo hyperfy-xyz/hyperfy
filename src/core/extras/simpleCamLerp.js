@@ -4,6 +4,7 @@ import { Layers } from './Layers'
 const BACKWARD = new THREE.Vector3(0, 0, 1)
 
 const v1 = new THREE.Vector3()
+const v2= new THREE.Vector3()
 
 let sweepGeometry
 
@@ -25,7 +26,7 @@ export function simpleCamLerp(world, camera, target, delta) {
   // }
 
   // EXPERIMENTAL: snap camera position instead
-  camera.position.copy(target.position)
+  camera.position = v2.copy(target.position)
 
   // raycast backward to check for zoom collision
   if (!sweepGeometry) sweepGeometry = new PHYSX.PxSphereGeometry(0.2)
