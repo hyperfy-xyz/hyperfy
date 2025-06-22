@@ -1,0 +1,27 @@
+{
+  "id": "cow_drops",
+  "name": "Cow Loot Table",
+  "description": "Drops from cows",
+  "drops": [
+    {
+      "itemId": 2132,
+      "quantity": 1,
+      "weight": 100,
+      "rarity": "always"
+    },
+    {
+      "itemId": 1739,
+      "quantity": 1,
+      "weight": 100,
+      "rarity": "always"
+    },
+    {
+      "itemId": 995,
+      "quantity": 3,
+      "weight": 50,
+      "rarity": "common"
+    }
+  ],
+  "rareDropTable": false,
+  "maxDrops": 3
+} 

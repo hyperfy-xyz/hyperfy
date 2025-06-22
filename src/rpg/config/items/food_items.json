@@ -1,0 +1,72 @@
+[
+  {
+    "id": 2132,
+    "name": "Raw Beef",
+    "examine": "I should probably cook this first.",
+    "value": 3,
+    "weight": 0.3,
+    "stackable": false,
+    "equipable": false,
+    "tradeable": true,
+    "members": false,
+    "model": "raw_beef",
+    "icon": "raw_beef"
+  },
+  {
+    "id": 2142,
+    "name": "Cooked Meat",
+    "examine": "Looks good!",
+    "value": 15,
+    "weight": 0.3,
+    "stackable": false,
+    "equipable": false,
+    "tradeable": true,
+    "members": false,
+    "healAmount": 3,
+    "model": "cooked_meat",
+    "icon": "cooked_meat"
+  },
+  {
+    "id": 379,
+    "name": "Lobster",
+    "examine": "This looks delicious.",
+    "value": 120,
+    "weight": 0.5,
+    "stackable": false,
+    "equipable": false,
+    "tradeable": true,
+    "members": false,
+    "healAmount": 12,
+    "model": "lobster",
+    "icon": "lobster"
+  },
+  {
+    "id": 385,
+    "name": "Shark",
+    "examine": "I'd better be careful eating this!",
+    "value": 800,
+    "weight": 0.4,
+    "stackable": false,
+    "equipable": false,
+    "tradeable": true,
+    "members": false,
+    "healAmount": 20,
+    "model": "shark",
+    "icon": "shark"
+  },
+  {
+    "id": 2434,
+    "name": "Prayer Potion(4)",
+    "examine": "4 doses of prayer potion.",
+    "value": 7500,
+    "weight": 0.035,
+    "stackable": false,
+    "equipable": false,
+    "tradeable": true,
+    "members": false,
+    "doses": 4,
+    "prayerRestore": 25,
+    "model": "prayer_potion_4",
+    "icon": "prayer_potion_4"
+  }
+] 

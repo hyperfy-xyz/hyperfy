@@ -1,0 +1,43 @@
+[
+  {
+    "id": 526,
+    "name": "Bones",
+    "examine": "Eww, it's a pile of bones.",
+    "value": 1,
+    "weight": 0.25,
+    "stackable": false,
+    "equipable": false,
+    "tradeable": true,
+    "members": false,
+    "prayerXp": 4.5,
+    "model": "bones",
+    "icon": "bones"
+  },
+  {
+    "id": 532,
+    "name": "Big Bones",
+    "examine": "Bigger bones from a bigger creature.",
+    "value": 5,
+    "weight": 0.25,
+    "stackable": false,
+    "equipable": false,
+    "tradeable": true,
+    "members": false,
+    "prayerXp": 15,
+    "model": "big_bones",
+    "icon": "big_bones"
+  },
+  {
+    "id": 1739,
+    "name": "Cowhide",
+    "examine": "It needs tanning.",
+    "value": 100,
+    "weight": 1.5,
+    "stackable": true,
+    "equipable": false,
+    "tradeable": true,
+    "members": false,
+    "model": "cowhide", 
+    "icon": "cowhide"
+  }
+] 

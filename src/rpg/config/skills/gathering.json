@@ -1,0 +1,58 @@
+{
+  "id": "gathering",
+  "name": "Gathering Skills", 
+  "description": "Configuration for resource gathering skills",
+  "skills": {
+    "mining": {
+      "name": "Mining",
+      "maxLevel": 99,
+      "experienceTable": {
+        "formula": "floor(level/4 * (level - 1 + 300 * 2^((level-1)/7)))",
+        "multiplier": 1.0
+      },
+      "resources": {
+        "tin": { "level": 1, "experience": 17.5, "respawnTime": 2500 },
+        "copper": { "level": 1, "experience": 17.5, "respawnTime": 2500 },
+        "iron": { "level": 15, "experience": 35, "respawnTime": 5000 },
+        "coal": { "level": 30, "experience": 50, "respawnTime": 30000 },
+        "gold": { "level": 40, "experience": 65, "respawnTime": 60000 },
+        "mithril": { "level": 55, "experience": 80, "respawnTime": 120000 },
+        "adamant": { "level": 70, "experience": 95, "respawnTime": 240000 },
+        "runite": { "level": 85, "experience": 125, "respawnTime": 720000 }
+      }
+    },
+    "woodcutting": {
+      "name": "Woodcutting",
+      "maxLevel": 99,
+      "experienceTable": {
+        "formula": "floor(level/4 * (level - 1 + 300 * 2^((level-1)/7)))",
+        "multiplier": 1.0
+      },
+      "resources": {
+        "normal": { "level": 1, "experience": 25, "respawnTime": 5000 },
+        "oak": { "level": 15, "experience": 37.5, "respawnTime": 8000 },
+        "willow": { "level": 30, "experience": 67.5, "respawnTime": 12000 },
+        "maple": { "level": 45, "experience": 100, "respawnTime": 35000 },
+        "yew": { "level": 60, "experience": 175, "respawnTime": 60000 },
+        "magic": { "level": 75, "experience": 250, "respawnTime": 120000 }
+      }
+    },
+    "fishing": {
+      "name": "Fishing",
+      "maxLevel": 99,
+      "experienceTable": {
+        "formula": "floor(level/4 * (level - 1 + 300 * 2^((level-1)/7)))",
+        "multiplier": 1.0
+      },
+      "resources": {
+        "shrimp": { "level": 1, "experience": 10, "cookingLevel": 1 },
+        "sardine": { "level": 5, "experience": 20, "cookingLevel": 5 },
+        "trout": { "level": 20, "experience": 50, "cookingLevel": 15 },
+        "salmon": { "level": 30, "experience": 70, "cookingLevel": 25 },
+        "lobster": { "level": 40, "experience": 90, "cookingLevel": 40 },
+        "swordfish": { "level": 50, "experience": 100, "cookingLevel": 45 },
+        "shark": { "level": 76, "experience": 110, "cookingLevel": 80 }
+      }
+    }
+  }
+} 

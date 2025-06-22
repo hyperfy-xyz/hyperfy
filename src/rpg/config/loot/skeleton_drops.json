@@ -1,0 +1,34 @@
+{
+  "id": "skeleton_drops",
+  "name": "Skeleton Loot Table", 
+  "description": "Drops from skeletons",
+  "drops": [
+    {
+      "itemId": 526,
+      "quantity": 1,
+      "weight": 100,
+      "rarity": "always"
+    },
+    {
+      "itemId": 995,
+      "quantity": 12,
+      "weight": 80,
+      "rarity": "common"
+    },
+    {
+      "itemId": 1277,
+      "quantity": 1,
+      "weight": 15,
+      "rarity": "uncommon"
+    },
+    {
+      "itemId": 1291,
+      "quantity": 1,
+      "weight": 5,
+      "rarity": "rare"
+    }
+  ],
+  "rareDropTable": true,
+  "rareTableAccess": 128,
+  "maxDrops": 2
+} 

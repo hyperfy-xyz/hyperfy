@@ -1,0 +1,81 @@
+[
+  {
+    "id": 100,
+    "name": "Bob",
+    "examine": "A friendly shopkeeper.",
+    "npcType": "shopkeeper",
+    "behavior": "friendly",
+    "level": 1,
+    "shop": {
+      "name": "Bob's General Store",
+      "stock": [
+        { "itemId": 1, "stock": -1 },
+        { "itemId": 2, "stock": 100 },
+        { "itemId": 3, "stock": 50 }
+      ],
+      "currency": "coins",
+      "buyModifier": 0.4,
+      "sellModifier": 1.0,
+      "restock": true,
+      "restockTime": 600000
+    },
+    "dialogue": {
+      "greeting": "Welcome to my shop!",
+      "idle": ["Business is good today!", "Feel free to browse."]
+    }
+  },
+  {
+    "id": 101,
+    "name": "Alice the Armorer",
+    "examine": "She sells various armors and shields.",
+    "npcType": "shopkeeper",
+    "behavior": "friendly",
+    "level": 1,
+    "shop": {
+      "name": "Alice's Armory",
+      "stock": [
+        { "itemId": 100, "stock": 10 },
+        { "itemId": 101, "stock": 10 },
+        { "itemId": 102, "stock": 5 },
+        { "itemId": 110, "stock": 10 },
+        { "itemId": 111, "stock": 5 }
+      ],
+      "currency": "coins",
+      "buyModifier": 0.4,
+      "sellModifier": 1.0,
+      "restock": true,
+      "restockTime": 1800000
+    },
+    "dialogue": {
+      "greeting": "Looking for protection? You've come to the right place!",
+      "idle": ["These armors are made by the finest smiths.", "A good shield can save your life."]
+    }
+  },
+  {
+    "id": 102,
+    "name": "William the Weaponsmith",
+    "examine": "A master weaponsmith.",
+    "npcType": "shopkeeper",
+    "behavior": "friendly",
+    "level": 1,
+    "shop": {
+      "name": "William's Weapons",
+      "stock": [
+        { "itemId": 200, "stock": 10 },
+        { "itemId": 201, "stock": 10 },
+        { "itemId": 202, "stock": 5 },
+        { "itemId": 210, "stock": 10 },
+        { "itemId": 211, "stock": 5 }
+      ],
+      "currency": "coins",
+      "buyModifier": 0.4,
+      "sellModifier": 1.0,
+      "restock": true,
+      "restockTime": 1800000
+    },
+    "dialogue": {
+      "greeting": "Need a weapon? I've got the sharpest blades in town!",
+      "idle": ["Each weapon is carefully crafted.", "A warrior is only as good as their weapon."]
+    }
+  }
+] 

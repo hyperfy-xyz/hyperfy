@@ -1,0 +1,73 @@
+{
+  "id": "goblin_menace",
+  "name": "The Goblin Menace",
+  "description": "Help the village defend against increasing goblin attacks.",
+  "questPoints": 2,
+  "difficulty": "Intermediate",
+  "length": "Medium",
+  "requirements": {
+    "skills": {
+      "attack": 10,
+      "defense": 5
+    },
+    "quests": ["tutorial_quest"],
+    "items": []
+  },
+  "startConditions": {
+    "minCombatLevel": 15
+  },
+  "rewards": {
+    "experience": {
+      "attack": 500,
+      "strength": 500,
+      "defense": 300
+    },
+    "items": [
+      { "itemId": 1203, "quantity": 1 },
+      { "itemId": 995, "quantity": 100 }
+    ],
+    "questPoints": 2
+  },
+  "steps": [
+    {
+      "id": "talk_to_elder",
+      "type": "talk",
+      "npcId": 200,
+      "description": "Talk to Elder Grimwald about the goblin problem",
+      "dialogue": {
+        "greeting": "Adventurer! The goblins have been growing bolder. We need your help!",
+        "objective": "The goblins have been raiding our supply wagons. Kill 5 goblins to send them a message."
+      }
+    },
+    {
+      "id": "kill_goblins",
+      "type": "kill",
+      "npcId": 1,
+      "quantity": 5,
+      "description": "Kill 5 goblins near the village",
+      "instructions": "Head east of the village to find goblins",
+      "area": {
+        "center": { "x": 100, "y": 0, "z": 50 },
+        "radius": 50
+      }
+    },
+    {
+      "id": "collect_goblin_mail",
+      "type": "collect",
+      "itemId": 288,
+      "quantity": 1,
+      "description": "Collect a piece of goblin mail as proof",
+      "instructions": "Search the goblin bodies for armor"
+    },
+    {
+      "id": "return_to_elder",
+      "type": "talk",
+      "npcId": 200,
+      "description": "Return to Elder Grimwald with the goblin mail",
+      "dialogue": {
+        "completion": "Excellent work! This should keep the goblins at bay for a while. Take this reward for your bravery."
+      }
+    }
+  ],
+  "completionText": "The village is safe from goblin raids, at least for now. The elder is grateful for your help."
+} 

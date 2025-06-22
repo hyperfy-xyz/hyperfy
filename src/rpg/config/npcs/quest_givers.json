@@ -1,0 +1,68 @@
+[
+  {
+    "id": 200,
+    "name": "Elder Grimwald",
+    "examine": "A wise old man with years of experience.",
+    "npcType": "quest_giver",
+    "behavior": "friendly",
+    "level": 1,
+    "questGiver": {
+      "useLLM": false,
+      "quests": ["tutorial_quest", "goblin_menace"],
+      "minLevel": 1,
+      "maxLevel": 20,
+      "questCooldown": 3600000
+    },
+    "dialogue": {
+      "greeting": "Welcome, young adventurer. Our village could use your help.",
+      "idle": [
+        "The goblins have been getting bolder lately...",
+        "I remember when I was young like you..."
+      ]
+    }
+  },
+  {
+    "id": 201,
+    "name": "Captain Morris",
+    "examine": "The captain of the city guard.",
+    "npcType": "quest_giver",
+    "behavior": "friendly",
+    "level": 1,
+    "questGiver": {
+      "useLLM": false,
+      "quests": ["guard_duty", "bandit_problem", "missing_patrol"],
+      "minLevel": 10,
+      "maxLevel": 40,
+      "questCooldown": 7200000
+    },
+    "dialogue": {
+      "greeting": "Ah, an adventurer! The city guard could use someone with your skills.",
+      "idle": [
+        "Crime has been on the rise lately.",
+        "We're always looking for capable individuals."
+      ]
+    }
+  },
+  {
+    "id": 202,
+    "name": "Mage Elara",
+    "examine": "A mysterious mage studying ancient magic.",
+    "npcType": "quest_giver",
+    "behavior": "friendly",
+    "level": 1,
+    "questGiver": {
+      "useLLM": false,
+      "quests": ["magical_research", "ancient_artifacts", "elemental_crisis"],
+      "minLevel": 20,
+      "maxLevel": 60,
+      "questCooldown": 10800000
+    },
+    "dialogue": {
+      "greeting": "Greetings, adventurer. I sense magical potential in you.",
+      "idle": [
+        "The flow of magic has been... disturbed lately.",
+        "These ancient texts hold many secrets."
+      ]
+    }
+  }
+] 
