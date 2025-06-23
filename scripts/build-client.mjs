@@ -30,7 +30,7 @@ const buildDirectory = path.join(rootDir, 'build')
     sourcemap: 'inline',
     metafile: true,
     jsx: 'automatic',
-    jsxImportSource: '@firebolt-dev/jsx',
+          jsxImportSource: 'react',
     // define: {
     //   // 'process.env.NODE_ENV': '"development"',
     // },

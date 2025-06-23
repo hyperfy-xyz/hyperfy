@@ -476,7 +476,23 @@ export class Physics extends System implements IPhysics {
           if (isDynamic) return;
           return;
         }
-        matrix.toPxTransform(this.transform);
+        // Use the extension method if available, otherwise fall back to manual conversion
+        if (typeof matrix.toPxTransform === 'function') {
+          matrix.toPxTransform(this.transform);
+        } else {
+          // Manual conversion from Matrix4 to PxTransform
+          const position = new THREE.Vector3();
+          const quaternion = new THREE.Quaternion();
+          const scale = new THREE.Vector3();
+          matrix.decompose(position, quaternion, scale);
+          this.transform.p.x = position.x;
+          this.transform.p.y = position.y;
+          this.transform.p.z = position.z;
+          this.transform.q.x = quaternion.x;
+          this.transform.q.y = quaternion.y;
+          this.transform.q.z = quaternion.z;
+          this.transform.q.w = quaternion.w;
+        }
         actor.setGlobalPose(this.transform);
       },
       snap: (pose: any) => {

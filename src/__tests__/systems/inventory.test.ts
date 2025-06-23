@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { InventorySystem } from '../../rpg/systems/InventorySystem';
 import { ItemRegistry } from '../../rpg/systems/inventory/ItemRegistry';
+import { EquipmentBonusCalculator } from '../../rpg/systems/inventory/EquipmentBonusCalculator';
 import { RPGEntity } from '../../rpg/entities/RPGEntity';
 import { MockWorld } from '../test-world-factory';
 import { EquipmentSlot, WeaponType } from '../../rpg/types';
@@ -723,6 +724,463 @@ describe('InventorySystem', () => {
         targetId: player.data.id,
         message: 'Your inventory is full.'
       });
+    });
+  });
+});
+
+describe('EquipmentBonusCalculator', () => {
+  let calculator: EquipmentBonusCalculator;
+  let itemRegistry: ItemRegistry;
+  let equipment: { [K in EquipmentSlot]: ItemDefinition | null };
+  
+  beforeEach(() => {
+    itemRegistry = new ItemRegistry();
+    calculator = new EquipmentBonusCalculator(itemRegistry);
+    
+    // Register test items with bonuses
+    const helmet: ItemDefinition = {
+      id: 100,
+      name: 'Rune Full Helm',
+      examine: '',
+      value: 21000,
+      weight: 2.7,
+      stackable: false,
+      equipable: true,
+      tradeable: true,
+      members: false,
+      equipment: {
+        slot: EquipmentSlot.HEAD,
+        requirements: {},
+        bonuses: {
+          attackStab: 0,
+          attackSlash: 0,
+          attackCrush: 0,
+          attackMagic: -6,
+          attackRanged: -2,
+          defenseStab: 30,
+          defenseSlash: 32,
+          defenseCrush: 27,
+          defenseMagic: -1,
+          defenseRanged: 30,
+          meleeStrength: 0,
+          rangedStrength: 0,
+          magicDamage: 0,
+          prayerBonus: 0
+        }
+      },
+      model: '',
+      icon: ''
+    };
+    
+    const platebody: ItemDefinition = {
+      id: 101,
+      name: 'Rune Platebody',
+      examine: '',
+      value: 65000,
+      weight: 9.5,
+      stackable: false,
+      equipable: true,
+      tradeable: true,
+      members: false,
+      equipment: {
+        slot: EquipmentSlot.BODY,
+        requirements: {},
+        bonuses: {
+          attackStab: 0,
+          attackSlash: 0,
+          attackCrush: 0,
+          attackMagic: -30,
+          attackRanged: -10,
+          defenseStab: 82,
+          defenseSlash: 80,
+          defenseCrush: 72,
+          defenseMagic: -6,
+          defenseRanged: 80,
+          meleeStrength: 0,
+          rangedStrength: 0,
+          magicDamage: 0,
+          prayerBonus: 0
+        }
+      },
+      model: '',
+      icon: ''
+    };
+    
+    const legs: ItemDefinition = {
+      id: 102,
+      name: 'Rune Platelegs',
+      examine: '',
+      value: 64000,
+      weight: 9.0,
+      stackable: false,
+      equipable: true,
+      tradeable: true,
+      members: false,
+      equipment: {
+        slot: EquipmentSlot.LEGS,
+        requirements: {},
+        bonuses: {
+          attackStab: 0,
+          attackSlash: 0,
+          attackCrush: 0,
+          attackMagic: -21,
+          attackRanged: -7,
+          defenseStab: 51,
+          defenseSlash: 49,
+          defenseCrush: 47,
+          defenseMagic: -4,
+          defenseRanged: 49,
+          meleeStrength: 0,
+          rangedStrength: 0,
+          magicDamage: 0,
+          prayerBonus: 0
+        }
+      },
+      model: '',
+      icon: ''
+    };
+    
+    itemRegistry.register(helmet);
+    itemRegistry.register(platebody);
+    itemRegistry.register(legs);
+    
+    equipment = {
+      [EquipmentSlot.HEAD]: helmet,
+      [EquipmentSlot.CAPE]: null,
+      [EquipmentSlot.AMULET]: null,
+      [EquipmentSlot.WEAPON]: null,
+      [EquipmentSlot.BODY]: platebody,
+      [EquipmentSlot.SHIELD]: null,
+      [EquipmentSlot.LEGS]: legs,
+      [EquipmentSlot.GLOVES]: null,
+      [EquipmentSlot.BOOTS]: null,
+      [EquipmentSlot.RING]: null,
+      [EquipmentSlot.AMMO]: null
+    };
+  });
+  
+  describe('Bonus Calculation', () => {
+    it('should calculate total equipment bonuses', () => {
+      const bonuses = calculator.calculateTotalBonuses(equipment);
+      
+      // Sum of all equipped items
+      expect(bonuses.attackStab).toBe(0);
+      expect(bonuses.attackMagic).toBe(-57); // -6 + -30 + -21
+      expect(bonuses.defenseStab).toBe(163); // 30 + 82 + 51
+      expect(bonuses.defenseSlash).toBe(161); // 32 + 80 + 49
+      expect(bonuses.defenseCrush).toBe(146); // 27 + 72 + 47
+    });
+    
+    it('should handle empty equipment slots', () => {
+      equipment[EquipmentSlot.HEAD] = null;
+      equipment[EquipmentSlot.BODY] = null;
+      equipment[EquipmentSlot.LEGS] = null;
+      
+      const bonuses = calculator.calculateTotalBonuses(equipment);
+      
+      // All bonuses should be 0
+      Object.values(bonuses).forEach(bonus => {
+        expect(bonus).toBe(0);
+      });
+    });
+    
+    it('should calculate weight from equipment', () => {
+      const weight = calculator.getEquipmentWeight(equipment);
+      
+      expect(weight).toBeCloseTo(21.2); // 2.7 + 9.5 + 9.0
+    });
+  });
+});
+
+describe('ItemRegistry', () => {
+  let registry: ItemRegistry;
+  
+  beforeEach(() => {
+    registry = new ItemRegistry();
+  });
+  
+  describe('Item Registration', () => {
+    it('should register and retrieve items', () => {
+      const item: ItemDefinition = {
+        id: 1001,
+        name: 'Test Item',
+        examine: '',
+        value: 10,
+        weight: 1,
+        stackable: false,
+        equipable: true,
+        tradeable: true,
+        members: false,
+        equipment: {
+          slot: EquipmentSlot.CAPE,
+          requirements: {},
+          bonuses: {
+            attackStab: 0,
+            attackSlash: 0,
+            attackCrush: 0,
+            attackMagic: 0,
+            attackRanged: 0,
+            defenseStab: 0,
+            defenseSlash: 0,
+            defenseCrush: 0,
+            defenseMagic: 0,
+            defenseRanged: 0,
+            meleeStrength: 0,
+            rangedStrength: 0,
+            magicDamage: 0,
+            prayerBonus: 0
+          }
+        },
+        model: '',
+        icon: ''
+      };
+      
+      registry.register(item);
+      
+      expect(registry.get(1001)).toEqual(item);
+      expect(registry.get(1001) !== null).toBe(true);
+    });
+    
+    it('should handle non-existent items', () => {
+      expect(registry.get(9999)).toBe(null);
+      expect(registry.get(9999) !== null).toBe(false);
+    });
+    
+    it('should register multiple items', () => {
+      const items: ItemDefinition[] = [
+        {
+          id: 1002,
+          name: 'Item 1',
+          examine: '',
+          value: 10,
+          weight: 1,
+          stackable: false,
+          equipable: true,
+          tradeable: true,
+          members: false,
+          equipment: {
+            slot: EquipmentSlot.CAPE,
+            requirements: {},
+            bonuses: {
+              attackStab: 0,
+              attackSlash: 0,
+              attackCrush: 0,
+              attackMagic: 0,
+              attackRanged: 0,
+              defenseStab: 0,
+              defenseSlash: 0,
+              defenseCrush: 0,
+              defenseMagic: 0,
+              defenseRanged: 0,
+              meleeStrength: 0,
+              rangedStrength: 0,
+              magicDamage: 0,
+              prayerBonus: 0
+            }
+          },
+          model: '',
+          icon: ''
+        },
+        {
+          id: 1003,
+          name: 'Item 2',
+          examine: '',
+          value: 5,
+          weight: 0.1,
+          stackable: true,
+          equipable: true,
+          tradeable: true,
+          members: false,
+          equipment: {
+            slot: EquipmentSlot.CAPE,
+            requirements: {},
+            bonuses: {
+              attackStab: 0,
+              attackSlash: 0,
+              attackCrush: 0,
+              attackMagic: 0,
+              attackRanged: 0,
+              defenseStab: 0,
+              defenseSlash: 0,
+              defenseCrush: 0,
+              defenseMagic: 0,
+              defenseRanged: 0,
+              meleeStrength: 0,
+              rangedStrength: 0,
+              magicDamage: 0,
+              prayerBonus: 0
+            }
+          },
+          model: '',
+          icon: ''
+        }
+      ];
+      
+      items.forEach(item => registry.register(item));
+      
+      expect(registry.get(1002) !== null).toBe(true);
+      expect(registry.get(1003) !== null).toBe(true);
+    });
+  });
+  
+  describe('Item Queries', () => {
+    beforeEach(() => {
+      const items: ItemDefinition[] = [
+        {
+          id: 2001,
+          name: 'Sword',
+          examine: '',
+          value: 100,
+          weight: 2,
+          stackable: false,
+          equipable: true,
+          tradeable: true,
+          members: false,
+          equipment: {
+            slot: EquipmentSlot.WEAPON,
+            requirements: {},
+            bonuses: {
+              attackStab: 0,
+              attackSlash: 0,
+              attackCrush: 0,
+              attackMagic: 0,
+              attackRanged: 0,
+              defenseStab: 0,
+              defenseSlash: 0,
+              defenseCrush: 0,
+              defenseMagic: 0,
+              defenseRanged: 0,
+              meleeStrength: 0,
+              rangedStrength: 0,
+              magicDamage: 0,
+              prayerBonus: 0
+            }
+          },
+          model: '',
+          icon: ''
+        },
+        {
+          id: 2002,
+          name: 'Shield',
+          examine: '',
+          value: 80,
+          weight: 3,
+          stackable: false,
+          equipable: true,
+          tradeable: true,
+          members: false,
+          equipment: {
+            slot: EquipmentSlot.SHIELD,
+            requirements: {},
+            bonuses: {
+              attackStab: 0,
+              attackSlash: 0,
+              attackCrush: 0,
+              attackMagic: 0,
+              attackRanged: 0,
+              defenseStab: 0,
+              defenseSlash: 0,
+              defenseCrush: 0,
+              defenseMagic: 0,
+              defenseRanged: 0,
+              meleeStrength: 0,
+              rangedStrength: 0,
+              magicDamage: 0,
+              prayerBonus: 0
+            }
+          },
+          model: '',
+          icon: ''
+        },
+        {
+          id: 2003,
+          name: 'Bread',
+          examine: '',
+          value: 5,
+          weight: 0.5,
+          stackable: false,
+          equipable: true,
+          tradeable: true,
+          members: false,
+          equipment: {
+            slot: EquipmentSlot.CAPE,
+            requirements: {},
+            bonuses: {
+              attackStab: 0,
+              attackSlash: 0,
+              attackCrush: 0,
+              attackMagic: 0,
+              attackRanged: 0,
+              defenseStab: 0,
+              defenseSlash: 0,
+              defenseCrush: 0,
+              defenseMagic: 0,
+              defenseRanged: 0,
+              meleeStrength: 0,
+              rangedStrength: 0,
+              magicDamage: 0,
+              prayerBonus: 0
+            }
+          },
+          model: '',
+          icon: ''
+        },
+        {
+          id: 995,
+          name: 'Coins',
+          examine: '',
+          value: 1,
+          weight: 0,
+          stackable: true,
+          equipable: true,
+          tradeable: true,
+          members: false,
+          equipment: {
+            slot: EquipmentSlot.CAPE,
+            requirements: {},
+            bonuses: {
+              attackStab: 0,
+              attackSlash: 0,
+              attackCrush: 0,
+              attackMagic: 0,
+              attackRanged: 0,
+              defenseStab: 0,
+              defenseSlash: 0,
+              defenseCrush: 0,
+              defenseMagic: 0,
+              defenseRanged: 0,
+              meleeStrength: 0,
+              rangedStrength: 0,
+              magicDamage: 0,
+              prayerBonus: 0
+            }
+          },
+          model: '',
+          icon: ''
+        }
+      ];
+      
+      items.forEach(item => registry.register(item));
+    });
+    
+    it('should get items by type', () => {
+      const weapons = registry.getByCategory('weapon');
+      const capes = registry.getByCategory('cape');
+      
+      expect(weapons).toHaveLength(1);
+      expect(weapons[0].id).toBe(2001);
+      expect(capes).toHaveLength(2); // bread and coins both have cape slot
+      expect(capes.find(i => i.id === 2003)).toBeDefined();
+    });
+    
+    it('should get all items', () => {
+      const allItems = registry.getAll();
+      
+      expect(allItems).toHaveLength(4);
+      expect(allItems.map(i => i.id)).toContain('sword');
+      expect(allItems.map(i => i.id)).toContain('shield');
+      expect(allItems.map(i => i.id)).toContain('bread');
+      expect(allItems.map(i => i.id)).toContain('coins');
     });
   });
 }); 

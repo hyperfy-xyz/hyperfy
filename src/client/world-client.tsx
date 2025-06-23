@@ -3,7 +3,7 @@ import React from 'react'
 // import '../core/lockdown'
 import * as THREE from 'three'
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { css } from '@firebolt-dev/css'
+// Removed css utility import
 
 import { createClientWorld } from '../core/createClientWorld'
 import { CoreUI } from './components/CoreUI'
@@ -11,7 +11,7 @@ import { CoreUI } from './components/CoreUI'
 export { System } from '../core/systems/System'
 
 interface ClientProps {
-  wsUrl: string | (() => string | Promise<string>);
+  wsUrl?: string | (() => string | Promise<string>);
   onSetup?: (world: any, config: any) => void;
 }
 
@@ -28,6 +28,7 @@ export function Client({ wsUrl, onSetup }: ClientProps) {
   }, [])
   useEffect(() => {
     const init = async () => {
+      console.log('[Client] Starting initialization...')
       const viewport = viewportRef.current
       const ui = uiRef.current
       const baseEnvironment = {
@@ -46,10 +47,20 @@ export function Client({ wsUrl, onSetup }: ClientProps) {
         const result = wsUrl()
         finalWsUrl = result instanceof Promise ? await result : result
       } else {
-        finalWsUrl = wsUrl
+        // Use PUBLIC_WS_URL if available, otherwise construct from current host
+        const publicWsUrl = (import.meta as any).env?.PUBLIC_WS_URL
+        if (publicWsUrl) {
+          finalWsUrl = publicWsUrl
+        } else {
+          const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:'
+          const defaultWsUrl = `${protocol}//${window.location.host}/ws`
+          finalWsUrl = wsUrl || defaultWsUrl
+        }
       }
+      console.log('[Client] WebSocket URL:', finalWsUrl)
       const config = { viewport, ui, wsUrl: finalWsUrl, baseEnvironment }
       onSetup?.(world, config)
+      console.log('[Client] Initializing world with config:', config)
       ;(world as any).init(config)
     }
     init()
@@ -57,13 +68,15 @@ export function Client({ wsUrl, onSetup }: ClientProps) {
   return (
     <div
       className='App'
-      css={css`
-        position: absolute;
-        top: 0;
-        left: 0;
-        right: 0;
-        height: 100vh;
-        height: 100dvh;
+      style={{
+        position: 'absolute',
+        top: 0,
+        left: 0,
+        right: 0,
+        height: '100vh',
+      }}
+    >
+      <style>{`
         .App__viewport {
           position: absolute;
           inset: 0;
@@ -75,8 +88,7 @@ export function Client({ wsUrl, onSetup }: ClientProps) {
           user-select: none;
           display: ${ui.visible ? 'block' : 'none'};
         }
-      `}
-    >
+      `}</style>
       <div className='App__viewport' ref={viewportRef}>
         <div className='App__ui' ref={uiRef}>
           <CoreUI world={world} />

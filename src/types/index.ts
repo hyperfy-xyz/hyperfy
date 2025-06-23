@@ -423,6 +423,13 @@ export interface Entities extends System {
   has(entityId: string): boolean;
   remove(entityId: string): void;
   set(entityId: string, entity: Entity): void;
+  
+  // Additional methods
+  getAll(): Entity[];
+  getAllPlayers(): Player[];
+  getRemovedIds(): string[];
+  setHot(entity: Entity, hot: boolean): void;
+  add(data: any, local?: boolean): Entity;
 }
 
 export interface Physics extends System {

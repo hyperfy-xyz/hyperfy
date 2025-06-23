@@ -1,41 +1,67 @@
 declare module 'lucide-react' {
-  import { FC, SVGProps } from 'react';
+  import { FC, SVGProps } from 'react'
   
-  export interface LucideProps extends SVGProps<SVGSVGElement> {
-    size?: string | number;
-    color?: string;
-    stroke?: string;
-    strokeWidth?: string | number;
-    fill?: string;
-    className?: string;
-    absoluteStrokeWidth?: boolean;
+  export interface IconProps extends SVGProps<SVGSVGElement> {
+    size?: string | number
   }
   
-  export type LucideIcon = FC<LucideProps>;
+  export type Icon = FC<IconProps>
   
-  // Declare all the icons we're using
-  export const BoxIcon: LucideIcon;
-  export const CodeIcon: LucideIcon;
-  export const DownloadIcon: LucideIcon;
-  export const EarthIcon: LucideIcon;
-  export const LayersIcon: LucideIcon;
-  export const Loader2: LucideIcon;
-  export const MenuIcon: LucideIcon;
-  export const MessageSquareIcon: LucideIcon;
-  export const MoveIcon: LucideIcon;
-  export const OctagonXIcon: LucideIcon;
-  export const Pin: LucideIcon;
-  export const Plus: LucideIcon;
-  export const SaveIcon: LucideIcon;
-  export const SearchIcon: LucideIcon;
-  export const SparkleIcon: LucideIcon;
-  export const Square: LucideIcon;
-  export const TagIcon: LucideIcon;
-  export const Trash2Icon: LucideIcon;
-  export const Trees: LucideIcon;
-  export const Zap: LucideIcon;
+  // Common icons - add more as needed
+  export const Settings: Icon
+  export const SettingsIcon: Icon
+  export const Sun: Icon
+  export const User: Icon
+  export const Volume2: Icon
+  export const X: Icon
+  export const XIcon: Icon
+  export const ZapIcon: Icon
+  export const Zap: Icon
+  export const Trash2Icon: Icon
+  export const DownloadIcon: Icon
+  export const BoxIcon: Icon
+  export const FileCode2Icon: Icon
+  export const CircleCheckIcon: Icon
+  export const EarthIcon: Icon
+  export const LockKeyholeIcon: Icon
+  export const SparkleIcon: Icon
+  export const LayersIcon: Icon
+  export const CircleIcon: Icon
+  export const FolderIcon: Icon
+  export const DumbbellIcon: Icon
+  export const BlendIcon: Icon
+  export const EyeIcon: Icon
+  export const EyeOffIcon: Icon
+  export const PersonStandingIcon: Icon
+  export const MagnetIcon: Icon
+  export const ChevronLeftIcon: Icon
+  export const ChevronRightIcon: Icon
+  export const ChevronDownIcon: Icon
+  export const UploadIcon: Icon
+  export const LoaderIcon: Icon
+  export const Loader2: Icon
+  export const BrickWallIcon: Icon
+  export const CrosshairIcon: Icon
+  export const HardDriveIcon: Icon
+  export const HashIcon: Icon
+  export const OctagonXIcon: Icon
+  export const TriangleIcon: Icon
+  export const RotateCwIcon: Icon
+  export const SearchIcon: Icon
+  export const MessageSquareIcon: Icon
+  export const RefreshCwIcon: Icon
+  export const CodeIcon: Icon
+  export const MenuIcon: Icon
+  export const MoveIcon: Icon
+  export const Pin: Icon
+  export const Plus: Icon
+  export const SaveIcon: Icon
+  export const Square: Icon
+  export const TagIcon: Icon
+  export const Trees: Icon
+  export const Rows3Icon: Icon
   
-  // Add any other icons as needed
-  const icons: Record<string, LucideIcon>;
-  export default icons;
+  // Allow for any other icon imports
+  const icons: { [key: string]: Icon }
+  export default icons
 } 

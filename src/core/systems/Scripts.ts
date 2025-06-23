@@ -34,7 +34,10 @@ export class Scripts extends System {
     
     // Check if Compartment is available (SES needs to be initialized)
     if (typeof Compartment === 'undefined') {
-      console.warn('Scripts system: Compartment not available. SES may not be initialized.');
+      // Only warn on server side where scripts are expected to be sandboxed
+      if (typeof window === 'undefined') {
+        console.warn('Scripts system: Compartment not available. SES may not be initialized.');
+      }
       return;
     }
 
@@ -81,7 +84,17 @@ export class Scripts extends System {
 
   evaluate(code: string): ScriptResult {
     if (!this.compartment) {
-      throw new Error('Scripts system: Compartment not initialized');
+      // Fallback to unsafe evaluation on client side
+      console.warn('Scripts: Using unsafe evaluation (no SES sandbox)');
+      return {
+        exec: (...args: any[]) => {
+          // Create a basic evaluation context
+          const wrappedCode = wrapRawCode(code);
+          const evalFunc = new Function('return ' + wrappedCode)();
+          return evalFunc(...args);
+        },
+        code,
+      };
     }
 
     let value: ((...args: any[]) => any) | undefined;

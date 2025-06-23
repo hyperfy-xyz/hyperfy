@@ -59,10 +59,7 @@ export class Entity implements IEntity {
     
     // Network sync for local entities
     if (local && (this.world as any).network) {
-      (this.world as any).network.send('entity:create', {
-        data: this.serialize(),
-        timestamp: Date.now()
-      });
+      (this.world as any).network.send('entityAdded', this.serialize());
     }
   }
   
@@ -330,10 +327,7 @@ export class Entity implements IEntity {
     
     // Network sync
     if (local && (this.world as any).network) {
-      (this.world as any).network.send('entity:destroy', {
-        entityId: this.id,
-        timestamp: Date.now()
-      });
+      (this.world as any).network.send('entityRemoved', this.id);
     }
     
     // Emit destroy event

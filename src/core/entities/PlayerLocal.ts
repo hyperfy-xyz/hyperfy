@@ -237,7 +237,9 @@ export class PlayerLocal extends Entity implements HotReloadable {
     this.cam.rotation.x += -15 * DEG2RAD
 
     if (this.world.loader?.preloader) {
+      console.log('[PlayerLocal] Waiting for preloader...')
       await this.world.loader.preloader
+      console.log('[PlayerLocal] Preloader complete')
     }
 
     this.applyAvatar()
@@ -245,6 +247,7 @@ export class PlayerLocal extends Entity implements HotReloadable {
     this.initControl()
 
     this.world.setHot(this, true)
+    console.log('[PlayerLocal] Emitting ready event')
     this.world.emit?.('ready', true)
   }
 
@@ -291,10 +294,23 @@ export class PlayerLocal extends Entity implements HotReloadable {
     const localPose = new PHYSX.PxTransform(PHYSX.PxIDENTITYEnum.PxIdentity)
     // rotate to stand up
     q1.setFromAxisAngle(BACKWARD, Math.PI / 2)
-    q1.toPxTransform!(localPose)
+    if (typeof (q1 as any).toPxTransform === 'function') {
+      ;(q1 as any).toPxTransform(localPose)
+    } else {
+      localPose.q.x = q1.x;
+      localPose.q.y = q1.y;
+      localPose.q.z = q1.z;
+      localPose.q.w = q1.w;
+    }
     // move capsule up so its base is at 0,0,0
     v1.set(0, halfHeight + radius, 0)
-    v1.toPxTransform!(localPose)
+    if (typeof (v1 as any).toPxTransform === 'function') {
+      ;(v1 as any).toPxTransform(localPose)
+    } else {
+      localPose.p.x = v1.x;
+      localPose.p.y = v1.y;
+      localPose.p.z = v1.z;
+    }
     shape.setLocalPose(localPose)
     const filterData = new PHYSX.PxFilterData(
       (LayersInstance as Layers).player.group,
@@ -312,8 +328,23 @@ export class PlayerLocal extends Entity implements HotReloadable {
     shape.setQueryFilterData(filterData)
     shape.setSimulationFilterData(filterData)
     const transform = new PHYSX.PxTransform(PHYSX.PxIDENTITYEnum.PxIdentity)
-    v1.copy(this.base.position).toPxTransform!(transform)
-    q1.set(0, 0, 0, 1).toPxTransform!(transform)
+    v1.copy(this.base.position);
+    if (typeof (v1 as any).toPxTransform === 'function') {
+      ;(v1 as any).toPxTransform(transform)
+    } else {
+      transform.p.x = v1.x;
+      transform.p.y = v1.y;
+      transform.p.z = v1.z;
+    }
+    q1.set(0, 0, 0, 1);
+    if (typeof (q1 as any).toPxTransform === 'function') {
+      ;(q1 as any).toPxTransform(transform)
+    } else {
+      transform.q.x = q1.x;
+      transform.q.y = q1.y;
+      transform.q.z = q1.z;
+      transform.q.w = q1.w;
+    }
     this.capsule = this.world.physics.physics.createRigidDynamic(transform)
     this.capsule.setMass(this.mass)
     // this.capsule.setRigidBodyFlag(PHYSX.PxRigidBodyFlagEnum.eKINEMATIC, false)
@@ -470,7 +501,7 @@ export class PlayerLocal extends Entity implements HotReloadable {
           const newQuaternion = q4
           playerTransform.decompose(newPosition as any, newQuaternion, v6 as any)
           const newPose = this.capsule.getGlobalPose()
-          newPosition.toPxTransform!(newPose)
+          ;(newPosition as any).toPxTransform(newPose)
           // newQuaternion.toPxTransform(newPose) // capsule doesn't rotate
           this.capsule.setGlobalPose(newPose)
           // rotate ghost by Y only
@@ -599,7 +630,7 @@ export class PlayerLocal extends Entity implements HotReloadable {
             const force = v1.set(0, amount, 0)
             PHYSX.PxRigidBodyExt.prototype.addForceAtPos(
               this.platform.actor,
-              force.toPxVec3!(),
+              (force as any).toPxVec3(),
               this.capsule.getGlobalPose().p,
               PHYSX.PxForceModeEnum.eFORCE,
               true
@@ -608,7 +639,7 @@ export class PlayerLocal extends Entity implements HotReloadable {
         }
       } else {
         const force = v1.set(0, -this.effectiveGravity, 0)
-        this.capsule.addForce(force.toPxVec3!(), PHYSX.PxForceModeEnum.eFORCE, true)
+        this.capsule.addForce((force as any).toPxVec3(), PHYSX.PxForceModeEnum.eFORCE, true)
       }
 
       // update velocity
@@ -665,7 +696,7 @@ export class PlayerLocal extends Entity implements HotReloadable {
         }
       }
 
-      this.capsule.setLinearVelocity(velocity.toPxVec3!())
+      this.capsule.setLinearVelocity((velocity as any).toPxVec3())
 
       // apply move force, projected onto ground normal
       if (this.moving) {
@@ -673,7 +704,7 @@ export class PlayerLocal extends Entity implements HotReloadable {
         moveSpeed *= 1 - snare
         const slopeRotation = q1.setFromUnitVectors(UP as any, this.groundNormal as any)
         const moveForce = v1.copy(this.moveDir).multiplyScalar(moveSpeed * 10).applyQuaternion(slopeRotation) // prettier-ignore
-        this.capsule.addForce(moveForce.toPxVec3!(), PHYSX.PxForceModeEnum.eFORCE, true)
+        this.capsule.addForce((moveForce as any).toPxVec3(), PHYSX.PxForceModeEnum.eFORCE, true)
         // alternative (slightly different projection)
         // let moveSpeed = 10
         // const slopeMoveDir = v1.copy(this.moveDir).projectOnPlane(this.groundNormal).normalize()
@@ -723,17 +754,17 @@ export class PlayerLocal extends Entity implements HotReloadable {
         } else if (this.control.keyC.down) {
           force.y = -flySpeed
         }
-        this.capsule.addForce(force.toPxVec3!(), PHYSX.PxForceModeEnum.eFORCE, true)
+        this.capsule.addForce((force as any).toPxVec3(), PHYSX.PxForceModeEnum.eFORCE, true)
       }
 
       // add drag to prevent excessive speeds
       const velocity = v2.copy(this.capsule.getLinearVelocity())
       const dragForce = v3.copy(velocity).multiplyScalar(-this.flyDrag * delta)
-      this.capsule.addForce(dragForce.toPxVec3!(), PHYSX.PxForceModeEnum.eFORCE, true)
+      this.capsule.addForce((dragForce as any).toPxVec3(), PHYSX.PxForceModeEnum.eFORCE, true)
 
       // zero out any rotational velocity
       const zeroAngular = v4.set(0, 0, 0)
-      this.capsule.setAngularVelocity(zeroAngular.toPxVec3!())
+      this.capsule.setAngularVelocity((zeroAngular as any).toPxVec3())
 
       // if not in build mode, cancel flying
       if (!this.world.builder?.enabled) {
@@ -977,7 +1008,7 @@ export class PlayerLocal extends Entity implements HotReloadable {
       this.base.position.setFromMatrixPosition(anchor)
       this.base.quaternion.setFromRotationMatrix(anchor)
       const pose = this.capsule.getGlobalPose()
-      this.base.position.toPxTransform!(pose)
+      ;(this.base.position as any).toPxTransform(pose)
       this.capsuleHandle.snap(pose)
     }
     // make camera follow our position horizontally
@@ -1011,7 +1042,7 @@ export class PlayerLocal extends Entity implements HotReloadable {
     const hasRotation = !isNaN(rotationY!)
     // snap to position
     const pose = this.capsule.getGlobalPose()
-    position.toPxTransform!(pose)
+    ;(position as any).toPxTransform(pose)
     this.capsuleHandle.snap(pose)
     this.base.position.copy(position)
     if (hasRotation) this.base.rotation.y = rotationY!
@@ -1067,8 +1098,7 @@ export class PlayerLocal extends Entity implements HotReloadable {
   }
 
   setName(name: string) {
-    this.nametag.label = name
-    this.data.name = name
+    this.modify({ name })
     this.world.network?.send('entityModified', { id: this.data.id, name })
   }
 
@@ -1097,6 +1127,7 @@ export class PlayerLocal extends Entity implements HotReloadable {
     let changed
     if (data.hasOwnProperty('name')) {
       this.data.name = data.name
+      this.nametag.label = data.name || ''
       changed = true
     }
     if (data.hasOwnProperty('health')) {

@@ -20,6 +20,8 @@ export class ServerEnvironment extends System {
     if (settings.on) {
       settings.on('change', this.onSettingsChange)
     }
+    // Load initial environment model
+    await this.updateModel()
   }
 
   async updateModel() {

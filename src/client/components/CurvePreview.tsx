@@ -1,61 +1,106 @@
 import React from 'react'
-import { css } from '@firebolt-dev/css'
 import { useEffect, useRef } from 'react'
-import * as d3 from 'd3'
+import { Curve } from '../../core/extras/Curve'
 
 interface CurvePreviewProps {
-  curve: any;
+  curve: Curve;
+  width?: number;
+  height?: number;
+  xRange?: [number, number];
   yMin?: number;
   yMax?: number;
 }
 
-export function CurvePreview({ curve, yMin = 0, yMax = 1 }: CurvePreviewProps) {
-  const elemRef = useRef<HTMLDivElement | null>(null)
+export function CurvePreview({ curve, width = 200, height = 100, xRange = [0, 1], yMin = 0, yMax = 1 }: CurvePreviewProps) {
+  const canvasRef = useRef<HTMLCanvasElement | null>(null)
+  const divRef = useRef<HTMLDivElement | null>(null)
+
   useEffect(() => {
-    const elem = elemRef.current
-    if (!elem) return
-    const width = elem.offsetWidth
-    const height = elem.offsetHeight
-    const margin = { top: 2, right: 2, bottom: 2, left: 2 }
-    const innerWidth = width - margin.left - margin.right
-    const innerHeight = height - margin.top - margin.bottom
+    const canvas = canvasRef.current
+    if (!canvas) return
 
-    const xScale = d3.scaleLinear().domain([0, 1]).range([0, innerWidth])
-    const yScale = d3.scaleLinear().domain([yMin, yMax]).range([innerHeight, 0])
+    const ctx = canvas.getContext('2d')
+    if (!ctx) return
 
-    const svg = d3.create('svg').attr('width', width).attr('height', height)
-    const g = svg.append('g').attr('transform', `translate(${margin.left},${margin.top})`)
+    // Set canvas size to match display size
+    canvas.width = width * window.devicePixelRatio
+    canvas.height = height * window.devicePixelRatio
+    ctx.scale(window.devicePixelRatio, window.devicePixelRatio)
 
-    const line = d3
-      .line<[number, number]>()
-      .x((d) => xScale(d[0]))
-      .y((d) => yScale(d[1]))
-      .curve(d3.curveLinear)
+    // Clear canvas
+    ctx.clearRect(0, 0, width, height)
 
-    const data: [number, number][] = d3.range(0, 1.01, 0.01).map(t => [t, curve.evaluate(t)])
-    g.append('path')
-      .datum(data)
-      .attr('fill', 'none')
-      .attr('stroke', 'white')
-      .attr('stroke-width', 2)
-      .attr('d', line)
+    // Draw background
+    ctx.fillStyle = '#1a1a1a'
+    ctx.fillRect(0, 0, width, height)
 
-    const node = svg.node()
-    if (node) {
-      elem.appendChild(node)
-      return () => {
-        elem.removeChild(node)
-      }
+    // Draw grid
+    ctx.strokeStyle = 'rgba(255, 255, 255, 0.1)'
+    ctx.lineWidth = 1
+
+    // Vertical grid lines
+    for (let i = 0; i <= 4; i++) {
+      const x = (i / 4) * width
+      ctx.beginPath()
+      ctx.moveTo(x, 0)
+      ctx.lineTo(x, height)
+      ctx.stroke()
     }
-  }, [curve, yMin, yMax])
+
+    // Horizontal grid lines
+    for (let i = 0; i <= 4; i++) {
+      const y = (i / 4) * height
+      ctx.beginPath()
+      ctx.moveTo(0, y)
+      ctx.lineTo(width, y)
+      ctx.stroke()
+    }
+
+    // Draw curve
+    if (curve) {
+      ctx.strokeStyle = '#00a7ff'
+      ctx.lineWidth = 2
+      ctx.beginPath()
+
+      let first = true
+      for (let x = 0; x < width; x++) {
+        const t = (x / width) * (xRange[1] - xRange[0]) + xRange[0]
+        const y = curve.evaluate(t)
+        
+        // Normalize y value to canvas coordinates
+        const normalizedY = 1 - ((y - yMin) / (yMax - yMin))
+        const pixelY = Math.max(0, Math.min(height, normalizedY * height))
+        
+        if (first) {
+          ctx.moveTo(x, pixelY)
+          first = false
+        } else {
+          ctx.lineTo(x, pixelY)
+      }
+      }
+      ctx.stroke()
+    }
+  }, [curve, width, height, xRange, yMin, yMax])
 
   return (
     <div
-      ref={elemRef}
-      css={css`
-        width: 100%;
-        height: 100%;
-      `}
+      ref={divRef}
+      style={{
+        width: `${width}px`,
+        height: `${height}px`,
+        border: '1px solid rgba(255, 255, 255, 0.1)',
+        borderRadius: '4px',
+        overflow: 'hidden',
+      }}
+    >
+      <canvas
+        ref={canvasRef}
+      style={{
+        width: '100%',
+        height: '100%',
+          display: 'block',
+      }}
     />
+    </div>
   )
 }

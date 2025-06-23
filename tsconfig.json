@@ -44,7 +44,8 @@
     
     // Advanced
     "types": ["node", "vitest/globals"],
-    "jsx": "react-jsx"
+    "jsx": "react-jsx",
+    "jsxImportSource": "react"
   },
   "include": [
     "src/**/*",

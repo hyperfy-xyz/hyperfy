@@ -1,24 +1,40 @@
+/// <reference types="vite/client" />
+
 // Global type declarations
 
-// Global PHYSX declaration
-declare const PHYSX: any;
-
-// Extend Window interface
+// Extend global scope
 declare global {
+  // Global variables
+  const PHYSX: any;
+  var env: Record<string, string> | undefined;
+  var physx: any;
+  var PhysX: any;
+  var ses: any;
+  var repairIntrinsics: any;
+  var lockdown: any;
+  var harden: any;
+  
+  // Window extensions
   interface Window {
-    app?: any;
+    ses?: any;
+    lockdown?: any;
+    Compartment?: any;
+    harden?: any;
     require?: any;
     monaco?: any;
+    env?: Record<string, string>;
+    PARTICLES_PATH?: string;
+    world?: any;
+    app?: any;
   }
-}
-
-// CSS-in-JS support for @firebolt-dev/css
-declare module 'react' {
-  interface HTMLAttributes<T> {
-    css?: any;
-  }
-  interface SVGAttributes<T> {
-    css?: any;
+  
+  // Performance API extensions
+  interface Performance {
+    memory?: {
+      usedJSHeapSize: number;
+      totalJSHeapSize: number;
+      jsHeapSizeLimit: number;
+    };
   }
 }
 

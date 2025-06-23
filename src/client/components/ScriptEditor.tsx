@@ -1,6 +1,5 @@
 import React from 'react'
 import { useEffect, useRef, useState } from 'react'
-import { css } from '@firebolt-dev/css'
 import { hashFile } from '../../core/utils-client'
 
 // editor will remember a single script so you can flip between tabs without hitting save (eg viewing docs)

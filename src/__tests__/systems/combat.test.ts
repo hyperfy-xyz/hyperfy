@@ -1,12 +1,10 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { CombatSystem } from '../../rpg/systems/CombatSystem';
+import { HitCalculator } from '../../rpg/systems/combat/HitCalculator';
+import { DamageCalculator } from '../../rpg/systems/combat/DamageCalculator';
+import { CombatAnimationManager } from '../../rpg/systems/combat/CombatAnimationManager';
 import { RPGEntity } from '../../rpg/entities/RPGEntity';
-import { 
-  CombatComponent, 
-  StatsComponent, 
-  CombatStyle, 
-  AttackType
-} from '../../rpg/types';
+import { CombatStyle, AttackType, StatsComponent, CombatComponent } from '../../rpg/types';
 import { createTestWorld, MockWorld } from '../test-world-factory';
 import type { World } from '../../types';
 
@@ -597,6 +595,249 @@ describe('CombatSystem', () => {
       
       // Restore original method
       (combatSystem as any).canAttack = originalCanAttack;
+    });
+  });
+});
+
+describe('HitCalculator', () => {
+  let hitCalculator: HitCalculator;
+  let attackerStats: StatsComponent;
+  let defenderStats: StatsComponent;
+  
+  beforeEach(() => {
+    hitCalculator = new HitCalculator();
+    
+    attackerStats = {
+      type: 'stats',
+      entity: {} as any,
+      data: {},
+      hitpoints: { current: 100, max: 100, level: 10, xp: 1154 },
+      attack: { level: 75, xp: 1210421 },
+      strength: { level: 75, xp: 1210421 },
+      defense: { level: 1, xp: 0 },
+      ranged: { level: 1, xp: 0 },
+      magic: { level: 1, xp: 0 },
+      prayer: { level: 1, xp: 0, points: 1, maxPoints: 1 },
+      combatBonuses: {
+        attackStab: 100,
+        attackSlash: 100,
+        attackCrush: 100,
+        attackMagic: 0,
+        attackRanged: 0,
+        defenseStab: 0,
+        defenseSlash: 0,
+        defenseCrush: 0,
+        defenseMagic: 0,
+        defenseRanged: 0,
+        meleeStrength: 100,
+        rangedStrength: 0,
+        magicDamage: 0,
+        prayerBonus: 0
+      },
+      combatLevel: 88,
+      totalLevel: 228
+    };
+    
+    defenderStats = {
+      type: 'stats',
+      entity: {} as any,
+      data: {},
+      hitpoints: { current: 100, max: 100, level: 10, xp: 1154 },
+      attack: { level: 1, xp: 0 },
+      strength: { level: 1, xp: 0 },
+      defense: { level: 40, xp: 37224 },
+      ranged: { level: 1, xp: 0 },
+      magic: { level: 1, xp: 0 },
+      prayer: { level: 1, xp: 0, points: 1, maxPoints: 1 },
+      combatBonuses: {
+        attackStab: 0,
+        attackSlash: 0,
+        attackCrush: 0,
+        attackMagic: 0,
+        attackRanged: 0,
+        defenseStab: 50,
+        defenseSlash: 50,
+        defenseCrush: 50,
+        defenseMagic: 0,
+        defenseRanged: 0,
+        meleeStrength: 0,
+        rangedStrength: 0,
+        magicDamage: 0,
+        prayerBonus: 0
+      },
+      combatLevel: 42,
+      totalLevel: 44
+    };
+  });
+  
+  describe('Attack Roll Calculation', () => {
+    it('should calculate melee attack roll correctly', () => {
+      const roll = hitCalculator.calculateAttackRoll(attackerStats, CombatStyle.ACCURATE, AttackType.MELEE);
+      
+      // With 75 attack + accurate bonus + equipment
+      // Effective level = 75 + 3 + 8 = 86
+      // Attack roll = 86 * (100 + 64) = 14104
+      expect(roll).toBe(14104);
+    });
+    
+    it('should apply style bonuses correctly', () => {
+      const accurateRoll = hitCalculator.calculateAttackRoll(attackerStats, CombatStyle.ACCURATE, AttackType.MELEE);
+      const aggressiveRoll = hitCalculator.calculateAttackRoll(attackerStats, CombatStyle.AGGRESSIVE, AttackType.MELEE);
+      const defensiveRoll = hitCalculator.calculateAttackRoll(attackerStats, CombatStyle.DEFENSIVE, AttackType.MELEE);
+      
+      // Accurate gives +3 attack levels
+      expect(accurateRoll).toBeGreaterThan(aggressiveRoll);
+      expect(accurateRoll).toBeGreaterThan(defensiveRoll);
+    });
+  });
+  
+  describe('Defense Roll Calculation', () => {
+    it('should calculate defense roll correctly', () => {
+      const roll = hitCalculator.calculateDefenseRoll(defenderStats, AttackType.MELEE);
+      
+      // With 40 defense + equipment
+      // Effective level = 40 + 0 + 8 = 48
+      // Defense roll = 48 * (50 + 64) = 5472
+      expect(roll).toBe(5472);
+    });
+  });
+  
+  describe('Hit Chance Calculation', () => {
+    it('should calculate hit chance based on rolls', () => {
+      const attackRoll = 10000;
+      const defenseRoll = 5000;
+      
+      const hitChance = hitCalculator.calculateHitChance(attackRoll, defenseRoll);
+      
+      // When attack > defense: 1 - (defense + 2) / (2 * (attack + 1))
+      const expected = 1 - (5002) / (2 * 10001);
+      expect(hitChance).toBeCloseTo(expected, 4);
+    });
+    
+    it('should handle case when defense is higher', () => {
+      const attackRoll = 5000;
+      const defenseRoll = 10000;
+      
+      const hitChance = hitCalculator.calculateHitChance(attackRoll, defenseRoll);
+      
+      // When defense > attack: attack / (2 * (defense + 1))
+      const expected = 5000 / (2 * 10001);
+      expect(hitChance).toBeCloseTo(expected, 4);
+    });
+  });
+});
+
+describe('DamageCalculator', () => {
+  let damageCalculator: DamageCalculator;
+  let attackerStats: StatsComponent;
+  
+  beforeEach(() => {
+    damageCalculator = new DamageCalculator();
+    
+    attackerStats = {
+      type: 'stats',
+      entity: {} as any,
+      data: {},
+      hitpoints: { current: 100, max: 100, level: 10, xp: 1154 },
+      attack: { level: 75, xp: 1210421 },
+      strength: { level: 99, xp: 13034431 },
+      defense: { level: 1, xp: 0 },
+      ranged: { level: 99, xp: 13034431 },
+      magic: { level: 99, xp: 13034431 },
+      prayer: { level: 1, xp: 0, points: 1, maxPoints: 1 },
+      combatBonuses: {
+        attackStab: 0,
+        attackSlash: 0,
+        attackCrush: 0,
+        attackMagic: 0,
+        attackRanged: 0,
+        defenseStab: 0,
+        defenseSlash: 0,
+        defenseCrush: 0,
+        defenseMagic: 0,
+        defenseRanged: 0,
+        meleeStrength: 118, // Max strength bonus
+        rangedStrength: 100,
+        magicDamage: 50,
+        prayerBonus: 0
+      },
+      combatLevel: 126,
+      totalLevel: 378
+    };
+  });
+  
+  describe('Max Hit Calculation', () => {
+    it('should calculate melee max hit correctly', () => {
+      const maxHit = damageCalculator.calculateMaxHit(attackerStats, CombatStyle.AGGRESSIVE, AttackType.MELEE);
+      
+      // With 99 strength + aggressive bonus + max strength gear
+      // This should be a significant hit
+      expect(maxHit).toBeGreaterThan(30);
+    });
+    
+    it('should calculate ranged max hit correctly', () => {
+      const maxHit = damageCalculator.calculateMaxHit(attackerStats, CombatStyle.RAPID, AttackType.RANGED);
+      
+      expect(maxHit).toBeGreaterThan(20);
+    });
+    
+    it('should calculate magic max hit correctly', () => {
+      const maxHit = damageCalculator.calculateMaxHit(attackerStats, CombatStyle.ACCURATE, AttackType.MAGIC);
+      
+      expect(maxHit).toBeGreaterThan(15);
+    });
+  });
+  
+  describe('Damage Roll', () => {
+    it('should roll damage between 0 and max hit', () => {
+      const maxHit = 30;
+      const damages: number[] = [];
+      
+      // Roll 100 times to test distribution
+      for (let i = 0; i < 100; i++) {
+        const damage = damageCalculator.rollDamage(maxHit);
+        damages.push(damage);
+        
+        expect(damage).toBeGreaterThanOrEqual(0);
+        expect(damage).toBeLessThanOrEqual(maxHit);
+      }
+      
+      // Should have some variety
+      const uniqueDamages = new Set(damages);
+      expect(uniqueDamages.size).toBeGreaterThan(10);
+    });
+  });
+  
+  describe('Damage Reductions', () => {
+    it('should apply protection prayer reductions', () => {
+      const targetStats: StatsComponent = {
+        ...attackerStats,
+        activePrayers: { protectFromMelee: true }
+      } as any;
+      
+      const damage = 100;
+      const reduced = damageCalculator.applyDamageReductions(damage, targetStats, AttackType.MELEE);
+      
+      // Protection prayers reduce by 40%
+      expect(reduced).toBe(60);
+    });
+    
+    it('should apply defensive bonuses', () => {
+      const targetStats: StatsComponent = {
+        ...attackerStats,
+        combatBonuses: {
+          ...attackerStats.combatBonuses,
+          defenseStab: 300,
+          defenseSlash: 300,
+          defenseCrush: 300
+        }
+      };
+      
+      const damage = 100;
+      const reduced = damageCalculator.applyDamageReductions(damage, targetStats, AttackType.MELEE);
+      
+      // High defense should provide some reduction
+      expect(reduced).toBeLessThan(damage);
     });
   });
 }); 

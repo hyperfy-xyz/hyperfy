@@ -58,3 +58,10 @@ client-meta.json
 # PhysX generated files (keep source)
 build/physx-js-webidl.js
 build/physx-js-webidl.wasm
+
+# Visual testing artifacts
+screenshots/
+visual-test-results.log
+visual-test-summary.json
+test-results/
+playwright-report/

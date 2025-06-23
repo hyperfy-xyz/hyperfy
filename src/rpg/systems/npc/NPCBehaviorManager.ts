@@ -12,7 +12,7 @@ import { NPCBehavior, NPCState } from '../../types';
 
 export class NPCBehaviorManager {
   private world: World;
-  private movementSystem: any;
+  private movementSystem: any = null;
   
   // Behavior update intervals
   private readonly BEHAVIOR_UPDATE_INTERVAL = 500; // 500ms
@@ -20,11 +20,18 @@ export class NPCBehaviorManager {
   
   constructor(world: World) {
     this.world = world;
-    // Get movement system from world
-    this.movementSystem = (world as any).systems?.get('movement') || {
+    // Note: Don't access systems during construction - they may not be initialized yet
+  }
+  
+  /**
+   * Initialize the behavior manager - called after all systems are ready
+   */
+  init(): void {
+    // Now safely get the movement system
+    this.movementSystem = (this.world as any).movement || {
       moveEntity: (id: string, pos: Vector3) => {
         // Fallback implementation
-        const entity = world.entities.get(id);
+        const entity = this.world.entities.get?.(id);
         if (entity) {
           entity.position = pos;
         }
@@ -36,18 +43,23 @@ export class NPCBehaviorManager {
    * Update NPC behavior
    */
   updateBehavior(npc: NPCEntity, _delta: number): void {
+    // Ensure we're initialized
+    if (!this.movementSystem) {
+      this.init();
+    }
+    
     const npcComponent = npc.getComponent<NPCComponent>('npc');
     if (!npcComponent) return;
     
     // Check if we should update behavior this frame
-    const lastUpdate = this.lastBehaviorUpdate.get(npc.data.id) || 0;
+    const lastUpdate = this.lastBehaviorUpdate.get(npc.id) || 0;
     const now = Date.now();
     
     if (now - lastUpdate < this.BEHAVIOR_UPDATE_INTERVAL) {
       return;
     }
     
-    this.lastBehaviorUpdate.set(npc.data.id, now);
+    this.lastBehaviorUpdate.set(npc.id, now);
     
     // Update based on behavior type
     switch (npcComponent.behavior) {
@@ -97,7 +109,7 @@ export class NPCBehaviorManager {
     for (const player of nearbyPlayers) {
       // Check if we can attack this player
       if (this.canAttackPlayer(npc, player)) {
-        const playerId = player.data?.id || (player as any).id;
+        const playerId = player.id;
         this.startCombat(npc, npcComponent, playerId);
         break;
       }
@@ -226,29 +238,24 @@ export class NPCBehaviorManager {
       return;
     }
     
-    // Move towards destination
-    const speed = movement.moveSpeed * 0.016; // Convert to per-frame
-    const moveX = (dx / distance) * speed;
-    const moveZ = (dz / distance) * speed;
-    
-    // Update position on entity
-    const newPosition = {
-      x: npcPos.x + moveX,
-      y: npcPos.y,
-      z: npcPos.z + moveZ
-    };
-    
-    // Update position on movement component
-    movement.position = newPosition;
-    
-    // Update entity data position if available
-    if (npc.data) {
-      // Handle both array and Vector3 formats
-      if (Array.isArray(npc.data.position)) {
-        npc.data.position = [newPosition.x, newPosition.y, newPosition.z];
-      } else {
-        (npc.data as any).position = newPosition;
-      }
+    // Move towards destination using movement system if available
+    if (this.movementSystem && typeof this.movementSystem.moveEntity === 'function') {
+      this.movementSystem.moveEntity(npc.id, movement.destination);
+    } else {
+      // Fallback direct movement
+      const speed = movement.moveSpeed * 0.016; // Convert to per-frame
+      const moveX = (dx / distance) * speed;
+      const moveZ = (dz / distance) * speed;
+      
+      const newPosition = {
+        x: npcPos.x + moveX,
+        y: npcPos.y,
+        z: npcPos.z + moveZ
+      };
+      
+      // Update position
+      npc.position = newPosition;
+      movement.position = newPosition;
     }
     
     movement.isMoving = true;
@@ -263,7 +270,7 @@ export class NPCBehaviorManager {
     
     // Emit combat start event
     this.world.events.emit('combat:start', {
-      attackerId: npc.data.id,
+      attackerId: npc.id,
       targetId: targetId
     });
   }
@@ -279,8 +286,7 @@ export class NPCBehaviorManager {
     
     for (const player of nearbyPlayers) {
       if (this.canAttackPlayer(npc, player)) {
-        const playerId = player.data?.id || (player as any).id;
-        npcComponent.currentTarget = playerId;
+        npcComponent.currentTarget = player.id;
         return;
       }
     }
@@ -295,10 +301,7 @@ export class NPCBehaviorManager {
    */
   private flee(npc: NPCEntity, npcComponent: NPCComponent): void {
     const combat = npc.getComponent<CombatComponent>('combat');
-    if (!combat || !combat.lastAttack) return;
-    
-    // Get attacker position - check if target exists
-    if (!combat.target) return;
+    if (!combat || !combat.target) return;
     
     const attacker = this.getEntity(combat.target);
     if (!attacker) return;
@@ -340,12 +343,11 @@ export class NPCBehaviorManager {
   /**
    * Make NPC face another entity
    */
-  private faceEntity(npc: NPCEntity, _target: { position: Vector3 }): void {
+  private faceEntity(npc: NPCEntity, target: { position: Vector3 }): void {
     const npcPos = this.getEntityPosition(npc);
     if (!npcPos) return;
     
     // Calculate direction to target
-    const target = _target;
     const dx = target.position.x - npcPos.x;
     const dz = target.position.z - npcPos.z;
     
@@ -356,12 +358,6 @@ export class NPCBehaviorManager {
     const movement = npc.getComponent<MovementComponent>('movement');
     if (movement) {
       movement.facingDirection = angle;
-    }
-    
-    // Update visual rotation if mesh exists
-    const mesh = (npc as any).mesh;
-    if (mesh) {
-      mesh.rotation.y = angle;
     }
   }
   
@@ -387,7 +383,7 @@ export class NPCBehaviorManager {
     
     // Check if target is alive
     const stats = target.getComponent('stats');
-    if (stats && stats.hitpoints.current <= 0) return false;
+    if (stats && (stats as any).hitpoints?.current <= 0) return false;
     
     // Check distance
     const npcPos = this.getEntityPosition(npc);
@@ -406,13 +402,13 @@ export class NPCBehaviorManager {
   private canAttackPlayer(npc: NPCEntity, player: PlayerEntity): boolean {
     // Check if player is alive
     const stats = player.getComponent<any>('stats');
-    if (stats && stats.hitpoints.current <= 0) return false;
+    if (stats && (stats as any).hitpoints?.current <= 0) return false;
     
     // Check combat level difference for aggression
     const npcComponent = npc.getComponent<NPCComponent>('npc');
     if (!npcComponent) return false;
     
-    const playerLevel = stats?.combatLevel || 1;
+    const playerLevel = (stats as any)?.combatLevel || 1;
     const levelDiff = playerLevel - npcComponent.combatLevel;
     
     // Don't attack players too high level
@@ -527,162 +523,60 @@ export class NPCBehaviorManager {
    * Execute patrol behavior
    */
   private executePatrol(npc: NPCEntity, component: NPCComponent): void {
-    // Check if NPC has waypoints defined
-    const waypoints = (component as any).waypoints || this.generateDefaultWaypoints(component.spawnPoint);
+    // Simple patrol implementation
+    const movement = npc.getComponent<MovementComponent>('movement');
+    if (!movement) return;
     
-    if (waypoints.length === 0) return;
-    
-    // Get current waypoint index
-    let waypointIndex = (component as any).currentWaypointIndex || 0;
-    const currentWaypoint = waypoints[waypointIndex];
-    
-    // Check distance to current waypoint
-    const distance = this.getDistance(npc.position, currentWaypoint);
-    
-    if (distance < 1.0) {
-      // Reached waypoint, move to next
-      waypointIndex = (waypointIndex + 1) % waypoints.length;
-      (component as any).currentWaypointIndex = waypointIndex;
-      
-      // Optional: pause at waypoint
-      if ((component as any).waypointPauseTime) {
-        component.state = NPCState.IDLE;
-        setTimeout(() => {
-          component.state = NPCState.PATROLLING;
-        }, (component as any).waypointPauseTime);
-        return;
-      }
+    if (!movement.destination || this.hasReachedDestination(npc, movement)) {
+      // Generate simple patrol points around spawn
+      const waypoints = this.generateDefaultWaypoints(component.spawnPoint);
+      const nextWaypoint = waypoints[Math.floor(Math.random() * waypoints.length)];
+      this.moveToPosition(npc, nextWaypoint);
     }
-    
-    // Move towards current waypoint
-    const nextWaypoint = waypoints[waypointIndex];
-    this.movementSystem.moveEntity(npc.data.id, nextWaypoint);
-    
-    // Update facing direction
-    this.updateFacingDirection(npc, nextWaypoint);
   }
   
   /**
-   * Generate default waypoints around spawn point
+   * Generate default waypoints for patrol
    */
   private generateDefaultWaypoints(spawnPoint: Vector3): Vector3[] {
     const waypoints: Vector3[] = [];
-    const radius = 5; // Default patrol radius
-    const points = 4; // Number of waypoints
+    const radius = 10;
     
-    for (let i = 0; i < points; i++) {
-      const angle = (i / points) * Math.PI * 2;
-      waypoints.push({
-        x: spawnPoint.x + Math.cos(angle) * radius,
-        y: spawnPoint.y,
-        z: spawnPoint.z + Math.sin(angle) * radius
-      });
-    }
+    // Create 4 waypoints in a square pattern
+    waypoints.push({ x: spawnPoint.x + radius, y: spawnPoint.y, z: spawnPoint.z });
+    waypoints.push({ x: spawnPoint.x, y: spawnPoint.y, z: spawnPoint.z + radius });
+    waypoints.push({ x: spawnPoint.x - radius, y: spawnPoint.y, z: spawnPoint.z });
+    waypoints.push({ x: spawnPoint.x, y: spawnPoint.y, z: spawnPoint.z - radius });
     
     return waypoints;
   }
   
   /**
-   * Update NPC facing direction
-   */
-  private updateFacingDirection(npc: NPCEntity, targetPosition: Vector3): void {
-    const direction = {
-      x: targetPosition.x - npc.position.x,
-      z: targetPosition.z - npc.position.z
-    };
-    
-    const angle = Math.atan2(direction.z, direction.x);
-    
-    // Apply rotation to NPC
-    const movement = npc.getComponent<MovementComponent>('movement');
-    if (movement) {
-      movement.facingDirection = angle;
-    }
-    
-    // Update visual rotation if mesh exists
-    const mesh = (npc as any).mesh;
-    if (mesh) {
-      mesh.rotation.y = angle;
-    }
-  }
-  
-  /**
-   * Flank the target from the side
-   */
-  private executeFlank(npc: NPCEntity, target: Entity): void {
-    const angle = Math.atan2(
-      target.position.z - npc.position.z,
-      target.position.x - npc.position.x
-    );
-    
-    // Flank to the right
-    const flankAngle = angle + Math.PI / 2;
-    const flankDistance = 3;
-    
-    const flankPosition = {
-      x: target.position.x + Math.cos(flankAngle) * flankDistance,
-      y: target.position.y,
-      z: target.position.z + Math.sin(flankAngle) * flankDistance
-    };
-    
-    this.movementSystem.moveEntity(npc.data.id, flankPosition);
-  }
-  
-  /**
-   * Check if there are allies nearby
-   */
-  private hasNearbyAllies(npc: NPCEntity, radius: number): boolean {
-    const component = npc.getComponent<NPCComponent>('npc');
-    if (!component) return false;
-    
-    // Use spatial query to find nearby NPCs
-    const nearbyEntities = this.spatialQuery(npc.position, radius);
-    
-    for (const entity of nearbyEntities) {
-      if (entity.data.id === npc.data.id) continue;
-      
-      const otherNpc = entity.getComponent<NPCComponent>('npc');
-      if (otherNpc && otherNpc.faction === component.faction) {
-        // Check if ally is in combat
-        const combat = entity.getComponent<CombatComponent>('combat');
-        if (!combat || !combat.inCombat) {
-          return true;
-        }
-      }
-    }
-    
-    return false;
-  }
-  
-  /**
-   * Perform spatial query to find entities within radius
+   * Spatial query for nearby entities
    */
   private spatialQuery(position: Vector3, radius: number): Entity[] {
-    const results: Entity[] = [];
-    
-    // Check if world has spatial index
+    // Try to use spatial index if available
     const spatialIndex = (this.world as any).spatialIndex;
-    if (spatialIndex) {
-      // Use optimized spatial query
-      return spatialIndex.query(position, radius);
+    if (spatialIndex && typeof spatialIndex.query === 'function') {
+      return spatialIndex.query({
+        position: { x: position.x, y: position.y, z: position.z },
+        radius
+      });
     }
     
-    // Fallback to brute force search
-    const radiusSquared = radius * radius;
+    // Fallback: iterate through all entities
+    const entities: Entity[] = [];
+    const entityMap = this.world.entities.items || new Map();
     
-    for (const entity of this.world.entities.items.values()) {
-      if (!entity.position) continue;
+    for (const entity of entityMap.values()) {
+      if (!entity) continue;
       
-      const dx = entity.position.x - position.x;
-      const dy = entity.position.y - position.y;
-      const dz = entity.position.z - position.z;
-      const distanceSquared = dx * dx + dy * dy + dz * dz;
-      
-      if (distanceSquared <= radiusSquared) {
-        results.push(entity);
+      const entityPos = this.getEntityPosition(entity);
+      if (entityPos && this.getDistance(position, entityPos) <= radius) {
+        entities.push(entity as unknown as Entity);
       }
     }
     
-    return results;
+    return entities;
   }
 } 

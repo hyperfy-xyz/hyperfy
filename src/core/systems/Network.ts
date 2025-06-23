@@ -187,7 +187,7 @@ export class Network extends System {
       velocity: entity.velocity
     }));
     
-    this.broadcast('sync:entities', {
+    this.broadcast('snapshot', {
       entities: entityStates,
       timestamp: Date.now()
     });
@@ -205,7 +205,7 @@ export class Network extends System {
     };
     
     connection.send({
-      type: 'init:world',
+      type: 'snapshot',
       data: worldState,
       timestamp: Date.now(),
       senderId: this.localId,
@@ -216,7 +216,7 @@ export class Network extends System {
   // Register core message handlers
   private registerCoreHandlers(): void {
     // Entity creation
-    this.onMessage('entity:create', (message) => {
+    this.onMessage('entityAdded', (message) => {
       if (message.senderId === this.localId) return;
       
       const { data } = message.data;
@@ -224,7 +224,7 @@ export class Network extends System {
     });
     
     // Entity destruction
-    this.onMessage('entity:destroy', (message) => {
+    this.onMessage('entityRemoved', (message) => {
       if (message.senderId === this.localId) return;
       
       const { entityId } = message.data;
@@ -232,7 +232,7 @@ export class Network extends System {
     });
     
     // Entity updates
-    this.onMessage('entity:update', (message) => {
+    this.onMessage('entityModified', (message) => {
       if (message.senderId === this.localId) return;
       
       const { entityId, updates } = message.data;
@@ -244,7 +244,7 @@ export class Network extends System {
     
     // Handle sync messages
     if (!this.isServer) {
-      this.onMessage('sync:entities', (message) => {
+      this.onMessage('snapshot', (message) => {
         const { entities } = message.data;
         
         for (const state of entities) {
@@ -260,7 +260,7 @@ export class Network extends System {
         }
       });
       
-      this.onMessage('init:world', (message) => {
+      this.onMessage('spawnModified', (message) => {
         const { entities } = message.data;
         
         // Clear existing entities except local player

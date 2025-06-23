@@ -1,4 +1,3 @@
-import { css } from '@firebolt-dev/css'
 import { cloneDeep, isArray, isBoolean } from 'lodash-es'
 import {
   BoxIcon,
@@ -112,6 +111,249 @@ export function Sidebar({ world, ui }) {
             flex-direction: column;
             flex-shrink: 0;
             gap: 0.625rem;
+          }
+          .sidebar-content.hidden {
+            opacity: 0;
+            pointer-events: none;
+          }
+          .sidebarpane.hidden {
+            opacity: 0;
+            pointer-events: none;
+          }
+          .sidebarpane-content {
+            pointer-events: auto;
+            max-height: 100%;
+            display: flex;
+            flex-direction: column;
+          }
+          .world-head {
+            height: 3.125rem;
+            padding: 0 1rem;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+            display: flex;
+            align-items: center;
+          }
+          .world-title {
+            font-weight: 500;
+            font-size: 1rem;
+            line-height: 1;
+          }
+          .world-content {
+            flex: 1;
+            padding: 0.5rem 0;
+            overflow-y: auto;
+          }
+          .apps-head {
+            height: 3.125rem;
+            padding: 0 0.6rem 0 1rem;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+            display: flex;
+            align-items: center;
+          }
+          .apps-title {
+            flex: 1;
+            font-weight: 500;
+            font-size: 1rem;
+            line-height: 1;
+          }
+          .apps-search {
+            display: flex;
+            align-items: center;
+          }
+          .apps-search input {
+            margin-left: 0.5rem;
+            width: 5rem;
+            font-size: 0.9375rem;
+          }
+          .apps-search input::placeholder {
+            color: #5d6077;
+          }
+          .apps-search input::selection {
+            background-color: white;
+            color: rgba(0, 0, 0, 0.8);
+          }
+          .apps-toggle {
+            width: 2rem;
+            height: 2rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 0 0 1rem;
+            color: #5d6077;
+          }
+          .apps-toggle:hover {
+            cursor: pointer;
+          }
+          .apps-toggle.active {
+            color: white;
+          }
+          .apps-content {
+            flex: 1;
+            overflow-y: auto;
+          }
+          .add-head {
+            height: 3.125rem;
+            padding: 0 1rem;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+            display: flex;
+            align-items: center;
+          }
+          .add-title {
+            font-weight: 500;
+            font-size: 1rem;
+            line-height: 1;
+          }
+          .add-content {
+            flex: 1;
+            overflow-y: auto;
+            padding: 1rem;
+          }
+          .add-items {
+            display: flex;
+            align-items: stretch;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+          }
+          .add-item {
+            flex-basis: calc((100% / 4) - (0.5rem * 3 / 4));
+            cursor: pointer;
+          }
+          .add-item-image {
+            width: 100%;
+            aspect-ratio: 1;
+            background-color: #1c1d22;
+            background-size: cover;
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            border-radius: 0.7rem;
+            margin: 0 0 0.4rem;
+          }
+          .add-item-name {
+            text-align: center;
+            font-size: 0.875rem;
+          }
+          .app-head {
+            height: 3.125rem;
+            padding: 0 1rem;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+            display: flex;
+            align-items: center;
+          }
+          .app-title {
+            flex: 1;
+            font-weight: 500;
+            font-size: 1rem;
+            line-height: 1;
+            white-space: nowrap;
+            text-overflow: ellipsis;
+            overflow: hidden;
+          }
+          .app-btn {
+            width: 2rem;
+            height: 2rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: rgba(255, 255, 255, 0.8);
+          }
+          .app-btn:hover {
+            cursor: pointer;
+            color: white;
+          }
+          .app-toggles {
+            padding: 0.5rem 1.4rem;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+          }
+          .app-toggle {
+            width: 2rem;
+            height: 2rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #5d6077;
+          }
+          .app-toggle:hover {
+            cursor: pointer;
+          }
+          .app-toggle.active {
+            color: white;
+          }
+          .app-content {
+            flex: 1;
+            padding: 0.5rem 0;
+            overflow-y: auto;
+          }
+          .appmodelbtn input {
+            position: absolute;
+            top: -9999px;
+          }
+          .script.hidden {
+            opacity: 0;
+            pointer-events: none;
+          }
+          .script-head {
+            height: 3.125rem;
+            padding: 0 1rem;
+            display: flex;
+            align-items: center;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+          }
+          .script-title {
+            flex: 1;
+            font-weight: 500;
+            font-size: 1rem;
+            line-height: 1;
+          }
+          .script-btn {
+            width: 2rem;
+            height: 2rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: rgba(255, 255, 255, 0.8);
+          }
+          .script-btn:hover {
+            cursor: pointer;
+            color: white;
+          }
+          .script-resizer {
+            position: absolute;
+            top: 0;
+            bottom: 0;
+            right: -5px;
+            width: 10px;
+            cursor: ew-resize;
+          }
+          .nodes-head {
+            height: 3.125rem;
+            padding: 0 1rem;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+            display: flex;
+            align-items: center;
+          }
+          .nodes-title {
+            font-weight: 500;
+            font-size: 1rem;
+            line-height: 1;
+          }
+          .meta-head {
+            height: 3.125rem;
+            padding: 0 1rem;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+            display: flex;
+            align-items: center;
+          }
+          .meta-title {
+            font-weight: 500;
+            font-size: 1rem;
+            line-height: 1;
+          }
+          .meta-content {
+            flex: 1;
+            overflow-y: auto;
+            padding: 0.5rem 0;
           }
         `}</style>
         <div className='sidebar-sections'>
@@ -307,22 +549,16 @@ function Content({ width = '20rem', hidden, children }) {
   return (
     <div
       className={cls('sidebar-content', { hidden })}
-      css={css`
-        width: ${width};
-        pointer-events: auto;
-        .sidebar-content-main {
-          background: rgba(11, 10, 21, 0.85);
-          border: 0.0625rem solid #2a2b39;
-          backdrop-filter: blur(5px);
-          border-radius: 1rem;
-          display: flex;
-          align-items: stretch;
-        }
-        &.hidden {
-          opacity: 0;
-          pointer-events: none;
-        }
-      `}
+      style={{
+        width: width,
+        pointerEvents: 'auto',
+        background: 'rgba(11, 10, 21, 0.85)',
+        border: '0.0625rem solid #2a2b39',
+        backdropFilter: 'blur(5px)',
+        borderRadius: '1rem',
+        display: 'flex',
+        alignItems: 'stretch',
+      }}
     >
       <div className='sidebar-content-main'>{children}</div>
       <Hint />
@@ -334,22 +570,12 @@ function Pane({ width = '20rem', hidden, children }) {
   return (
     <div
       className={cls('sidebarpane', { hidden })}
-      css={css`
-        width: ${width};
-        max-width: 100%;
-        display: flex;
-        flex-direction: column;
-        .sidebarpane-content {
-          pointer-events: auto;
-          max-height: 100%;
-          display: flex;
-          flex-direction: column;
-        }
-        &.hidden {
-          opacity: 0;
-          pointer-events: none;
-        }
-      `}
+      style={{
+        width: width,
+        maxWidth: '100%',
+        display: 'flex',
+        flexDirection: 'column',
+      }}
     >
       <div className='sidebarpane-content'>{children}</div>
       <Hint />
@@ -365,16 +591,16 @@ function Hint() {
   return (
     <div
       className='hint'
-      css={css`
-        margin-top: 0.25rem;
-        background: rgba(11, 10, 21, 0.85);
-        border: 0.0625rem solid #2a2b39;
-        backdrop-filter: blur(5px);
-        border-radius: 1rem;
-        min-width: 0;
-        padding: 1rem;
-        font-size: 0.9375rem;
-      `}
+      style={{
+        marginTop: '0.25rem',
+        background: 'rgba(11, 10, 21, 0.85)',
+        border: '0.0625rem solid #2a2b39',
+        backdropFilter: 'blur(5px)',
+        borderRadius: '1rem',
+        minWidth: '0',
+        padding: '1rem',
+        fontSize: '0.9375rem',
+      }}
     >
       <span>{hint}</span>
     </div>
@@ -385,20 +611,20 @@ function Group({ label }) {
   return (
     <>
       <div
-        css={css`
-          height: 0.0625rem;
-          background: rgba(255, 255, 255, 0.05);
-          margin: 0.6rem 0;
-        `}
+        style={{
+          height: '0.0625rem',
+          background: 'rgba(255, 255, 255, 0.05)',
+          margin: '0.6rem 0',
+        }}
       />
       {label && (
         <div
-          css={css`
-            font-weight: 500;
-            line-height: 1;
-            padding: 0.75rem 0 0.75rem 1rem;
-            margin-top: -0.6rem;
-          `}
+          style={{
+            fontWeight: '500',
+            lineHeight: '1',
+            padding: '0.75rem 0 0.75rem 1rem',
+            marginTop: '-0.6rem',
+          }}
         >
           {label}
         </div>
@@ -439,7 +665,6 @@ function Prefs({ world, hidden }) {
     const options: Array<{label: string; value: number}> = []
     const add = (label: string, dpr: number) => {
       options.push({
-        // label: `${Math.round(width * dpr)} x ${Math.round(height * dpr)}`,
         label,
         value: dpr,
       })
@@ -472,14 +697,14 @@ function Prefs({ world, hidden }) {
     <Pane hidden={hidden}>
       <div
         className='prefs noscrollbar'
-        css={css`
-          overflow-y: auto;
-          background: rgba(11, 10, 21, 0.85);
-          border: 0.0625rem solid #2a2b39;
-          backdrop-filter: blur(5px);
-          border-radius: 1rem;
-          padding: 0.6rem 0;
-        `}
+        style={{
+          overflowY: 'auto',
+          background: 'rgba(11, 10, 21, 0.85)',
+          border: '0.0625rem solid #2a2b39',
+          backdropFilter: 'blur(5px)',
+          borderRadius: '1rem',
+          padding: '0.6rem 0',
+        }}
       >
         <FieldText label='Name' hint='Change your name' value={name} onChange={changeName} />
         <Group label='Interface' />
@@ -619,32 +844,15 @@ function World({ world, hidden }) {
     <Pane hidden={hidden}>
       <div
         className='world'
-        css={css`
-          background: rgba(11, 10, 21, 0.85);
-          border: 0.0625rem solid #2a2b39;
-          backdrop-filter: blur(5px);
-          border-radius: 1rem;
-          display: flex;
-          flex-direction: column;
-          min-height: 12rem;
-          .world-head {
-            height: 3.125rem;
-            padding: 0 1rem;
-            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
-            display: flex;
-            align-items: center;
-          }
-          .world-title {
-            font-weight: 500;
-            font-size: 1rem;
-            line-height: 1;
-          }
-          .world-content {
-            flex: 1;
-            padding: 0.5rem 0;
-            overflow-y: auto;
-          }
-        `}
+        style={{
+          background: 'rgba(11, 10, 21, 0.85)',
+          border: '0.0625rem solid #2a2b39',
+          backdropFilter: 'blur(5px)',
+          borderRadius: '1rem',
+          display: 'flex',
+          flexDirection: 'column',
+          minHeight: '12rem',
+        }}
       >
         <div className='world-head'>
           <div className='world-title'>World</div>
@@ -701,20 +909,6 @@ function World({ world, hidden }) {
               onChange={value => world.settings.set('public', value, true)}
             />
           )}
-          {/* <FieldBtn
-          label='Set Spawn'
-          hint='Sets the location players spawn to the location you are currently standing'
-          onClick={() => {
-            world.network.send('spawnModified', 'set')
-          }}
-        /> */}
-          {/* <FieldBtn
-          label='Clear Spawn'
-          hint='Resets the spawn point to origin'
-          onClick={() => {
-            world.network.send('spawnModified', 'clear')
-          }}
-        /> */}
         </div>
       </div>
     </Pane>
@@ -744,64 +938,16 @@ function Apps({ world, hidden }) {
     <Pane width={perf ? '40rem' : '20rem'} hidden={hidden}>
       <div
         className='apps'
-        css={css`
-          background: rgba(11, 10, 21, 0.85);
-          border: 0.0625rem solid #2a2b39;
-          backdrop-filter: blur(5px);
-          border-radius: 1rem;
-          flex: 1;
-          display: flex;
-          flex-direction: column;
-          min-height: 17rem;
-          .apps-head {
-            height: 3.125rem;
-            padding: 0 0.6rem 0 1rem;
-            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
-            display: flex;
-            align-items: center;
-          }
-          .apps-title {
-            flex: 1;
-            font-weight: 500;
-            font-size: 1rem;
-            line-height: 1;
-          }
-          .apps-search {
-            display: flex;
-            align-items: center;
-            input {
-              margin-left: 0.5rem;
-              width: 5rem;
-              font-size: 0.9375rem;
-              &::placeholder {
-                color: #5d6077;
-              }
-              &::selection {
-                background-color: white;
-                color: rgba(0, 0, 0, 0.8);
-              }
-            }
-          }
-          .apps-toggle {
-            width: 2rem;
-            height: 2rem;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            margin: 0 0 0 1rem;
-            color: #5d6077;
-            &:hover {
-              cursor: pointer;
-            }
-            &.active {
-              color: white;
-            }
-          }
-          .apps-content {
-            flex: 1;
-            overflow-y: auto;
-          }
-        `}
+        style={{
+          background: 'rgba(11, 10, 21, 0.85)',
+          border: '0.0625rem solid #2a2b39',
+          backdropFilter: 'blur(5px)',
+          borderRadius: '1rem',
+          flex: '1',
+          display: 'flex',
+          flexDirection: 'column',
+          minHeight: '17rem',
+        }}
       >
         <div className='apps-head'>
           <div className='apps-title'>Apps</div>
@@ -863,55 +1009,15 @@ function Add({ world, hidden }) {
     <Pane hidden={hidden}>
       <div
         className='add'
-        css={css`
-          background: rgba(11, 10, 21, 0.85);
-          border: 0.0625rem solid #2a2b39;
-          backdrop-filter: blur(5px);
-          border-radius: 1rem;
-          display: flex;
-          flex-direction: column;
-          min-height: 17rem;
-          .add-head {
-            height: 3.125rem;
-            padding: 0 1rem;
-            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
-            display: flex;
-            align-items: center;
-          }
-          .add-title {
-            font-weight: 500;
-            font-size: 1rem;
-            line-height: 1;
-          }
-          .add-content {
-            flex: 1;
-            overflow-y: auto;
-            padding: 1rem;
-          }
-          .add-items {
-            display: flex;
-            align-items: stretch;
-            flex-wrap: wrap;
-            gap: ${gap};
-          }
-          .add-item {
-            flex-basis: calc((100% / ${span}) - (${gap} * (${span} - 1) / ${span}));
-            cursor: pointer;
-          }
-          .add-item-image {
-            width: 100%;
-            aspect-ratio: 1;
-            background-color: #1c1d22;
-            background-size: cover;
-            border: 1px solid rgba(255, 255, 255, 0.05);
-            border-radius: 0.7rem;
-            margin: 0 0 0.4rem;
-          }
-          .add-item-name {
-            text-align: center;
-            font-size: 0.875rem;
-          }
-        `}
+        style={{
+          background: 'rgba(11, 10, 21, 0.85)',
+          border: '0.0625rem solid #2a2b39',
+          backdropFilter: 'blur(5px)',
+          borderRadius: '1rem',
+          display: 'flex',
+          flexDirection: 'column',
+          minHeight: '17rem',
+        }}
       >
         <div className='add-head'>
           <div className='add-title'>Add</div>
@@ -922,9 +1028,9 @@ function Add({ world, hidden }) {
               <div className='add-item' key={blueprint.id} onClick={() => add(blueprint)}>
                 <div
                   className='add-item-image'
-                  css={css`
-                    background-image: url(${world.resolveURL(blueprint.image?.url)});
-                  `}
+                  style={{
+                    backgroundImage: `url(${world.resolveURL(blueprint.image?.url)})`,
+                  }}
                 ></div>
                 <div className='add-item-name'>{blueprint.name}</div>
               </div>
@@ -1010,69 +1116,15 @@ function App({ world, hidden }) {
     <Pane hidden={hidden}>
       <div
         className='app'
-        css={css`
-          background: rgba(11, 10, 21, 0.85);
-          border: 0.0625rem solid #2a2b39;
-          backdrop-filter: blur(5px);
-          border-radius: 1rem;
-          display: flex;
-          flex-direction: column;
-          min-height: 1rem;
-          .app-head {
-            height: 3.125rem;
-            padding: 0 1rem;
-            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
-            display: flex;
-            align-items: center;
-          }
-          .app-title {
-            flex: 1;
-            font-weight: 500;
-            font-size: 1rem;
-            line-height: 1;
-            white-space: nowrap;
-            text-overflow: ellipsis;
-            overflow: hidden;
-          }
-          .app-btn {
-            width: 2rem;
-            height: 2rem;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            color: rgba(255, 255, 255, 0.8);
-            &:hover {
-              cursor: pointer;
-              color: white;
-            }
-          }
-          .app-toggles {
-            padding: 0.5rem 1.4rem;
-            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-          }
-          .app-toggle {
-            width: 2rem;
-            height: 2rem;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            color: #5d6077;
-            &:hover {
-              cursor: pointer;
-            }
-            &.active {
-              color: white;
-            }
-          }
-          .app-content {
-            flex: 1;
-            padding: 0.5rem 0;
-            overflow-y: auto;
-          }
-        `}
+        style={{
+          background: 'rgba(11, 10, 21, 0.85)',
+          border: '0.0625rem solid #2a2b39',
+          backdropFilter: 'blur(5px)',
+          borderRadius: '1rem',
+          display: 'flex',
+          flexDirection: 'column',
+          minHeight: '1rem',
+        }}
       >
         <div className='app-head'>
           <div className='app-title'>{app.blueprint.name}</div>
@@ -1115,7 +1167,6 @@ function App({ world, hidden }) {
             onPointerLeave={() => setHint(null)}
           >
             <OctagonXIcon size='1.125rem' />
-            {/* {blueprint.disabled ? <SquareIcon size='1.125rem' /> : <SquareCheckBigIcon size='1.125rem' />} */}
           </div>
           <div
             className={cls('app-toggle', { active: pinned })}
@@ -1213,10 +1264,10 @@ function AppTransformFields({ app }) {
         }}
       />
       <div
-        css={css`
-          margin: 0.5rem 0;
-          border-top: 1px solid rgba(255, 255, 255, 0.03);
-        `}
+        style={{
+          margin: '0.5rem 0',
+          borderTop: '1px solid rgba(255, 255, 255, 0.03)',
+        }}
       />
     </>
   )
@@ -1242,14 +1293,9 @@ function AppModelBtn({ value, onChange, children }) {
   return (
     <label
       className='appmodelbtn'
-      css={css`
-        overflow: hidden;
-        input {
-          position: absolute;
-          top: -9999px;
-        }
-      `}
-      onClick={handleDownload}
+      style={{
+        overflow: 'hidden',
+      }}
     >
       <input key={key} type='file' accept='.glb,.vrm' onChange={handleChange} />
       {children}
@@ -1443,56 +1489,19 @@ function Script({ world, hidden }) {
     <div
       ref={containerRef}
       className={cls('script', { hidden })}
-      css={css`
-        pointer-events: auto;
-        align-self: stretch;
-        background: rgba(11, 10, 21, 0.85);
-        border: 0.0625rem solid #2a2b39;
-        backdrop-filter: blur(5px);
-        border-radius: 1rem;
-        display: flex;
-        flex-direction: column;
-        align-items: stretch;
-        min-height: 23.7rem;
-        position: relative;
-        .script-head {
-          height: 3.125rem;
-          padding: 0 1rem;
-          display: flex;
-          align-items: center;
-          border-bottom: 1px solid rgba(255, 255, 255, 0.05);
-        }
-        .script-title {
-          flex: 1;
-          font-weight: 500;
-          font-size: 1rem;
-          line-height: 1;
-        }
-        .script-btn {
-          width: 2rem;
-          height: 2rem;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          color: rgba(255, 255, 255, 0.8);
-          &:hover {
-            cursor: pointer;
-            color: white;
-          }
-        }
-        .script-resizer {
-          position: absolute;
-          top: 0;
-          bottom: 0;
-          right: -5px;
-          width: 10px;
-          cursor: ew-resize;
-        }
-        &.hidden {
-          opacity: 0;
-          pointer-events: none;
-        }
-      `}
+      style={{
+        pointerEvents: 'auto',
+        alignSelf: 'stretch',
+        background: 'rgba(11, 10, 21, 0.85)',
+        border: '0.0625rem solid #2a2b39',
+        backdropFilter: 'blur(5px)',
+        borderRadius: '1rem',
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'stretch',
+        minHeight: '23.7rem',
+        position: 'relative',
+      }}
     >
       <div className='script-head'>
         <div className='script-title'>Script</div>
@@ -1512,28 +1521,16 @@ function Nodes({ world, hidden }) {
     <Pane hidden={hidden}>
       <div
         className='nodes'
-        css={css`
-          flex: 1;
-          background: rgba(11, 10, 21, 0.85);
-          border: 0.0625rem solid #2a2b39;
-          backdrop-filter: blur(5px);
-          border-radius: 1rem;
-          min-height: 23.7rem;
-          display: flex;
-          flex-direction: column;
-          .nodes-head {
-            height: 3.125rem;
-            padding: 0 1rem;
-            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
-            display: flex;
-            align-items: center;
-          }
-          .nodes-title {
-            font-weight: 500;
-            font-size: 1rem;
-            line-height: 1;
-          }
-        `}
+        style={{
+          flex: '1',
+          background: 'rgba(11, 10, 21, 0.85)',
+          border: '0.0625rem solid #2a2b39',
+          backdropFilter: 'blur(5px)',
+          borderRadius: '1rem',
+          minHeight: '23.7rem',
+          display: 'flex',
+          flexDirection: 'column',
+        }}
       >
         <div className='nodes-head'>
           <div className='nodes-title'>Nodes</div>
@@ -1566,33 +1563,16 @@ function Meta({ world, hidden }) {
     <Pane hidden={hidden}>
       <div
         className='meta'
-        css={css`
-          flex: 1;
-          background: rgba(11, 10, 21, 0.85);
-          border: 0.0625rem solid #2a2b39;
-          backdrop-filter: blur(5px);
-          border-radius: 1rem;
-          display: flex;
-          flex-direction: column;
-          min-height: 1rem;
-          .meta-head {
-            height: 3.125rem;
-            padding: 0 1rem;
-            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
-            display: flex;
-            align-items: center;
-          }
-          .meta-title {
-            font-weight: 500;
-            font-size: 1rem;
-            line-height: 1;
-          }
-          .meta-content {
-            flex: 1;
-            overflow-y: auto;
-            padding: 0.5rem 0;
-          }
-        `}
+        style={{
+          flex: '1',
+          background: 'rgba(11, 10, 21, 0.85)',
+          border: '0.0625rem solid #2a2b39',
+          backdropFilter: 'blur(5px)',
+          borderRadius: '1rem',
+          display: 'flex',
+          flexDirection: 'column',
+          minHeight: '1rem',
+        }}
       >
         <div className='meta-head'>
           <div className='meta-title'>Metadata</div>

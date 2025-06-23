@@ -1,4 +1,3 @@
-import { css } from '@firebolt-dev/css'
 import {
   BlendIcon,
   BoxIcon,
@@ -98,41 +97,45 @@ export function AppPane({ world, app }: AppPaneProps) {
     <div
       ref={paneRef}
       className='apane'
-      {...{ css: css`
-        position: absolute;
-        top: 20px;
-        left: 20px;
-        width: 320px;
-        max-height: calc(100vh - 40px);
-        background: rgba(22, 22, 28, 1);
-        border: 1px solid rgba(255, 255, 255, 0.03);
-        border-radius: 10px;
-        box-shadow: rgba(0, 0, 0, 0.5) 0px 10px 30px;
-        pointer-events: auto;
-        display: flex;
-        flex-direction: column;
+      style={{
+        position: 'absolute',
+        top: '20px',
+        left: '20px',
+        width: '320px',
+        maxHeight: 'calc(100vh - 40px)',
+        background: 'rgba(22, 22, 28, 1)',
+        border: '1px solid rgba(255, 255, 255, 0.03)',
+        borderRadius: '10px',
+        boxShadow: 'rgba(0, 0, 0, 0.5) 0px 10px 30px',
+        pointerEvents: 'auto',
+        display: 'flex',
+        flexDirection: 'column',
+      }}
+    >
+      <style>{`
         .apane-head {
           height: 50px;
           border-bottom: 1px solid rgba(255, 255, 255, 0.05);
           display: flex;
           align-items: center;
           padding: 0 10px;
-          &-icon {
+        }
+        .apane-head-icon {
             width: 60px;
             height: 40px;
             display: flex;
             align-items: center;
-            svg {
+        }
+        .apane-head-icon svg {
               margin-left: 10px;
             }
-          }
-          &-tabs {
+        .apane-head-tabs {
             flex: 1;
             align-self: stretch;
             display: flex;
             justify-content: center;
           }
-          &-tab {
+        .apane-head-tab {
             align-self: stretch;
             display: flex;
             align-items: center;
@@ -140,38 +143,35 @@ export function AppPane({ world, app }: AppPaneProps) {
             margin: 0 16px 0 0;
             font-size: 14px;
             color: rgba(255, 255, 255, 0.5);
-            &:hover:not(.active) {
+        }
+        .apane-head-tab:hover:not(.active) {
               cursor: pointer;
               color: rgba(255, 255, 255, 0.7);
             }
-            &.active {
+        .apane-head-tab.active {
               border-bottom: 1px solid white;
               margin-bottom: -1px;
               color: white;
             }
-          }
-
-          &-btns {
+        .apane-head-btns {
             width: 60px;
             display: flex;
             align-items: center;
-            &.right {
+        }
+        .apane-head-btns.right {
               justify-content: flex-end;
             }
-          }
-
-          &-btn {
+        .apane-head-btn {
             color: #515151;
             width: 30px;
             height: 40px;
             display: flex;
             align-items: center;
             justify-content: center;
-            &:hover {
+        }
+        .apane-head-btn:hover {
               cursor: pointer;
               color: white;
-            }
-          }
         }
         .apane-download {
           border-top: 1px solid rgba(255, 255, 255, 0.05);
@@ -179,18 +179,227 @@ export function AppPane({ world, app }: AppPaneProps) {
           display: flex;
           align-items: center;
           justify-content: center;
-          svg {
+        }
+        .apane-download svg {
             margin-right: 8px;
           }
-          span {
+        .apane-download span {
             font-size: 14px;
           }
-          &:hover {
+        .apane-download:hover {
             cursor: pointer;
           }
+        .amain-image {
+          align-self: center;
+          width: 120px;
+          height: 120px;
+          background-position: center;
+          background-size: cover;
+          border-radius: 10px;
+          margin: 20px 0 0;
+          background-image: ${blueprint.image ? `url(${world.resolveURL(blueprint.image.url)})` : 'none'};
         }
-      ` }}
-    >
+        .amain-name {
+          text-align: center;
+          font-size: 18px;
+          font-weight: 500;
+          margin: 16px 0 0;
+        }
+        .amain-author {
+          text-align: center;
+          font-size: 14px;
+          color: rgba(255, 255, 255, 0.5);
+          margin: 7px 0 0;
+        }
+        .amain-author a {
+          color: #00a7ff;
+        }
+        .amain-desc {
+          font-size: 14px;
+          color: rgba(255, 255, 255, 0.5);
+          margin: 16px 0 0;
+        }
+        .amain-line {
+          border-top: 1px solid rgba(255, 255, 255, 0.05);
+          margin: 0 -20px;
+        }
+        .amain-line.mt {
+          margin-top: 20px;
+        }
+        .amain-line.mb {
+          margin-bottom: 20px;
+        }
+        .amain-btns {
+          display: flex;
+          gap: 5px;
+          margin: 0 0 5px;
+        }
+        .amain-btns-btn {
+          flex: 1;
+          background: #252630;
+          border-radius: 10px;
+          height: 40px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          overflow: hidden;
+          cursor: pointer;
+        }
+        .amain-btns-btn input {
+          position: absolute;
+          top: -9999px;
+        }
+        .amain-btns-btn svg {
+          margin: 0 8px 0 0;
+        }
+        .amain-btns-btn span {
+          font-size: 14px;
+        }
+        .amain-btns2 {
+          display: flex;
+          gap: 5px;
+        }
+        .amain-btns2-btn {
+          flex: 1;
+          background: #252630;
+          border-radius: 10px;
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          justify-content: center;
+          padding: 10px 0;
+          color: #606275;
+          cursor: pointer;
+        }
+        .amain-btns2-btn svg {
+          margin: 0 0 5px;
+        }
+        .amain-btns2-btn span {
+          font-size: 12px;
+        }
+        .amain-btns2-btn.active {
+          color: white;
+        }
+        .amain-btns2-btn.active.blue svg {
+          color: #5097ff;
+        }
+        .amain-btns2-btn.active.yellow svg {
+          color: #fbff50;
+        }
+        .amain-btns2-btn.active.red svg {
+          color: #ff5050;
+        }
+        .amain-btns2-btn.active.green svg {
+          color: #50ff51;
+        }
+        .amain-fields {
+          margin-top: 20px;
+        }
+        .ameta-field {
+          display: flex;
+          align-items: center;
+          margin: 0 0 10px;
+        }
+        .ameta-field-label {
+          width: 90px;
+          font-size: 14px;
+          color: rgba(255, 255, 255, 0.5);
+        }
+        .ameta-field-input {
+          flex: 1;
+        }
+        .anodes-tree {
+          flex: 1;
+          overflow-y: auto;
+          margin-bottom: 20px;
+          padding-right: 10px;
+        }
+        .anodes-item {
+          display: flex;
+          align-items: center;
+          padding: 4px 6px;
+          border-radius: 10px;
+          font-size: 14px;
+          cursor: pointer;
+        }
+        .anodes-item:hover {
+          color: #00a7ff;
+        }
+        .anodes-item.selected {
+          color: #00a7ff;
+          background: rgba(0, 167, 255, 0.1);
+        }
+        .anodes-item svg {
+          margin-right: 8px;
+          opacity: 0.5;
+          flex-shrink: 0;
+        }
+        .anodes-item span {
+          white-space: nowrap;
+          overflow: hidden;
+          text-overflow: ellipsis;
+        }
+        .anodes-item-indent {
+          margin-left: 20px;
+        }
+        .anodes-empty {
+          color: rgba(255, 255, 255, 0.5);
+          text-align: center;
+          padding: 20px;
+        }
+        .anodes-details {
+          flex-shrink: 0;
+          border-top: 1px solid rgba(255, 255, 255, 0.05);
+          padding-top: 20px;
+          max-height: 40vh;
+          overflow-y: auto;
+          padding-right: 10px;
+        }
+        .anodes-detail {
+          display: flex;
+          margin-bottom: 8px;
+          font-size: 14px;
+        }
+        .anodes-detail-label {
+          width: 100px;
+          color: rgba(255, 255, 255, 0.5);
+          flex-shrink: 0;
+        }
+        .anodes-detail-value {
+          flex: 1;
+          word-break: break-word;
+        }
+        .anodes-detail-value.copy {
+          cursor: pointer;
+        }
+        .fieldwlabel-label {
+          width: 90px;
+          font-size: 14px;
+          color: rgba(255, 255, 255, 0.5);
+        }
+        .fieldwlabel-content {
+          flex: 1;
+        }
+        .fieldsection-label {
+          font-size: 14px;
+          font-weight: 400;
+          line-height: 1;
+        }
+        .fieldbuttons-button {
+          flex: 1;
+          background: #252630;
+          border-radius: 10px;
+          height: 34px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          font-size: 14px;
+        }
+        .fieldbuttons-button:hover {
+          cursor: pointer;
+          background: #30323e;
+        }
+      `}</style>
       <div className='apane-head' ref={headRef}>
         <div className='apane-head-icon'>
           <ZapIcon size={16} />
@@ -292,127 +501,29 @@ function AppPaneMain({ world, app, blueprint, canEdit }: AppPaneMainProps) {
   return (
     <div
       className='amain noscrollbar'
-      {...{ css: css`
-        flex: 1;
-        padding: 0 20px 10px;
-        max-height: 500px;
-        overflow-y: auto;
-        display: flex;
-        flex-direction: column;
-        align-items: stretch;
-        .amain-image {
-          align-self: center;
-          width: 120px;
-          height: 120px;
-          background-position: center;
-          background-size: cover;
-          border-radius: 10px;
-          margin: 20px 0 0;
-        }
-        .amain-name {
-          text-align: center;
-          font-size: 18px;
-          font-weight: 500;
-          margin: 16px 0 0;
-        }
-        .amain-author {
-          text-align: center;
-          font-size: 14px;
-          color: rgba(255, 255, 255, 0.5);
-          margin: 7px 0 0;
-          a {
-            color: #00a7ff;
-          }
-        }
-        .amain-desc {
-          font-size: 14px;
-          color: rgba(255, 255, 255, 0.5);
-          margin: 16px 0 0;
-        }
-        .amain-line {
-          border-top: 1px solid rgba(255, 255, 255, 0.05);
-          margin: 0 -20px;
-          &.mt {
-            margin-top: 20px;
-          }
-          &.mb {
-            margin-bottom: 20px;
-          }
-        }
-        .amain-btns {
-          display: flex;
-          gap: 5px;
-          margin: 0 0 5px;
-          &-btn {
-            flex: 1;
-            background: #252630;
-            border-radius: 10px;
-            height: 40px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            overflow: hidden;
-            cursor: pointer;
-            input {
-              position: absolute;
-              top: -9999px;
-            }
-            svg {
-              margin: 0 8px 0 0;
-            }
-            span {
-              font-size: 14px;
-            }
-          }
-        }
-        .amain-btns2 {
-          display: flex;
-          gap: 5px;
-          &-btn {
-            flex: 1;
-            background: #252630;
-            border-radius: 10px;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            padding: 10px 0;
-            color: #606275;
-            cursor: pointer;
-            svg {
-              margin: 0 0 5px;
-            }
-            span {
-              font-size: 12px;
-            }
-            &.active {
-              color: white;
-              &.blue svg {
-                color: #5097ff;
-              }
-              &.yellow svg {
-                color: #fbff50;
-              }
-              &.red svg {
-                color: #ff5050;
-              }
-              &.green svg {
-                color: #50ff51;
-              }
-            }
-          }
-        }
-        .amain-fields {
-          margin-top: 20px;
-        }
-      ` }}
+      style={{
+        flex: 1,
+        padding: '0 20px 10px',
+        maxHeight: '500px',
+        overflowY: 'auto',
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'stretch',
+      }}
     >
       {blueprint.image && (
         <div
           className='amain-image'
-          {...{ css: css`
-            background-image: ${blueprint.image ? `url(${world.resolveURL(blueprint.image.url)})` : 'none'};
-          ` }}
+          style={{
+            alignSelf: 'center',
+            width: '120px',
+            height: '120px',
+            backgroundPosition: 'center',
+            backgroundSize: 'cover',
+            borderRadius: '10px',
+            margin: '20px 0 0',
+            backgroundImage: `url(${world.resolveURL(blueprint.image.url)})`,
+          }}
         />
       )}
       {blueprint.name && <div className='amain-name'>{blueprint.name}</div>}
@@ -491,25 +602,12 @@ function AppPaneMeta({ world, app, blueprint }: AppPaneMetaProps) {
   return (
     <div
       className='ameta noscrollbar'
-      {...{ css: css`
-        flex: 1;
-        padding: 20px 20px 10px;
-        max-height: 500px;
-        overflow-y: auto;
-        .ameta-field {
-          display: flex;
-          align-items: center;
-          margin: 0 0 10px;
-          &-label {
-            width: 90px;
-            font-size: 14px;
-            color: rgba(255, 255, 255, 0.5);
-          }
-          &-input {
-            flex: 1;
-          }
-        }
-      ` }}
+      style={{
+        flex: 1,
+        padding: '20px 20px 10px',
+        maxHeight: '500px',
+        overflowY: 'auto',
+      }}
     >
       <div className='ameta-field'>
         <div className='ameta-field-label'>Name</div>
@@ -520,7 +618,7 @@ function AppPaneMeta({ world, app, blueprint }: AppPaneMetaProps) {
       <div className='ameta-field'>
         <div className='ameta-field-label'>Image</div>
         <div className='ameta-field-input'>
-          <InputFile world={world} kind='texture' value={blueprint.image} onChange={image => set('image', image)} />
+          <InputFile accept='image/*' value={blueprint.image} onChange={image => set('image', image)} />
         </div>
       </div>
       <div className='ameta-field'>
@@ -577,78 +675,14 @@ function AppPaneNodes({ app }: AppPaneNodesProps) {
   return (
     <div
       className='anodes noscrollbar'
-      {...{ css: css`
-        flex: 1;
-        padding: 20px;
-        min-height: 200px;
-        display: flex;
-        flex-direction: column;
-        overflow: hidden;
-        .anodes-tree {
-          flex: 1;
-          overflow-y: auto;
-          margin-bottom: 20px;
-          padding-right: 10px;
-        }
-        .anodes-item {
-          display: flex;
-          align-items: center;
-          padding: 4px 6px;
-          border-radius: 10px;
-          font-size: 14px;
-          cursor: pointer;
-          &:hover {
-            color: #00a7ff;
-          }
-          &.selected {
-            color: #00a7ff;
-            background: rgba(0, 167, 255, 0.1);
-          }
-          svg {
-            margin-right: 8px;
-            opacity: 0.5;
-            flex-shrink: 0;
-          }
-          span {
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
-          }
-          &-indent {
-            margin-left: 20px;
-          }
-        }
-        .anodes-empty {
-          color: rgba(255, 255, 255, 0.5);
-          text-align: center;
-          padding: 20px;
-        }
-        .anodes-details {
-          flex-shrink: 0;
-          border-top: 1px solid rgba(255, 255, 255, 0.05);
-          padding-top: 20px;
-          max-height: 40vh;
-          overflow-y: auto;
-          padding-right: 10px;
-        }
-        .anodes-detail {
-          display: flex;
-          margin-bottom: 8px;
-          font-size: 14px;
-          &-label {
-            width: 100px;
-            color: rgba(255, 255, 255, 0.5);
-            flex-shrink: 0;
-          }
-          &-value {
-            flex: 1;
-            word-break: break-word;
-            &.copy {
-              cursor: pointer;
-            }
-          }
-        }
-      ` }}
+      style={{
+        flex: 1,
+        padding: '20px',
+        minHeight: '200px',
+        display: 'flex',
+        flexDirection: 'column',
+        overflow: 'hidden',
+      }}
     >
       <div className='anodes-tree'>
         {rootNode ? (
@@ -835,23 +869,22 @@ function FieldWithLabel({ label, children }) {
   return (
     <div
       className='fieldwlabel'
-      css={css`
-        display: flex;
-        align-items: center;
-        margin: 0 0 10px;
-        .fieldwlabel-label {
-          width: 90px;
-          font-size: 14px;
-          color: rgba(255, 255, 255, 0.5);
-        }
-        .fieldwlabel-content {
-          flex: 1;
-        }
-      `}
-    {...{} as any}
+      style={{
+        display: 'flex',
+        alignItems: 'center',
+        margin: '0 0 10px',
+      }}
     >
-      <div className='fieldwlabel-label'>{label}</div>
-      <div className='fieldwlabel-content'>{children}</div>
+      <div className='fieldwlabel-label' style={{
+        width: '90px',
+        fontSize: '14px',
+        color: 'rgba(255, 255, 255, 0.5)',
+      }}>
+        {label}
+      </div>
+      <div className='fieldwlabel-content' style={{ flex: 1 }}>
+        {children}
+      </div>
     </div>
   )
 }
@@ -860,19 +893,19 @@ function FieldSection({ world, field, value, modify }) {
   return (
     <div
       className='fieldsection'
-      css={css`
-        border-top: 1px solid rgba(255, 255, 255, 0.05);
-        margin: 20px 0 14px;
-        padding: 16px 0 0 0;
-        .fieldsection-label {
-          font-size: 14px;
-          font-weight: 400;
-          line-height: 1;
-        }
-      `}
-    {...{} as any}
+      style={{
+        borderTop: '1px solid rgba(255, 255, 255, 0.05)',
+        margin: '20px 0 14px',
+        padding: '16px 0 0 0',
+      }}
     >
-      <div className='fieldsection-label'>{field.label}</div>
+      <div className='fieldsection-label' style={{
+        fontSize: '14px',
+        fontWeight: '400',
+        lineHeight: '1',
+      }}>
+        {field.label}
+      </div>
     </div>
   )
 }
@@ -899,7 +932,6 @@ function FieldNumber({ world, field, value, modify }) {
       <InputNumber
         value={value}
         onChange={value => modify(field.key, value)}
-        dp={field.dp}
         min={field.min}
         max={field.max}
         step={field.step}
@@ -927,7 +959,7 @@ function FieldFile({ world, field, value, modify }) {
   if (!kind) return null
   return (
     <FieldWithLabel label={field.label}>
-      <InputFile world={world} kind={field.kind} value={value} onChange={value => modify(field.key, value)} />
+      <InputFile accept={kind.accept} value={value} onChange={value => modify(field.key, value)} />
     </FieldWithLabel>
   )
 }
@@ -935,7 +967,7 @@ function FieldFile({ world, field, value, modify }) {
 function FieldSwitch({ world, field, value, modify }) {
   return (
     <FieldWithLabel label={field.label}>
-      <InputSwitch options={field.options} value={value} onChange={value => modify(field.key, value)} />
+      <InputSwitch value={value} onChange={value => modify(field.key, value)} />
     </FieldWithLabel>
   )
 }
@@ -952,21 +984,16 @@ function FieldButton({ world, field, value, modify }) {
   return (
     <FieldWithLabel label={''}>
       <div
-        css={css`
-          background: #252630;
-          border-radius: 10px;
-          height: 34px;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          font-size: 14px;
-          &:hover {
-            cursor: pointer;
-            background: #30323e;
-          }
-        `}
+        style={{
+          background: '#252630',
+          borderRadius: '10px',
+          height: '34px',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          fontSize: '14px',
+        }}
         onClick={field.onClick}
-        {...{} as any}
       >
         <span>{field.label}</span>
       </div>
@@ -978,29 +1005,24 @@ function FieldButtons({ world, field, value, modify }) {
   return (
     <FieldWithLabel label={field.label}>
       <div
-        css={css`
-          height: 34px;
-          display: flex;
-          gap: 5px;
-          .fieldbuttons-button {
-            flex: 1;
-            background: #252630;
-            border-radius: 10px;
-            height: 34px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 14px;
-            &:hover {
-              cursor: pointer;
-              background: #30323e;
-            }
-          }
-        `}
-        {...{} as any}
+        style={{
+          height: '34px',
+          display: 'flex',
+          gap: '5px',
+        }}
       >
         {field.buttons.map(button => (
-          <div key={button.label} className='fieldbuttons-button' onClick={button.onClick}>
+          <div key={button.label} className='fieldbuttons-button' onClick={button.onClick} style={{
+            flex: 1,
+            background: '#252630',
+            borderRadius: '10px',
+            height: '34px',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            fontSize: '14px',
+            cursor: 'pointer',
+          }}>
             <span>{button.label}</span>
           </div>
         ))}

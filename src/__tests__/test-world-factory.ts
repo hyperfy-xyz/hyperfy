@@ -33,13 +33,22 @@ export class MockWorld implements World {
   events = createMockEventSystem();
   scripts = createMockSystem('scripts');
   chat = createMockChatSystem();
-  blueprints = createMockSystem('blueprints');
+  blueprints = createMockBlueprintsSystem();
   entities = createMockEntitiesSystem();
   physics = createMockPhysicsSystem();
   stage = createMockStageSystem();
   
   // Network mock
   network = createMockNetworkSystem();
+
+  // Add emit method
+  emit = vi.fn((event: string, ...args: any[]) => {
+    return true;
+  });
+
+  // Add on and off methods
+  on = vi.fn();
+  off = vi.fn();
 
   private running = false;
   private tickInterval?: NodeJS.Timeout;
@@ -212,6 +221,28 @@ function createMockChatSystem(): any {
         from,
         timestamp: Date.now(),
       });
+    }),
+  };
+}
+
+function createMockBlueprintsSystem(): any {
+  const blueprints = new Map<string, any>();
+  
+  return {
+    ...createMockSystem('blueprints'),
+    blueprints,
+    get: vi.fn((id: string) => blueprints.get(id) || null),
+    create: vi.fn((blueprintId: string, options?: any) => {
+      return createMockEntity(`bp-entity-${Date.now()}`, blueprintId, options);
+    }),
+    modify: vi.fn((data: any) => {
+      if (data.id && blueprints.has(data.id)) {
+        Object.assign(blueprints.get(data.id), data);
+      }
+    }),
+    add: vi.fn((blueprint: any, local?: boolean) => {
+      blueprints.set(blueprint.id, blueprint);
+      return blueprint;
     }),
   };
 }

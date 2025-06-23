@@ -1,4 +1,3 @@
-import { css } from '@firebolt-dev/css'
 import { useEffect, useRef, useState } from 'react'
 
 export function useElemSize(elem: HTMLElement | null) {

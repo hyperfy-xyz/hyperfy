@@ -1,5 +1,8 @@
 import { System } from './System.js';
 import type { World, Entities as IEntities, Entity, Player } from '../../types/index.js';
+import { PlayerLocal } from '../entities/PlayerLocal.js';
+import { PlayerRemote } from '../entities/PlayerRemote.js';
+import { App } from '../entities/App.js';
 
 // Entity data structure
 interface EntityData {
@@ -7,9 +10,9 @@ interface EntityData {
   type: string;
   name?: string;
   owner?: string;
-  position?: { x: number; y: number; z: number };
-  rotation?: { x: number; y: number; z: number; w: number };
-  scale?: { x: number; y: number; z: number };
+  position?: any; // Can be object or array
+  rotation?: any; // Can be object or array
+  scale?: any; // Can be object or array
   [key: string]: any;
 }
 
@@ -37,7 +40,7 @@ class BaseEntity implements Entity {
     this.world = world;
     this.data = data;
     this.id = data.id;
-    this.name = data.name || data.id;
+    this.name = data.name || 'entity';
     this.type = data.type;
     this.components = new Map();
     this.node = {};
@@ -47,8 +50,20 @@ class BaseEntity implements Entity {
     this.velocity = { x: 0, y: 0, z: 0 };
     this.isPlayer = data.type === 'player';
 
+    // Enrich the data with defaults (store as arrays for network serialization)
+    this.data = {
+      ...data,
+      name: this.name,
+      position: Array.isArray(data.position) ? data.position : [
+        data.position?.x || 0,
+        data.position?.y || 0,
+        data.position?.z || 0
+      ],
+      quaternion: Array.isArray(data.quaternion) ? data.quaternion : [0, 0, 0, 1],
+    };
+
     if (local && 'network' in world) {
-      (world as any).network?.send('entityAdded', data);
+      (world as any).network?.send('entityAdded', this.serialize());
     }
   }
 
@@ -111,9 +126,9 @@ class BaseEntity implements Entity {
 
 // Entity type registry
 const EntityTypes: Record<string, EntityConstructor> = {
-  app: BaseEntity,
-  playerLocal: BaseEntity,
-  playerRemote: BaseEntity,
+  app: App as unknown as EntityConstructor,
+  playerLocal: PlayerLocal as unknown as EntityConstructor,
+  playerRemote: PlayerRemote as unknown as EntityConstructor,
 };
 
 /**
@@ -136,16 +151,21 @@ export class Entities extends System implements IEntities {
     super(world);
     this.items = new Map();
     this.players = new Map();
-    this.player = undefined;
+    this.player = null as any;
     this.apps = new Map();
     this.hot = new Set();
     this.removed = [];
   }
 
-  get(entityId: string): Entity | null {
-    return this.items.get(entityId) || null;
+  get(id: string): Entity | null {
+    return this.items.get(id) || null;
   }
 
+  getPlayer(entityId: string): Player | null {
+    return this.players.get(entityId) || null;
+  }
+
+  // TypeScript-specific methods for interface compliance
   has(entityId: string): boolean {
     return this.items.has(entityId);
   }
@@ -155,10 +175,6 @@ export class Entities extends System implements IEntities {
     if (entity.isPlayer) {
       this.players.set(entityId, entity as Player);
     }
-  }
-
-  getPlayer(entityId: string): Player | null {
-    return this.players.get(entityId) || null;
   }
 
   create(name: string, options?: any): Entity {
@@ -199,28 +215,28 @@ export class Entities extends System implements IEntities {
 
     if ('network' in this.world && data.owner === (this.world as any).network?.id) {
       this.player = entity as Player;
-      this.emit('player', entity);
+      (this.world as any).emit('player', entity);
+    }
+
+    // Initialize the entity if it has an init method
+    if ('init' in entity && typeof (entity as any).init === 'function') {
+      console.log(`[Entities] Initializing entity ${entity.id} of type ${data.type}`);
+      (entity as any).init();
     }
 
     return entity;
   }
 
-  remove(entityId: string): void {
-    const entity = this.items.get(entityId);
-    if (!entity) {
-      console.warn(`Tried to remove entity that did not exist: ${entityId}`);
-      return;
-    }
-
-    if (entity.isPlayer) {
-      this.players.delete(entity.id);
-    }
-
-    entity.destroy();
-    this.items.delete(entityId);
-    this.removed.push(entityId);
+  remove(id: string): void {
+    const entity = this.items.get(id);
+    if (!entity) return console.warn(`Tried to remove entity that did not exist: ${id}`);
+    if (entity.isPlayer) this.players.delete(entity.id);
+    entity.destroy(true);
+    this.items.delete(id);
+    this.removed.push(id);
   }
 
+  // TypeScript interface compliance method
   destroyEntity(entityId: string): void {
     this.remove(entityId);
   }
@@ -262,10 +278,12 @@ export class Entities extends System implements IEntities {
     return data;
   }
 
-  deserialize(datas: EntityData[]): void {
+  async deserialize(datas: EntityData[]): Promise<void> {
+    console.log(`[Entities] Deserializing ${datas.length} entities`);
     for (const data of datas) {
       this.add(data);
     }
+    console.log(`[Entities] Deserialization complete`);
   }
 
   override destroy(): void {
@@ -281,7 +299,11 @@ export class Entities extends System implements IEntities {
     this.removed = [];
   }
 
-  // Additional helper methods
+  // TypeScript interface compliance methods
+  getLocalPlayer(): Player | null {
+    return this.player || null;
+  }
+
   getAll(): Entity[] {
     return Array.from(this.items.values());
   }
@@ -291,13 +313,8 @@ export class Entities extends System implements IEntities {
   }
 
   getRemovedIds(): string[] {
-    const ids = [...this.removed];
+    const ids = [...new Set(this.removed)]; // Remove duplicates
     this.removed = [];
     return ids;
-  }
-
-  // Add method to get local player
-  getLocalPlayer(): Player | null {
-    return this.player || null;
   }
 } 

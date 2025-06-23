@@ -2,6 +2,9 @@ import 'ses'
 import '../core/lockdown'
 import './bootstrap'
 
+import dotenv from 'dotenv'
+
+dotenv.config()
 import fs from 'fs-extra'
 import path from 'path'
 import { pipeline } from 'stream/promises'
@@ -13,6 +16,7 @@ import statics from '@fastify/static'
 import multipart from '@fastify/multipart'
 
 import { createServerWorld } from '../core/createServerWorld'
+import { createRPGServerWorld } from '../core/createRPGServerWorld'
 import { hashFile } from '../core/utils-server'
 import { getDB } from './db'
 import { Storage } from './Storage'
@@ -42,9 +46,36 @@ const db = await getDB(path.join(worldDir, '/db.sqlite'))
 // init storage
 const storage = new Storage(path.join(worldDir, '/storage.json'))
 
-// create world
-const world = createServerWorld()
-world.assetsUrl = process.env['PUBLIC_ASSETS_URL'] || null
+// create world - use RPG world if configured
+const enableRPG = process.env['ENABLE_RPG'] === 'true'
+const world = enableRPG ? createRPGServerWorld() : createServerWorld()
+if (enableRPG) {
+  console.log('RPG systems enabled')
+}
+  world.assetsUrl = process.env['PUBLIC_ASSETS_URL'] || '/assets/'
+  
+  // Ensure assetsUrl ends with slash for proper URL resolution
+  if (!world.assetsUrl.endsWith('/')) {
+    world.assetsUrl += '/'
+  }
+  
+// Set up default environment if no settings exist
+if (!(world.settings as any).model) {
+  // Set default environment model in settings for ServerEnvironment system
+  ;(world.settings as any).model = {
+    url: 'asset://base-environment.glb'
+  }
+}
+
+// Also configure for client preloading
+if (!(world as any).environment?.base) {
+  (world as any).environment = {
+    base: {
+      model: 'asset://base-environment.glb'
+    }
+  }
+}
+
 ;(world.collections as any).deserialize(collections)
 ;(world as any).init({ db, storage, assetsDir })
 

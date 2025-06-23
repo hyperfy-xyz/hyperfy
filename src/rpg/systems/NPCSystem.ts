@@ -19,6 +19,7 @@ import { NPCBehaviorManager } from './npc/NPCBehaviorManager';
 import { NPCDialogueManager } from './npc/NPCDialogueManager';
 import { NPCSpawnManager } from './npc/NPCSpawnManager';
 import { ConfigLoader } from '../config/ConfigLoader';
+import { createLogger } from '../../core/logger';
 
 export class NPCSystem extends System {
   // Core management
@@ -36,6 +37,9 @@ export class NPCSystem extends System {
   // Add counter for unique IDs
   private npcIdCounter = 0;
   
+  // Logger
+  private logger = createLogger('NPCSystem');
+  
   constructor(world: World) {
     super(world);
     this.behaviorManager = new NPCBehaviorManager(world);
@@ -47,20 +51,26 @@ export class NPCSystem extends System {
    * Initialize the system
    */
   override async init(_options: any): Promise<void> {
-    console.log('[NPCSystem] Initializing...');
+    this.logger.info('Initializing...');
+    
+    // Initialize sub-managers
+    this.behaviorManager.init();
     
     // Load NPC definitions from config
     const configLoader = ConfigLoader.getInstance();
     if (!configLoader.isConfigLoaded()) {
-      await configLoader.loadAll();
+      await configLoader.loadAllConfigurations();
     }
     
     // Register all NPCs from config
-    const npcDefinitions = configLoader.getAllNPCs();
-    for (const definition of npcDefinitions) {
+    const npcConfigs = configLoader.getAllNPCs();
+    this.logger.debug(`Found ${Object.keys(npcConfigs).length} NPC configs`);
+    for (const config of Object.values(npcConfigs)) {
+      const definition = this.convertConfigToDefinition(config);
       this.registerNPCDefinition(definition);
+      this.logger.debug(`Registered NPC: ${definition.name} (ID: ${definition.id})`);
     }
-    console.log(`[NPCSystem] Loaded ${npcDefinitions.length} NPC definitions from config`);
+    this.logger.info(`Loaded ${this.npcDefinitions.size} NPC definitions from config`);
     
     // Listen for entity events
     this.world.events.on('entity:created', (event: any) => {
@@ -105,6 +115,65 @@ export class NPCSystem extends System {
   }
 
   /**
+   * Convert NPCConfig to NPCDefinition
+   */
+  private convertConfigToDefinition(config: any): NPCDefinition {
+    // Map type string to NPCType enum
+    const npcTypeMap: { [key: string]: NPCType } = {
+      'monster': NPCType.MONSTER,
+      'guard': NPCType.GUARD,
+      'quest_giver': NPCType.QUEST_GIVER,
+      'shop': NPCType.SHOPKEEPER,
+      'shopkeeper': NPCType.SHOPKEEPER,
+      'banker': NPCType.BANKER,
+      'boss': NPCType.BOSS,
+      'animal': NPCType.ANIMAL,
+      'citizen': NPCType.CITIZEN
+    };
+
+    // Map behavior string to NPCBehavior enum
+    const behaviorMap: { [key: string]: NPCBehavior } = {
+      'aggressive': NPCBehavior.AGGRESSIVE,
+      'passive': NPCBehavior.PASSIVE,
+      'defensive': NPCBehavior.DEFENSIVE,
+      'friendly': NPCBehavior.FRIENDLY,
+      'shop': NPCBehavior.SHOP,
+      'quest': NPCBehavior.QUEST,
+      'banker': NPCBehavior.BANKER,
+      'wander': NPCBehavior.WANDER,
+      'patrol': NPCBehavior.PATROL,
+      'follow': NPCBehavior.FOLLOW
+    };
+
+    return {
+      id: config.id,
+      name: config.name,
+      examine: config.examine || `A ${config.name}.`,
+      npcType: npcTypeMap[config.type?.toLowerCase()] || NPCType.CITIZEN,
+      behavior: behaviorMap[config.behavior?.toLowerCase()] || NPCBehavior.PASSIVE,
+      faction: config.faction || 'neutral',
+      level: config.level,
+      combatLevel: config.combatLevel,
+      maxHitpoints: config.stats?.hitpoints,
+      attackStyle: AttackType.MELEE, // Default to melee
+      aggressionLevel: config.aggressionLevel,
+      aggressionRange: config.aggressionRange,
+      combat: config.stats ? {
+        attackBonus: config.stats.attack || 0,
+        strengthBonus: config.stats.strength || 0,
+        defenseBonus: config.stats.defence || 0,
+        maxHit: Math.floor((config.stats.strength || 0) / 4) + 1,
+        attackSpeed: config.attackSpeed || 4000
+      } : undefined,
+      lootTable: config.dropTable,
+      respawnTime: 60000, // Default 1 minute
+      wanderRadius: config.wanderRadius,
+      moveSpeed: config.stats?.speed || 1,
+      dialogue: config.dialogue ? { text: config.dialogue } : undefined
+    };
+  }
+
+  /**
    * Register an NPC definition
    */
   registerNPCDefinition(definition: NPCDefinition): void {
@@ -117,7 +186,7 @@ export class NPCSystem extends System {
   spawnNPC(definitionId: number, position: Vector3, spawnerId?: string): NPCEntity | null {
     const definition = this.npcDefinitions.get(definitionId);
     if (!definition) {
-      console.warn(`[NPCSystem] Unknown NPC definition: ${definitionId}`);
+      this.logger.warn(`Unknown NPC definition: ${definitionId}`);
       return null;
     }
     

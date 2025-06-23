@@ -1,5 +1,3 @@
-import React from 'react'
-import { css } from '@firebolt-dev/css'
 import {
   BlendIcon,
   BoxIcon,
@@ -11,7 +9,7 @@ import {
   MagnetIcon,
   PersonStandingIcon,
 } from 'lucide-react'
-import { useEffect, useMemo, useState } from 'react'
+import React, { useEffect, useMemo, useState } from 'react'
 import { cls } from './cls'
 
 export function NodeHierarchy({ app }) {
@@ -36,6 +34,54 @@ export function NodeHierarchy({ app }) {
       return obj && typeof obj[prop] !== 'undefined'
     } catch (err) {
       return false
+    }
+  }
+
+  const renderHierarchy = (nodes, depth, selectedNode, setSelectedNode) => {
+    return nodes.map(node => {
+      if (!node) return null
+      
+      const isSelected = selectedNode && selectedNode.id === node.id
+      const nodeIcon = getNodeIcon(node.constructor.name)
+      
+      return (
+        <div key={node.id || node.name}>
+          <div
+            className={cls('nodehierarchy-item', { selected: isSelected })}
+            style={{ paddingLeft: `${depth * 20 + 6}px` }}
+            onClick={() => setSelectedNode(node)}
+          >
+            {nodeIcon}
+            <span>{node.name || node.constructor.name}</span>
+          </div>
+          {node.children && node.children.length > 0 && (
+            <div className='nodehierarchy-item-indent'>
+              {renderHierarchy(node.children, depth + 1, selectedNode, setSelectedNode)}
+            </div>
+          )}
+        </div>
+      )
+    })
+  }
+
+  const getNodeIcon = (nodeName) => {
+    switch (nodeName) {
+      case 'Group':
+        return <FolderIcon size={16} />
+      case 'Mesh':
+        return <BoxIcon size={16} />
+      case 'Collider':
+        return <MagnetIcon size={16} />
+      case 'RigidBody':
+        return <DumbbellIcon size={16} />
+      case 'Avatar':
+        return <PersonStandingIcon size={16} />
+      case 'LOD':
+        return <LayersIcon size={16} />
+      case 'Anchor':
+        return <BlendIcon size={16} />
+      default:
+        return <CircleIcon size={16} />
     }
   }
 

@@ -65,19 +65,40 @@ export class ClientLoader extends System {
   }
 
   execPreload() {
+    if (this.preloadItems.length === 0) {
+      console.log('[ClientLoader] No items to preload')
+      this.world.emit?.('progress', 100)
+      return
+    }
+    
     let loadedItems = 0
     let totalItems = this.preloadItems.length
     let progress = 0
+    console.log('[ClientLoader] Starting preload of', totalItems, 'items:', this.preloadItems)
+    
     const promises = this.preloadItems.map(item => {
-      return this.load(item.type, item.url).then(() => {
-        loadedItems++
-        progress = (loadedItems / totalItems) * 100
-        this.world.emit?.('progress', progress)
-      })
+      return this.load(item.type, item.url)
+        .then(() => {
+          loadedItems++
+          progress = (loadedItems / totalItems) * 100
+          console.log(`[ClientLoader] Loaded ${item.type}: ${item.url} (${loadedItems}/${totalItems})`)
+          this.world.emit?.('progress', progress)
+        })
+        .catch(error => {
+          console.error(`[ClientLoader] Failed to load ${item.type}: ${item.url}`, error)
+          throw error // Re-throw to be caught by allSettled
+        })
     })
-    this.preloader = Promise.allSettled(promises).then(() => {
+    
+    this.preloader = Promise.allSettled(promises).then((results) => {
+      const failed = results.filter(r => r.status === 'rejected')
+      if (failed.length > 0) {
+        console.error('[ClientLoader] Some assets failed to load:', failed)
+      }
+      console.log('[ClientLoader] Preload complete')
       this.preloader = null
-      // this.world.emit('ready', true)
+      // Don't emit ready here - let PlayerLocal do it after it's initialized
+      // this.world.emit?.('ready', true)
     })
   }
 
@@ -102,11 +123,22 @@ export class ClientLoader extends System {
     if (this.files.has(url)) {
       return this.files.get(url)
     }
-    const resp = await fetch(url)
-    const blob = await resp.blob()
-    const file = new File([blob], url.split('/').pop(), { type: blob.type })
-    this.files.set(url, file)
-    return file
+    
+    try {
+      console.log('[ClientLoader] Fetching file:', url)
+      const resp = await fetch(url)
+      if (!resp.ok) {
+        throw new Error(`HTTP error! status: ${resp.status}`)
+      }
+      const blob = await resp.blob()
+      const file = new File([blob], url.split('/').pop(), { type: blob.type })
+      this.files.set(url, file)
+      console.log('[ClientLoader] File loaded successfully:', url, 'size:', file.size)
+      return file
+    } catch (error) {
+      console.error('[ClientLoader] Failed to fetch file:', url, error)
+      throw error
+    }
   }
 
   async load(type, url) {

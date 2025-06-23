@@ -1,6 +1,7 @@
 /// <reference path="../types/physx.d.ts" />
 
 import PhysXModule from './physx-js-webidl.js'
+import { extendThreePhysX } from './extras/extendThreePhysX.js'
 
 /**
  * PhysX Loader
@@ -13,6 +14,10 @@ export function loadPhysX(): Promise<any> {
   if (!promise) {
     promise = new Promise(async (resolve) => {
       (globalThis as any).PHYSX = await PhysXModule()
+      
+      // Extend Three.js objects with physics methods immediately after PhysX loads
+      extendThreePhysX()
+      
       const version = (PHYSX as any).PHYSICS_VERSION
       const allocator = new (PHYSX as any).PxDefaultAllocator()
       const errorCb = new (PHYSX as any).PxDefaultErrorCallback()

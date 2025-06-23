@@ -20,7 +20,7 @@ import { exportApp } from '../../core/extras/appTools'
 import { downloadFile } from '../../core/extras/downloadFile'
 import { hashFile } from '../../core/utils-client'
 import { isArray, isBoolean } from 'lodash-es'
-import { css } from '@firebolt-dev/css'
+// Removed firebolt-dev/css import
 
 export function MenuApp({ world, app, blur }) {
   const [pages, setPages] = useState(() => ['index'])

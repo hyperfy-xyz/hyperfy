@@ -13,7 +13,7 @@ export class ServerLiveKit extends System {
   constructor(world: any) {
     super(world)
     this.roomId = uuid()
-    this.wsUrl = process.env.LIVEKIT_WS_URL
+    this.wsUrl = process.env.LIVEKIT_URL || process.env.LIVEKIT_WS_URL
     this.apiKey = process.env.LIVEKIT_API_KEY
     this.apiSecret = process.env.LIVEKIT_API_SECRET
     this.enabled = !!(this.wsUrl && this.apiKey && this.apiSecret)

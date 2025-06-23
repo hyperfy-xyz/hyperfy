@@ -62,7 +62,7 @@ export class ClientLiveKit extends System {
       // @ts-ignore - setSpeaking might not exist
       this.world.entities.player?.setSpeaking?.(speaking)
     })
-    await this.room.connect(process.env['LIVEKIT_URL'] || '', token)
+    await this.room.connect(window.env?.LIVEKIT_URL || import.meta.env?.LIVEKIT_URL || '', token)
   }
 
   async enableAudio() {

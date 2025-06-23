@@ -1,15 +1,13 @@
-import React from 'react'
-import { createContext, useContext, useEffect, useMemo, useRef, useState } from 'react'
-import { css } from '@firebolt-dev/css'
-import { ChevronLeftIcon, ChevronRightIcon } from './Icons'
-import { useUpdate } from './useUpdate'
-import { hashFile } from '../../core/utils-client'
 import { LoaderIcon, XIcon } from 'lucide-react'
-import { downloadFile } from '../../core/extras/downloadFile'
-import { CurvePreview } from './CurvePreview'
+import { createContext, useContext, useEffect, useMemo, useRef, useState } from 'react'
 import { Curve } from '../../core/extras/Curve'
-import { Portal } from './Portal'
+import { downloadFile } from '../../core/extras/downloadFile'
+import { hashFile } from '../../core/utils-client'
 import { CurvePane } from './CurvePane'
+import { CurvePreview } from './CurvePreview'
+import { ChevronLeftIcon, ChevronRightIcon } from './Icons'
+import { Portal } from './Portal'
+import { useUpdate } from './useUpdate'
 
 interface MenuContextType {
   setHint: (hint: string | null) => void;
@@ -23,30 +21,31 @@ export function Menu({ title, blur, children }) {
     <MenuContext.Provider value={{ setHint }}>
       <div
         className='menu'
-        css={css`
-          pointer-events: auto;
-          opacity: ${blur ? 0.3 : 1};
-          transition: opacity 0.15s ease-out;
-          font-size: 1rem;
+        style={{
+          pointerEvents: 'auto',
+          opacity: blur ? 0.3 : 1,
+          transition: 'opacity 0.15s ease-out',
+          fontSize: '1rem',
+        }}
+      >
+        <style>{`
           .menu-head {
             background: #0f1018;
             padding: 1rem;
             white-space: nowrap;
             text-overflow: ellipsis;
             overflow: hidden;
-            span {
+          }
+          .menu-head span {
               font-size: 1.3rem;
               font-weight: 600;
-            }
           }
           .menu-items {
             background-color: rgba(15, 16, 24, 0.8);
             overflow-y: auto;
             max-height: calc(2.5rem * 9.5);
           }
-        `}
-        {...{} as any}
-      >
+        `}</style>
         <div className='menu-head'>
           <span>{title}</span>
         </div>
@@ -61,15 +60,14 @@ function MenuHint({ text }) {
   return (
     <div
       className='menuhint'
-      css={css`
-        margin-top: 0.2rem;
-        padding: 0.875rem;
-        font-size: 1rem;
-        line-height: 1.4;
-        background-color: rgba(15, 16, 24, 0.8);
-        border-top: 0.1rem solid black;
-      `}
-      {...{} as any}
+      style={{
+        marginTop: '0.2rem',
+        padding: '0.875rem',
+        fontSize: '1rem',
+        lineHeight: '1.4',
+        backgroundColor: 'rgba(15, 16, 24, 0.8)',
+        borderTop: '0.1rem solid black',
+      }}
     >
       <span>{text}</span>
     </div>
@@ -82,30 +80,28 @@ export function MenuItemBack({ hint, onClick }) {
   return (
     <label
       className='menuback'
-      css={css`
-        display: flex;
-        align-items: center;
-        height: 2.5rem;
-        padding: 0 0.825rem;
-        font-size: 1rem;
-        > svg {
-          margin-left: -0.25rem;
-        }
-        .menuback-label {
-          flex: 1;
-        }
-        &:hover {
-          cursor: pointer;
-          background: rgba(255, 255, 255, 0.05);
-        }
-      `}
+      style={{
+        display: 'flex',
+        alignItems: 'center',
+        height: '2.5rem',
+        padding: '0 0.825rem',
+        fontSize: '1rem',
+        cursor: 'pointer',
+      }}
       onPointerEnter={() => setHint?.(hint)}
       onPointerLeave={() => setHint?.(null)}
       onClick={onClick}
-      {...{} as any}
     >
+      <style>{`
+        .menuback svg {
+          margin-left: -0.25rem;
+        }
+        .menuback:hover {
+          background: rgba(255, 255, 255, 0.05);
+        }
+      `}</style>
       <ChevronLeftIcon size={'1.5rem'} />
-      <div className='menuback-label'>
+      <div className='menuback-label' style={{ flex: 1 }}>
         <span>Back</span>
       </div>
     </label>
@@ -116,11 +112,10 @@ export function MenuLine() {
   return (
     <div
       className='menuline'
-      css={css`
-        height: 0.1rem;
-        background: rgba(255, 255, 255, 0.1);
-      `}
-      {...{} as any}
+      style={{
+        height: '0.1rem',
+        background: 'rgba(255, 255, 255, 0.1)',
+      }}
     />
   )
 }
@@ -128,16 +123,15 @@ export function MenuLine() {
 export function MenuSection({ label }) {
   return (
     <div
-      css={css`
-        padding: 0.25rem 0.875rem;
-        font-size: 0.75rem;
-        font-weight: 500;
-        opacity: 0.3;
-        white-space: nowrap;
-        text-overflow: ellipsis;
-        overflow: hidden;
-      `}
-      {...{} as any}
+      style={{
+        padding: '0.25rem 0.875rem',
+        fontSize: '0.75rem',
+        fontWeight: '500',
+        opacity: '0.3',
+        whiteSpace: 'nowrap',
+        textOverflow: 'ellipsis',
+        overflow: 'hidden',
+      }}
     >
       <span>{label}</span>
     </div>
@@ -150,28 +144,30 @@ export function MenuItemBtn({ label, hint, nav, onClick }) {
   return (
     <div
       className='menuitembtn'
-      css={css`
-        display: flex;
-        align-items: center;
-        height: 2.5rem;
-        padding: 0 0.875rem;
-        .menuitembtn-label {
-          flex: 1;
-          white-space: nowrap;
-          text-overflow: ellipsis;
-          overflow: hidden;
-        }
-        &:hover {
-          cursor: pointer;
-          background: rgba(255, 255, 255, 0.05);
-        }
-      `}
+      style={{
+        display: 'flex',
+        alignItems: 'center',
+        height: '2.5rem',
+        padding: '0 0.875rem',
+        cursor: 'pointer',
+      }}
       onPointerEnter={() => setHint?.(hint)}
       onPointerLeave={() => setHint?.(null)}
       onClick={onClick}
-      {...{} as any}
     >
-      <div className='menuitembtn-label'>{label}</div>
+      <style>{`
+        .menuitembtn:hover {
+          background: rgba(255, 255, 255, 0.05);
+        }
+      `}</style>
+      <div className='menuitembtn-label' style={{
+        flex: 1,
+        whiteSpace: 'nowrap',
+        textOverflow: 'ellipsis',
+        overflow: 'hidden',
+      }}>
+        {label}
+      </div>
       {nav && <ChevronRightIcon size='1.5rem' />}
     </div>
   )
@@ -187,44 +183,43 @@ export function MenuItemText({ label, hint, placeholder, value, onChange }) {
   return (
     <label
       className='menuitemtext'
-      css={css`
-        display: flex;
-        align-items: center;
-        height: 2.5rem;
-        padding: 0 0.875rem;
-        cursor: text;
-        .menuitemtext-label {
-          width: 9.4rem;
-          flex-shrink: 0;
-          white-space: nowrap;
-          text-overflow: ellipsis;
-          overflow: hidden;
+      style={{
+        display: 'flex',
+        alignItems: 'center',
+        height: '2.5rem',
+        padding: '0 0.875rem',
+        cursor: 'text',
+      }}
+      onPointerEnter={() => setHint?.(hint)}
+      onPointerLeave={() => setHint?.(null)}
+    >
+      <style>{`
+        .menuitemtext:hover {
+          background-color: rgba(255, 255, 255, 0.05);
         }
-        .menuitemtext-field {
-          flex: 1;
-        }
-        input {
-          text-align: right;
-          cursor: inherit;
-          &::selection {
+        .menuitemtext input::selection {
             background-color: white;
             color: rgba(0, 0, 0, 0.8);
           }
-        }
-        &:hover {
-          background-color: rgba(255, 255, 255, 0.05);
-        }
-      `}
-      onPointerEnter={() => setHint?.(hint)}
-      onPointerLeave={() => setHint?.(null)}
-      {...{} as any}
-    >
-      <div className='menuitemtext-label'>{label}</div>
-      <div className='menuitemtext-field'>
+      `}</style>
+      <div className='menuitemtext-label' style={{
+        width: '9.4rem',
+        flexShrink: 0,
+        whiteSpace: 'nowrap',
+        textOverflow: 'ellipsis',
+        overflow: 'hidden',
+      }}>
+        {label}
+      </div>
+      <div className='menuitemtext-field' style={{ flex: 1 }}>
         <input
           type='text'
           value={localValue || ''}
           placeholder={placeholder}
+          style={{
+            textAlign: 'right',
+            cursor: 'inherit',
+          }}
           onFocus={e => e.target.select()}
           onChange={e => setLocalValue(e.target.value)}
           onKeyDown={e => {
@@ -268,51 +263,51 @@ export function MenuItemTextarea({ label, hint, placeholder, value, onChange }) 
   return (
     <label
       className='menuitemtext'
-      css={css`
-        display: flex;
-        align-items: flex-start;
-        min-height: 2.5rem;
-        padding: 0 0.875rem;
-        cursor: text;
-        .menuitemtext-label {
-          padding-top: 0.6rem;
-          width: 9.4rem;
-          flex-shrink: 0;
-          white-space: nowrap;
-          text-overflow: ellipsis;
-          overflow: hidden;
+      style={{
+        display: 'flex',
+        alignItems: 'flex-start',
+        minHeight: '2.5rem',
+        padding: '0 0.875rem',
+        cursor: 'text',
+      }}
+      onPointerEnter={() => setHint?.(hint)}
+      onPointerLeave={() => setHint?.(null)}
+    >
+      <style>{`
+        .menuitemtext:hover {
+          background-color: rgba(255, 255, 255, 0.05);
         }
-        .menuitemtext-field {
-          flex: 1;
-          padding: 0.6rem 0 0.6rem 0;
-        }
-        textarea {
-          width: 100%;
-          height: 1rem;
-          text-align: right;
-          height: auto;
-          overflow: hidden;
-          resize: none;
-          cursor: inherit;
-          &::selection {
+        .menuitemtext textarea::selection {
             background-color: white;
             color: rgba(0, 0, 0, 0.8);
           }
-        }
-        &:hover {
-          background-color: rgba(255, 255, 255, 0.05);
-        }
-      `}
-      onPointerEnter={() => setHint?.(hint)}
-      onPointerLeave={() => setHint?.(null)}
-      {...{} as any}
-    >
-      <div className='menuitemtext-label'>{label}</div>
-      <div className='menuitemtext-field'>
+      `}</style>
+      <div className='menuitemtext-label' style={{
+        paddingTop: '0.6rem',
+        width: '9.4rem',
+        flexShrink: 0,
+        whiteSpace: 'nowrap',
+        textOverflow: 'ellipsis',
+        overflow: 'hidden',
+      }}>
+        {label}
+      </div>
+      <div className='menuitemtext-field' style={{
+        flex: 1,
+        padding: '0.6rem 0 0.6rem 0',
+      }}>
         <textarea
           ref={textareaRef}
           value={localValue || ''}
           placeholder={placeholder}
+          style={{
+            width: '100%',
+            textAlign: 'right',
+            height: 'auto',
+            overflow: 'hidden',
+            resize: 'none',
+            cursor: 'inherit',
+          }}
           onFocus={e => e.target.select()}
           onChange={e => setLocalValue(e.target.value)}
           onKeyDown={e => {
@@ -363,43 +358,32 @@ export function MenuItemNumber({ label, hint, dp = 0, min = -Infinity, max = Inf
   return (
     <label
       className='menuitemnumber'
-      css={css`
-        display: flex;
-        align-items: center;
-        height: 2.5rem;
-        padding: 0 0.875rem;
-        cursor: text;
-        .menuitemnumber-label {
-          width: 9.4rem;
-          flex-shrink: 0;
-          white-space: nowrap;
-          text-overflow: ellipsis;
-          overflow: hidden;
-        }
-        .menuitemnumber-field {
-          flex: 1;
-        }
-        input {
-          height: 1rem;
-          text-align: right;
-          overflow: hidden;
-          cursor: inherit;
-          &::selection {
-            background-color: white;
-            color: rgba(0, 0, 0, 0.8);
-          }
-        }
-        &:hover {
+      style={{
+        display: 'flex',
+        alignItems: 'center',
+        height: '2.5rem',
+        padding: '0 0.875rem',
+        cursor: 'text',
+      }}
+      onPointerEnter={() => setHint?.(hint)}
+      onPointerLeave={() => setHint?.(null)}
+    >
+      <style>{`
+        .menuitemnumber:hover {
           cursor: pointer;
           background: rgba(255, 255, 255, 0.05);
         }
-      `}
-      onPointerEnter={() => setHint?.(hint)}
-      onPointerLeave={() => setHint?.(null)}
-      {...{} as any}
-    >
-      <div className='menuitemnumber-label'>{label}</div>
-      <div className='menuitemnumber-field'>
+      `}</style>
+      <div className='menuitemnumber-label' style={{
+        width: '9.4rem',
+        flexShrink: 0,
+        whiteSpace: 'nowrap',
+        textOverflow: 'ellipsis',
+        overflow: 'hidden',
+      }}>
+        {label}
+      </div>
+      <div className='menuitemnumber-field' style={{ flex: 1 }}>
         <input
           type='text'
           value={local}
@@ -504,59 +488,56 @@ export function MenuItemRange({ label, hint, min = 0, max = 1, step = 0.05, inst
   return (
     <div
       className='menuitemrange'
-      css={css`
-        display: flex;
-        align-items: center;
-        height: 2.5rem;
-        padding: 0 0.875rem;
-        .menuitemrange-label {
-          flex: 1;
-          white-space: nowrap;
-          text-overflow: ellipsis;
-          overflow: hidden;
-          padding-right: 1rem;
-        }
-        .menuitemrange-text {
-          font-size: 0.7rem;
-          margin-right: 0.5rem;
-          opacity: 0;
-          transition: opacity 0.1s ease-out;
-        }
-        .menuitemrange:hover .menuitemrange-text {
-          opacity: 0.5;
-        }
-        .menuitemrange-track {
-          width: 5rem;
-          height: 0.3rem;
-          background: rgba(255, 255, 255, 0.1);
-          border-radius: 1rem;
-          overflow: hidden;
-          position: relative;
-          cursor: pointer;
-        }
-        .menuitemrange-bar {
-          position: absolute;
-          top: 0;
-          left: 0;
-          height: 100%;
-          background: #039be5;
-          border-radius: 1rem;
-          transition: width 0.1s ease-out;
-        }
-        &:hover {
-          background: rgba(255, 255, 255, 0.05);
-        }
-      `}
+      style={{
+        display: 'flex',
+        alignItems: 'center',
+        height: '2.5rem',
+        padding: '0 0.875rem',
+      }}
       onPointerEnter={() => setHint?.(hint)}
       onPointerLeave={() => setHint?.(null)}
-      {...{} as any}
     >
-      <div className='menuitemrange-label'>{label}</div>
-      <div className='menuitemrange-text'>{text}</div>
-      <div className='menuitemrange-track' ref={trackRef}>
+      <style>{`
+        .menuitemrange:hover {
+          background: rgba(255, 255, 255, 0.05);
+        }
+      `}</style>
+      <div className='menuitemrange-label' style={{
+        flex: 1,
+        whiteSpace: 'nowrap',
+        textOverflow: 'ellipsis',
+        overflow: 'hidden',
+        paddingRight: '1rem',
+      }}>
+        {label}
+      </div>
+      <div className='menuitemrange-text' style={{
+        fontSize: '0.7rem',
+        marginRight: '0.5rem',
+        opacity: 0,
+        transition: 'opacity 0.1s ease-out',
+      }}>
+        {text}
+      </div>
+      <div className='menuitemrange-track' ref={trackRef} style={{
+        width: '5rem',
+        height: '0.3rem',
+        background: 'rgba(255, 255, 255, 0.1)',
+        borderRadius: '1rem',
+        overflow: 'hidden',
+        position: 'relative',
+        cursor: 'pointer',
+      }}>
         <div
           className='menuitemrange-bar'
           style={{
+            position: 'absolute',
+            top: 0,
+            left: 0,
+            height: '100%',
+            background: '#039be5',
+            borderRadius: '1rem',
+            transition: 'width 0.1s ease-out',
             width: barWidthPercentage + '%',
           }}
         />
@@ -584,17 +565,19 @@ export function MenuItemSwitch({ label, hint, options, value, onChange }) {
   return (
     <div
       className='menuitemswitch'
-      css={css`
-        display: flex;
-        align-items: center;
-        height: 2.5rem;
-        padding: 0 0.875rem;
-        .menuitemswitch-label {
-          flex: 1;
-          white-space: nowrap;
-          text-overflow: ellipsis;
-          overflow: hidden;
-          padding-right: 1rem;
+      style={{
+        display: 'flex',
+        alignItems: 'center',
+        height: '2.5rem',
+        padding: '0 0.875rem',
+      }}
+      onPointerEnter={() => setHint?.(hint)}
+      onPointerLeave={() => setHint?.(null)}
+    >
+      <style>{`
+        .menuitemswitch:hover {
+          padding: 0 0.275rem 0 0.875rem;
+          background-color: rgba(255, 255, 255, 0.05);
         }
         .menuitemswitch-btn {
           width: 2.125rem;
@@ -603,32 +586,34 @@ export function MenuItemSwitch({ label, hint, options, value, onChange }) {
           align-items: center;
           justify-content: center;
           opacity: 0.2;
-          &:hover {
+        }
+        .menuitemswitch-btn:hover {
             cursor: pointer;
             opacity: 1;
           }
-        }
-        .menuitemswitch-text {
-          line-height: 1;
-        }
-        &:hover {
-          padding: 0 0.275rem 0 0.875rem;
-          background-color: rgba(255, 255, 255, 0.05);
-          .menuitemswitch-btn {
-            display: flex;
-          }
-        }
-      `}
-      onPointerEnter={() => setHint?.(hint)}
-      onPointerLeave={() => setHint?.(null)}
-      {...{} as any}
-    >
-      <div className='menuitemswitch-label'>{label}</div>
-      <div className='menuitemswitch-btn left' onClick={prev}>
+      `}</style>
+      <div className='menuitemswitch-label' style={{
+        flex: 1,
+        whiteSpace: 'nowrap',
+        textOverflow: 'ellipsis',
+        overflow: 'hidden',
+        paddingRight: '1rem',
+      }}>
+        {label}
+      </div>
+      <div className='menuitemswitch-btn left' onClick={prev} style={{
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+      }}>
         <ChevronLeftIcon size='1.5rem' />
       </div>
       <div className='menuitemswitch-text'>{selected?.label || '???'}</div>
-      <div className='menuitemswitch-btn right' onClick={next}>
+      <div className='menuitemswitch-btn right' onClick={next} style={{
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+      }}>
         <ChevronRightIcon size='1.5rem' />
       </div>
     </div>
@@ -643,32 +628,21 @@ export function MenuItemCurve({ label, hint, x, xRange, y, yMin, yMax, value, on
   return (
     <div
       className='menuitemcurve'
-      css={css`
-        .menuitemcurve-control {
-          display: flex;
-          align-items: center;
-          height: 2.5rem;
-          padding: 0 0.875rem;
-        }
-        .menuitemcurve-label {
-          flex: 1;
-          white-space: nowrap;
-          text-overflow: ellipsis;
-          overflow: hidden;
-          padding-right: 1rem;
-        }
-        .menuitemcurve-curve {
-          width: 6rem;
-          height: 1.2rem;
-          position: relative;
-        }
-        &:hover {
+      style={{
+        display: 'flex',
+        alignItems: 'center',
+        height: '2.5rem',
+        padding: '0 0.875rem',
+      }}
+      onPointerEnter={() => setHint?.(hint)}
+      onPointerLeave={() => setHint?.(null)}
+    >
+      <style>{`
+        .menuitemcurve:hover {
           cursor: pointer;
           background-color: rgba(255, 255, 255, 0.05);
         }
-      `}
-      {...{} as any}
-    >
+      `}</style>
       <div
         className='menuitemcurve-control'
         onClick={() => {
@@ -678,10 +652,16 @@ export function MenuItemCurve({ label, hint, x, xRange, y, yMin, yMax, value, on
             setEdit(curve.clone())
           }
         }}
-        onPointerEnter={() => setHint?.(hint)}
-        onPointerLeave={() => setHint?.(null)}
       >
-        <div className='menuitemcurve-label'>{label}</div>
+        <div className='menuitemcurve-label' style={{
+          flex: 1,
+          whiteSpace: 'nowrap',
+          textOverflow: 'ellipsis',
+          overflow: 'hidden',
+          paddingRight: '1rem',
+        }}>
+          {label}
+        </div>
         <div className='menuitemcurve-curve'>
           <CurvePreview curve={curve} yMin={yMin} yMax={yMax} />
         </div>
@@ -690,8 +670,8 @@ export function MenuItemCurve({ label, hint, x, xRange, y, yMin, yMax, value, on
         <Portal>
           <CurvePane
             curve={edit}
-            title={label}
             xLabel={x}
+            xRange={[0, 1]}
             yLabel={y}
             yMin={yMin}
             yMax={yMax}
@@ -731,32 +711,33 @@ export function MenuItemFileBtn({ label, hint, accept, value, onChange }) {
   return (
     <label
       className='menuitemfilebtn'
-      css={css`
-        display: flex;
-        align-items: center;
-        height: 2.5rem;
-        padding: 0 0.875rem;
-        overflow: hidden;
-        .menuitemfilebtn-label {
-          width: 9.4rem;
-          flex-shrink: 0;
-        }
-        input {
-          position: absolute;
-          top: -9999px;
-        }
-        &:hover {
-          cursor: pointer;
-          background: rgba(255, 255, 255, 0.05);
-        }
-      `}
+      style={{
+        display: 'flex',
+        alignItems: 'center',
+        height: '2.5rem',
+        padding: '0 0.875rem',
+        overflow: 'hidden',
+      }}
       onPointerEnter={() => setHint?.(hint)}
       onPointerLeave={() => setHint?.(null)}
       onClick={handleDownload}
-      {...{} as any}
     >
-      <div className='menuitemfilebtn-label'>{label}</div>
-      <input key={key} type='file' accept={accept} onChange={handleChange} />
+      <style>{`
+        .menuitemfilebtn:hover {
+          cursor: pointer;
+          background: rgba(255, 255, 255, 0.05);
+        }
+      `}</style>
+      <div className='menuitemfilebtn-label' style={{
+        width: '9.4rem',
+        flexShrink: 0,
+      }}>
+        {label}
+      </div>
+      <input key={key} type='file' accept={accept} onChange={handleChange} style={{
+        position: 'absolute',
+        top: '-9999px',
+      }} />
     </label>
   )
 }
@@ -873,87 +854,71 @@ export function MenuItemFile({ world, label, hint, kind: kindName, value, onChan
   return (
     <label
       className='menuitemfile'
-      css={css`
-        display: flex;
-        align-items: center;
-        height: 2.5rem;
-        padding: 0 0.875rem;
-        overflow: hidden;
-        input {
-          position: absolute;
-          top: -9999px;
-          left: -9999px;
-          opacity: 0;
-        }
-        svg {
-          line-height: 0;
-        }
-        .menuitemfile-label {
-          flex: 1;
-          white-space: nowrap;
-          text-overflow: ellipsis;
-          overflow: hidden;
-          padding-right: 1rem;
-        }
-        .menuitemfile-placeholder {
-          color: rgba(255, 255, 255, 0.3);
-        }
-        .menuitemfile-name {
-          text-align: right;
-          white-space: nowrap;
-          text-overflow: ellipsis;
-          overflow: hidden;
-          max-width: 9rem;
-        }
-        .menuitemfile-x {
-          line-height: 0;
-          margin: 0 -0.2rem 0 0.3rem;
-          color: rgba(255, 255, 255, 0.3);
-          &:hover {
-            color: white;
-          }
-        }
-        .menuitemfile-loading {
-          margin: 0 -0.1rem 0 0.3rem;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          @keyframes spin {
-            from {
-              transform: rotate(0deg);
-            }
-            to {
-              transform: rotate(360deg);
-            }
-          }
-          svg {
-            animation: spin 1s linear infinite;
-          }
-        }
-        &:hover {
-          cursor: pointer;
-          background: rgba(255, 255, 255, 0.05);
-        }
-      `}
+      style={{
+        display: 'flex',
+        alignItems: 'center',
+        height: '2.5rem',
+        padding: '0 0.875rem',
+        overflow: 'hidden',
+      }}
       onPointerEnter={() => setHint?.(hint)}
       onPointerLeave={() => setHint?.(null)}
       onClick={handleDownload}
-      {...{} as any}
     >
-      <div className='menuitemfile-label'>{label}</div>
-      {!value && !loading && <div className='menuitemfile-placeholder'>{kind.placeholder}</div>}
-      {name && <div className='menuitemfile-name'>{name}</div>}
+      <style>{`
+        .menuitemfile:hover {
+          cursor: pointer;
+          background: rgba(255, 255, 255, 0.05);
+        }
+      `}</style>
+      <div className='menuitemfile-label' style={{
+        flex: 1,
+        whiteSpace: 'nowrap',
+        textOverflow: 'ellipsis',
+        overflow: 'hidden',
+        paddingRight: '1rem',
+      }}>
+        {label}
+      </div>
+      {!value && !loading && <div className='menuitemfile-placeholder' style={{
+        color: 'rgba(255, 255, 255, 0.3)',
+      }}>
+        {kind.placeholder}
+      </div>}
+      {name && <div className='menuitemfile-name' style={{
+        textAlign: 'right',
+        whiteSpace: 'nowrap',
+        textOverflow: 'ellipsis',
+        overflow: 'hidden',
+        maxWidth: '9rem',
+      }}>
+        {name}
+      </div>}
       {value && !loading && (
-        <div className='menuitemfile-x' onClick={remove}>
+        <div className='menuitemfile-x' style={{
+          lineHeight: 0,
+          margin: '0 -0.2rem 0 0.3rem',
+          color: 'rgba(255, 255, 255, 0.3)',
+        }} onClick={remove}>
           <XIcon size='1rem' />
         </div>
       )}
       {loading && (
-        <div className='menuitemfile-loading'>
+        <div className='menuitemfile-loading' style={{
+          margin: '0 -0.1rem 0 0.3rem',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+        }}>
           <LoaderIcon size='1rem' />
         </div>
       )}
-      <input key={n} type='file' onChange={set} accept={kind.accept} />
+      <input key={n} type='file' onChange={set} accept={kind.accept} style={{
+        position: 'absolute',
+        top: '-9999px',
+        left: '-9999px',
+        opacity: 0,
+      }} />
     </label>
   )
 }
@@ -964,32 +929,31 @@ export function MenuItemToggle({ label, hint, trueLabel = 'Yes', falseLabel = 'N
   return (
     <div
       className='menuitemtoggle'
-      css={css`
-        display: flex;
-        align-items: center;
-        height: 2.5rem;
-        padding: 0 0.875rem;
-        .menuitemtoggle-label {
-          flex: 1;
-          white-space: nowrap;
-          text-overflow: ellipsis;
-          overflow: hidden;
-          padding-right: 1rem;
-        }
-        .menuitemtoggle-text {
-          // ...
-        }
-        &:hover {
-          cursor: pointer;
-          background: rgba(255, 255, 255, 0.05);
-        }
-      `}
+      style={{
+        display: 'flex',
+        alignItems: 'center',
+        height: '2.5rem',
+        padding: '0 0.875rem',
+      }}
       onPointerEnter={() => setHint?.(hint)}
       onPointerLeave={() => setHint?.(null)}
       onClick={() => onChange(!value)}
-      {...{} as any}
     >
-      <div className='menuitemtoggle-label'>{label}</div>
+      <style>{`
+        .menuitemtoggle:hover {
+          cursor: pointer;
+          background: rgba(255, 255, 255, 0.05);
+        }
+      `}</style>
+      <div className='menuitemtoggle-label' style={{
+        flex: 1,
+        whiteSpace: 'nowrap',
+        textOverflow: 'ellipsis',
+        overflow: 'hidden',
+        paddingRight: '1rem',
+      }}>
+        {label}
+      </div>
       <div className='menuitemtoggle-text'>{value ? trueLabel : falseLabel}</div>
     </div>
   )

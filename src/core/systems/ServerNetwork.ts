@@ -123,8 +123,7 @@ export class ServerNetwork extends System {
       this.saveTimerId = setTimeout(this.save, SAVE_INTERVAL * 1000);
     }
     
-    // load environment model
-    await (this.world as any).environment?.updateModel();
+    // Environment model loading is handled by ServerEnvironment.start()
   }
 
   override preFixedUpdate(): void {
@@ -284,7 +283,7 @@ export class ServerNetwork extends System {
       if (isNumber(playerLimit) && playerLimit > 0 && this.sockets.size >= playerLimit) {
         const packet = writePacket('kick', 'player_limit');
         ws.send(packet);
-        ws.disconnect();
+        ws.close();
         return;
       }
 
@@ -324,7 +323,7 @@ export class ServerNetwork extends System {
       if (this.sockets.has(user.id)) {
         const packet = writePacket('kick', 'duplicate_user');
         ws.send(packet);
-        ws.disconnect();
+        ws.close();
         return;
       }
 

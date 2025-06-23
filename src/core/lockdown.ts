@@ -5,14 +5,13 @@ lockdown({
   errorTrapping: 'report',
   unhandledRejectionTrapping: 'report',
 
-  //
-  // regExpTaming: 'unsafe',
-  // localeTaming: 'unsafe',
-  // consoleTaming: 'unsafe',
-  // evalTaming: 'unsafeEval',
-  // // stackFiltering: ''
-  // overrideTaming: 'min',
-  // domainTaming: 'unsafe',
+  // Make lockdown more permissive to avoid React DOM conflicts
+  regExpTaming: 'unsafe',
+  localeTaming: 'unsafe',
+  consoleTaming: 'unsafe',
+  evalTaming: 'unsafeEval',
+  overrideTaming: 'min',
+  domainTaming: 'unsafe',
 
   // this is needed for monaco to work correctly.
   // specifically the theming seems to be broken.

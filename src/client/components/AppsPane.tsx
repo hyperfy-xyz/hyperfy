@@ -15,7 +15,7 @@ import {
 } from 'lucide-react'
 import { useEffect, useMemo, useRef, useState } from 'react'
 
-import { orderBy } from 'lodash-es'
+// import { orderBy } from 'lodash-es' // Not available, using manual sort
 import { formatBytes } from '../../core/extras/formatBytes'
 import { cls } from './cls'
 import { usePane } from './usePane'
@@ -157,7 +157,14 @@ function AppsPaneContent({ world, query, refresh, setRefresh }: AppsPaneContentP
       query = query.toLowerCase()
       newItems = newItems.filter((item: any) => item.keywords.includes(query))
     }
-    newItems = orderBy(newItems, sort, [asc ? 'asc' : 'desc'])
+    newItems = newItems.sort((a, b) => {
+      const aVal = a[sort]
+      const bVal = b[sort]
+      let comparison = 0
+      if (aVal < bVal) comparison = -1
+      else if (aVal > bVal) comparison = 1
+      return asc ? comparison : -comparison
+    })
     return newItems
   }, [items, sort, asc, query])
   const reorder = (key: string) => {

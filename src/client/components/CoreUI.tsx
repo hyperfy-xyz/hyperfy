@@ -1,6 +1,6 @@
-import { css } from '@firebolt-dev/css'
+// import { css } from '../utils/css' // Removed css utility
 import { MessageSquareIcon, RefreshCwIcon } from 'lucide-react'
-import React, { useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 
 // import { CodeEditor } from './CodeEditor'
 import { buttons, propToLabel } from '../../core/extras/buttons'
@@ -82,11 +82,11 @@ export function CoreUI({ world }: { world: any }) {
     <div
       ref={ref}
       className='coreui'
-      css={css`
-        position: absolute;
-        inset: 0;
-        overflow: hidden;
-      `}
+      style={{
+        position: 'absolute',
+        inset: '0',
+        overflow: 'hidden'
+      }}
     >
       {disconnected && <Disconnected />}
       {!ui.reticleSuppressors && <Reticle world={world} />}
@@ -382,15 +382,21 @@ function Chat({ world }: { world: any }) {
   return (
     <div
       className={cls('mainchat', { active })}
-      css={css`
-        position: absolute;
-        left: calc(2rem + env(safe-area-inset-left));
-        bottom: calc(2rem + env(safe-area-inset-bottom));
-        width: 20rem;
-        font-size: 1rem;
+      style={{
+        position: 'absolute',
+        left: 'calc(2rem + env(safe-area-inset-left))',
+        bottom: 'calc(2rem + env(safe-area-inset-bottom))',
+        width: '20rem',
+        fontSize: '1rem',
+        pointerEvents: active ? 'auto' : 'none',
+      }}
+    >
+      <style>{`
         @media all and (max-width: 1200px) {
-          left: calc(1rem + env(safe-area-inset-left));
-          bottom: calc(1rem + env(safe-area-inset-bottom));
+          .mainchat {
+            left: calc(1rem + env(safe-area-inset-left)) !important;
+            bottom: calc(1rem + env(safe-area-inset-bottom)) !important;
+          }
         }
         .mainchat-msgs {
           padding: 0 0 0.5rem 0.4rem;
@@ -405,10 +411,8 @@ function Chat({ world }: { world: any }) {
           background: rgba(11, 10, 21, 0.85);
           border: 0.0625rem solid #2a2b39;
           border-radius: 1rem;
-          &:hover {
-            cursor: pointer;
-          }
-          opacity: 0; // disabled
+          opacity: ${active ? '0' : '1'};
+          cursor: pointer;
         }
         .mainchat-entry {
           height: 2.875rem;
@@ -417,30 +421,14 @@ function Chat({ world }: { world: any }) {
           border: 0.0625rem solid #2a2b39;
           border-radius: 1rem;
           backdrop-filter: blur(5px);
-          display: flex;
+          display: ${active ? 'flex' : 'none'};
           align-items: center;
-
-          // debug
-          display: none;
-          /* pointer-events: auto;
-          opacity: 1; */
-
-          input {
-            font-size: 0.9375rem;
-            line-height: 1;
-          }
         }
-        &.active {
-          pointer-events: auto;
-          .mainchat-btn {
-            display: none;
-          }
-          .mainchat-entry {
-            display: flex;
-          }
+        .mainchat-entry input {
+          font-size: 0.9375rem;
+          line-height: 1;
         }
-      `}
-    >
+      `}</style>
       <div className='mainchat-msgs'>
         {isTouch && !active && <MiniMessages world={world} />}
         {(!isTouch || active) && <Messages world={world} active={active} />}
@@ -550,26 +538,24 @@ function Messages({ world, active }: { world: any; active: boolean }) {
     <div
       ref={contentRef}
       className={cls('messages noscrollbar', { active })}
-      css={css`
-        /* padding: 0 0 0.5rem; */
-        /* margin-bottom: 20px; */
-        flex: 1;
-        max-height: 16rem;
-        transition: all 0.15s ease-out;
-        display: flex;
-        flex-direction: column;
-        align-items: stretch;
-        overflow-y: auto;
-        -webkit-mask-image: linear-gradient(to top, black calc(100% - 10rem), black 10rem, transparent);
-        mask-image: linear-gradient(to top, black calc(100% - 10rem), black 10rem, transparent);
-        &.active {
-          pointer-events: auto;
-        }
+      style={{
+        flex: 1,
+        maxHeight: '16rem',
+        transition: 'all 0.15s ease-out',
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'stretch',
+        overflowY: 'auto',
+        WebkitMaskImage: 'linear-gradient(to top, black calc(100% - 10rem), black 10rem, transparent)',
+        maskImage: 'linear-gradient(to top, black calc(100% - 10rem), black 10rem, transparent)',
+        pointerEvents: active ? 'auto' : 'none',
+      }}
+    >
+      <style>{`
         .messages-spacer {
           flex-shrink: 0;
         }
-      `}
-    >
+      `}</style>
       <div className='messages-spacer' ref={spacerRef} />
       {msgs.map(msg => (
         <Message key={msg.id} msg={msg} />
@@ -596,20 +582,19 @@ function Message({ msg }: { msg: any }) {
   return (
     <div
       className='message'
-      css={css`
-        padding: 0.25rem 0;
-        line-height: 1.4;
-        font-size: 1rem;
-        paint-order: stroke fill;
-        -webkit-text-stroke: 0.25rem rgba(0, 0, 0, 0.2);
+      style={{
+        padding: '0.25rem 0',
+        lineHeight: 1.4,
+        fontSize: '1rem',
+        paintOrder: 'stroke fill',
+        WebkitTextStroke: '0.25rem rgba(0, 0, 0, 0.2)',
+      }}
+    >
+      <style>{`
         .message-from {
           margin-right: 0.25rem;
         }
-        .message-body {
-          // ...
-        }
-      `}
-    >
+      `}</style>
       {msg.from && <span className='message-from'>[{msg.from}]</span>}
       <span className='message-body'>{msg.body}</span>
       {/* <span>{timeAgo}</span> */}
@@ -627,49 +612,54 @@ function Disconnected() {
   return (
     <>
       <div
-        css={css`
-          position: fixed;
-          top: 0;
-          left: 0;
-          width: 100%;
-          height: 100%;
-          backdrop-filter: grayscale(100%);
-          pointer-events: none;
-          z-index: 9999;
-          animation: fadeIn 3s forwards;
-          @keyframes fadeIn {
-            from {
-              opacity: 0;
-            }
-            to {
-              opacity: 1;
-            }
-          }
-        `}
+        style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          width: '100%',
+          height: '100%',
+          backdropFilter: 'grayscale(100%)',
+          pointerEvents: 'none',
+          zIndex: 9999,
+          animation: 'fadeIn 3s forwards',
+        }}
       />
-      <div
-        css={css`
-          pointer-events: auto;
-          position: absolute;
-          top: 50%;
-          left: 50%;
-          background: rgba(11, 10, 21, 0.85);
-          border: 0.0625rem solid #2a2b39;
-          backdrop-filter: blur(5px);
-          border-radius: 1rem;
-          height: 2.75rem;
-          padding: 0 1rem;
-          transform: translate(-50%, -50%);
-          display: flex;
-          align-items: center;
-          cursor: pointer;
-          > span {
-            margin-left: 0.4rem;
+      <style>{`
+        @keyframes fadeIn {
+          from {
+            opacity: 0;
           }
-        `}
+          to {
+            opacity: 1;
+          }
+        }
+      `}</style>
+      <div
+        className="disconnected-btn"
+        style={{
+          pointerEvents: 'auto',
+          position: 'absolute',
+          top: '50%',
+          left: '50%',
+          background: 'rgba(11, 10, 21, 0.85)',
+          border: '0.0625rem solid #2a2b39',
+          backdropFilter: 'blur(5px)',
+          borderRadius: '1rem',
+          height: '2.75rem',
+          padding: '0 1rem',
+          transform: 'translate(-50%, -50%)',
+          display: 'flex',
+          alignItems: 'center',
+          cursor: 'pointer',
+        }}
         onClick={() => window.location.reload()}
       >
-        <RefreshCwIcon size='1.1rem' />
+        <style>{`
+          .disconnected-btn > span {
+            margin-left: 0.4rem;
+          }
+        `}</style>
+        <RefreshCwIcon size={18} />
         <span>Reconnect</span>
       </div>
     </>
@@ -680,19 +670,31 @@ function LoadingOverlay({ world }: { world: any }) {
   const [progress, setProgress] = useState(0)
   const { title, desc, image } = world.settings
   useEffect(() => {
-    world.on('progress', setProgress)
+    console.log('[LoadingOverlay] Mounted, listening for progress events')
+    const handleProgress = (value: number) => {
+      console.log('[LoadingOverlay] Progress update:', value)
+      setProgress(value)
+    }
+    world.on('progress', handleProgress)
     return () => {
-      world.off('progress', setProgress)
+      console.log('[LoadingOverlay] Unmounted')
+      world.off('progress', handleProgress)
     }
   }, [])
+  useEffect(() => {
+    console.log('[LoadingOverlay] Progress changed to:', progress)
+  }, [progress])
   return (
     <div
-      css={css`
-        position: absolute;
-        inset: 0;
-        background: black;
-        display: flex;
-        pointer-events: auto;
+      style={{
+        position: 'absolute',
+        inset: '0',
+        background: 'black',
+        display: 'flex',
+        pointerEvents: 'auto',
+      }}
+    >
+      <style>{`
         @keyframes pulse {
           0% {
             transform: scale(1);
@@ -753,8 +755,7 @@ function LoadingOverlay({ world }: { world: any }) {
           border-radius: 3px;
           transition: width 0.2s ease-out;
         }
-      `}
-    >
+      `}</style>
       <div className='loading-image' />
       <div className='loading-shade' />
       <div className='loading-info'>
@@ -776,14 +777,17 @@ const kickMessages: Record<string, string> = {
 function KickedOverlay({ code }: { code: string }) {
   return (
     <div
-      css={css`
-        position: absolute;
-        inset: 0;
-        background: black;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        pointer-events: auto;
+      style={{
+        position: 'absolute',
+        inset: 0,
+        background: 'black',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        pointerEvents: 'auto',
+      }}
+    >
+      <style>{`
         @keyframes spin {
           from {
             transform: rotate(0deg);
@@ -792,12 +796,11 @@ function KickedOverlay({ code }: { code: string }) {
             transform: rotate(360deg);
           }
         }
-        svg {
+        .kicked-overlay svg {
           animation: spin 1s linear infinite;
         }
-      `}
-    >
-      <div>{kickMessages[code] || kickMessages.unknown}</div>
+      `}</style>
+      <div className="kicked-overlay">{kickMessages[code] || kickMessages.unknown}</div>
     </div>
   )
 }
@@ -817,21 +820,26 @@ function ActionsBlock({ world }: { world: any }) {
   if (!showActions) return null
   return (
     <div
-      css={css`
-        position: absolute;
-        top: calc(2rem + env(safe-area-inset-top));
-        left: calc(2rem + env(safe-area-inset-left));
-        bottom: calc(2rem + env(safe-area-inset-bottom));
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        @media all and (max-width: 1200px) {
-          top: calc(1rem + env(safe-area-inset-top));
-          left: calc(1rem + env(safe-area-inset-left));
-          bottom: calc(1rem + env(safe-area-inset-bottom));
-        }
-      `}
+      className="actions-block"
+      style={{
+        position: 'absolute',
+        top: 'calc(2rem + env(safe-area-inset-top))',
+        left: 'calc(2rem + env(safe-area-inset-left))',
+        bottom: 'calc(2rem + env(safe-area-inset-bottom))',
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+      }}
     >
+      <style>{`
+        @media all and (max-width: 1200px) {
+          .actions-block {
+            top: calc(1rem + env(safe-area-inset-top)) !important;
+            left: calc(1rem + env(safe-area-inset-left)) !important;
+            bottom: calc(1rem + env(safe-area-inset-bottom)) !important;
+          }
+        }
+      `}</style>
       <Actions world={world} />
     </div>
   )
@@ -846,26 +854,25 @@ function Actions({ world }: { world: any }) {
   return (
     <div
       className='actions'
-      css={css`
-        flex: 1;
-        display: flex;
-        flex-direction: column;
-        justify-content: center;
+      style={{
+        flex: 1,
+        display: 'flex',
+        flexDirection: 'column',
+        justifyContent: 'center',
+      }}
+    >
+      <style>{`
         .actions-item {
           display: flex;
           align-items: center;
           margin: 0 0 0.5rem;
-          &-icon {
-            // ...
-          }
-          &-label {
-            margin-left: 0.625em;
-            paint-order: stroke fill;
-            -webkit-text-stroke: 0.25rem rgba(0, 0, 0, 0.2);
-          }
         }
-      `}
-    >
+        .actions-item-label {
+          margin-left: 0.625em;
+          paint-order: stroke fill;
+          -webkit-text-stroke: 0.25rem rgba(0, 0, 0, 0.2);
+        }
+      `}</style>
       {actions.map((action: any) => (
         <div className='actions-item' key={action.id}>
           <div className='actions-item-icon'>{getActionIcon(action)}</div>
@@ -902,16 +909,16 @@ function ActionPill({ label }: { label: string }) {
   return (
     <div
       className='actionpill'
-      css={css`
-        border: 0.0625rem solid white;
-        border-radius: 0.25rem;
-        background: rgba(0, 0, 0, 0.1);
-        padding: 0.25rem 0.375rem;
-        font-size: 0.875em;
-        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
-        paint-order: stroke fill;
-        -webkit-text-stroke: 0.25rem rgba(0, 0, 0, 0.2);
-      `}
+      style={{
+        border: '0.0625rem solid white',
+        borderRadius: '0.25rem',
+        background: 'rgba(0, 0, 0, 0.1)',
+        padding: '0.25rem 0.375rem',
+        fontSize: '0.875em',
+        boxShadow: '0 1px 3px rgba(0, 0, 0, 0.3)',
+        paintOrder: 'stroke fill',
+        WebkitTextStroke: '0.25rem rgba(0, 0, 0, 0.2)',
+      }}
     >
       {label}
     </div>
@@ -923,13 +930,15 @@ function ActionIcon({ icon }: { icon: any }) {
   return (
     <div
       className='actionicon'
-      css={css`
-        line-height: 0;
-        svg {
+      style={{
+        lineHeight: 0,
+      }}
+    >
+      <style>{`
+        .actionicon svg {
           filter: drop-shadow(0 1px 3px rgba(0, 0, 0, 0.8));
         }
-      `}
-    >
+      `}</style>
       <Icon size='1.5rem' />
     </div>
   )
@@ -950,23 +959,22 @@ function Reticle({ world }: { world: any }) {
   return (
     <div
       className='reticle'
-      css={css`
-        position: absolute;
-        inset: 0;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        font-size: 1rem;
-        .reticle-item {
-          width: 1.25rem;
-          height: 1.25rem;
-          border-radius: 0.625rem;
-          border: 0.125rem solid ${buildMode ? '#ff4d4d' : 'white'};
-          mix-blend-mode: ${buildMode ? 'normal' : 'difference'};
-        }
-      `}
+      style={{
+        position: 'absolute',
+        inset: 0,
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        fontSize: '1rem',
+      }}
     >
-      <div className='reticle-item' />
+      <div className='reticle-item' style={{
+        width: '1.25rem',
+        height: '1.25rem',
+        borderRadius: '0.625rem',
+        border: `0.125rem solid ${buildMode ? '#ff4d4d' : 'white'}`,
+        mixBlendMode: buildMode ? 'normal' : 'difference',
+      }} />
     </div>
   )
 }
@@ -985,13 +993,16 @@ function Toast({ world }: { world: any }) {
   return (
     <div
       className='toast'
-      css={css`
-        position: absolute;
-        top: calc(50% - 4.375rem);
-        left: 0;
-        right: 0;
-        display: flex;
-        justify-content: center;
+      style={{
+        position: 'absolute',
+        top: 'calc(50% - 4.375rem)',
+        left: 0,
+        right: 0,
+        display: 'flex',
+        justifyContent: 'center',
+      }}
+    >
+      <style>{`
         @keyframes toastIn {
           from {
             opacity: 0;
@@ -1015,14 +1026,13 @@ function Toast({ world }: { world: any }) {
           opacity: 0;
           transform: translateY(0.625rem) scale(0.9);
           transition: all 0.1s ease-in-out;
-          &.visible {
-            opacity: 1;
-            transform: translateY(0) scale(1);
-            animation: toastIn 0.1s ease-in-out;
-          }
         }
-      `}
-    >
+        .toast-msg.visible {
+          opacity: 1;
+          transform: translateY(0) scale(1);
+          animation: toastIn 0.1s ease-in-out;
+        }
+      `}</style>
       {msg && <ToastMsg key={msg.id} text={msg.text} />}
     </div>
   )
@@ -1048,14 +1058,17 @@ function TouchBtns({ world }: { world: any }) {
   return (
     <div
       className='touchbtns'
-      css={css`
-        position: absolute;
-        bottom: calc(1rem + env(safe-area-inset-bottom));
-        right: calc(1rem + env(safe-area-inset-right));
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        gap: 0.5rem;
+      style={{
+        position: 'absolute',
+        bottom: 'calc(1rem + env(safe-area-inset-bottom))',
+        right: 'calc(1rem + env(safe-area-inset-right))',
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        gap: '0.5rem',
+      }}
+    >
+      <style>{`
         .touchbtns-btn {
           pointer-events: auto;
           width: 3.5rem;
@@ -1069,16 +1082,15 @@ function TouchBtns({ world }: { world: any }) {
           border-radius: 1rem;
           box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.2);
           cursor: pointer;
-          &:active {
-            transform: scale(0.95);
-          }
-          &.action {
-            background: #ff4d4d;
-            border-color: #ff6666;
-          }
         }
-      `}
-    >
+        .touchbtns-btn:active {
+          transform: scale(0.95);
+        }
+        .touchbtns-btn.action {
+          background: #ff4d4d;
+          border-color: #ff6666;
+        }
+      `}</style>
       {isAction && (
         <div
           className='touchbtns-btn action'

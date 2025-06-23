@@ -40,6 +40,53 @@ beforeAll(() => {
     return null;
   }) as any;
 
+  // Mock PHYSX for physics tests
+  (global as any).PHYSX = {
+    PxSphereGeometry: class {
+      radius: number;
+      constructor(radius: number) {
+        this.radius = radius;
+      }
+    },
+    PxBoxGeometry: class {
+      x: number;
+      y: number;
+      z: number;
+      constructor(x: number, y: number, z: number) {
+        this.x = x;
+        this.y = y;
+        this.z = z;
+      }
+    },
+    PxCapsuleGeometry: class {
+      radius: number;
+      height: number;
+      constructor(radius: number, height: number) {
+        this.radius = radius;
+        this.height = height;
+      }
+    },
+    PX_PHYSICS_VERSION: '5.0.0',
+  };
+
+  // Mock createNode function
+  (global as any).createNode = vi.fn((type: string, props?: any) => {
+    return {
+      type,
+      props,
+      position: { x: 0, y: 0, z: 0 },
+      rotation: { x: 0, y: 0, z: 0, w: 1 },
+      scale: { x: 1, y: 1, z: 1 },
+      visible: true,
+      active: true,
+      add: vi.fn(),
+      remove: vi.fn(),
+      traverse: vi.fn(),
+      parent: null,
+      children: [],
+    };
+  });
+
   // Mock requestAnimationFrame for physics simulations
   global.requestAnimationFrame = vi.fn((callback) => {
     return setTimeout(() => callback(Date.now()), 16); // 60fps

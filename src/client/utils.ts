@@ -20,11 +20,3 @@ const coarse = typeof window !== 'undefined' && typeof window.matchMedia === 'fu
 const noHover = typeof window !== 'undefined' && typeof window.matchMedia === 'function' ? window.matchMedia('(hover: none)').matches : false;
 const hasTouch = typeof navigator !== 'undefined' && typeof navigator.maxTouchPoints === 'number' ? navigator.maxTouchPoints > 0 : false;
 export const isTouch = (coarse && hasTouch) || (noHover && hasTouch);
-
-/**
- * Utility to apply css prop in a TypeScript-friendly way
- * Usage: <div {...cssProps(css`...styles...`)}>
- */
-export function cssProps(styles: string) {
-  return { css: styles } as any;
-}

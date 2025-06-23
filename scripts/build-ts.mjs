@@ -8,6 +8,7 @@ import { polyfillNode } from 'esbuild-plugin-polyfill-node'
 
 const dev = process.argv.includes('--dev')
 const typecheck = !process.argv.includes('--no-typecheck')
+const serverOnly = process.argv.includes('--server-only')
 const dirname = path.dirname(fileURLToPath(import.meta.url))
 const rootDir = path.join(dirname, '../')
 const buildDir = path.join(rootDir, 'build')
@@ -40,7 +41,7 @@ async function runTypeCheck() {
   
   console.log('Running TypeScript type checking...')
   try {
-    execSync('npx tsc --noEmit', { 
+    execSync('npx tsc --noEmit -p tsconfig.build.json', { 
       stdio: 'inherit',
       cwd: rootDir 
     })
@@ -77,9 +78,17 @@ async function buildClient() {
     sourcemap: true,
     metafile: true,
     jsx: 'automatic',
-    jsxImportSource: '@firebolt-dev/jsx',
+    jsxImportSource: 'react',
     define: {
       'process.env.NODE_ENV': dev ? '"development"' : '"production"',
+      'import.meta.env.PUBLIC_WS_URL': JSON.stringify(process.env.PUBLIC_WS_URL || ''),
+      'import.meta.env.LIVEKIT_URL': JSON.stringify(process.env.LIVEKIT_URL || ''),
+      'import.meta.env.LIVEKIT_API_KEY': JSON.stringify(process.env.LIVEKIT_API_KEY || ''),
+      // Don't include API secret in client bundle - it should only be on server
+      // 'import.meta.env.LIVEKIT_API_SECRET': JSON.stringify(process.env.LIVEKIT_API_SECRET || ''),
+      // Also define window versions for backward compatibility
+      'window.PUBLIC_WS_URL': JSON.stringify(process.env.PUBLIC_WS_URL || ''),
+      'window.LIVEKIT_URL': JSON.stringify(process.env.LIVEKIT_URL || ''),
     },
     loader: {
       '.ts': 'ts',
@@ -180,7 +189,7 @@ async function buildServer() {
             // Copy PhysX files
             const physxTsSrc = path.join(rootDir, 'src/core/physx-js-webidl.ts')
             const physxJsSrc = path.join(rootDir, 'src/core/physx-js-webidl.js')
-            const physxDest = path.join(rootDir, 'build/physx-js-webidl.js')
+            const physxDest = path.join(rootDir, 'build/public/physx-js-webidl.js')
             
             // Check if TypeScript version exists, otherwise use JS
             if (await fs.pathExists(physxTsSrc)) {
@@ -201,7 +210,7 @@ async function buildServer() {
             
             // Copy WASM
             const physxWasmSrc = path.join(rootDir, 'src/core/physx-js-webidl.wasm')
-            const physxWasmDest = path.join(rootDir, 'build/physx-js-webidl.wasm')
+            const physxWasmDest = path.join(rootDir, 'build/public/physx-js-webidl.wasm')
             await fs.copy(physxWasmSrc, physxWasmDest)
             
             // Restart server in dev mode
@@ -237,12 +246,21 @@ async function generateDeclarations() {
       cwd: rootDir
     })
     
-    // Bundle declarations
-    execSync('npx dts-bundle-generator -o build/index.d.ts src/server/index.ts --no-check', {
-      stdio: 'inherit',
-      cwd: rootDir
-    })
+    // Skip declaration bundling for server entry point
+    // The server/index.ts is a startup script, not a library module
+    console.log('Skipping declaration bundling for server entry point')
     
+    // Create a simple index.d.ts that points to the generated declarations
+    const indexDeclaration = `// TypeScript declarations for Hyperfy
+// Server entry point (startup script)
+export {};
+
+// For library usage, import specific modules directly:
+// import { World } from 'hyperfy/build/core/World';
+// import { createServerWorld } from 'hyperfy/build/core/createServerWorld';
+// import { createRPGServerWorld } from 'hyperfy/build/core/createRPGServerWorld';
+`
+    await fs.writeFile(path.join(rootDir, 'build/index.d.ts'), indexDeclaration)
     console.log('Declaration files generated ✓')
   } catch (error) {
     console.error('Declaration generation failed!')
@@ -279,10 +297,15 @@ async function main() {
   await runTypeCheck()
   
   // Build client and server
-  const [clientCtx, serverCtx] = await Promise.all([
-    buildClient(),
-    buildServer()
-  ])
+  let clientCtx, serverCtx
+  if (serverOnly) {
+    serverCtx = await buildServer()
+  } else {
+    [clientCtx, serverCtx] = await Promise.all([
+      buildClient(),
+      buildServer()
+    ])
+  }
   
   // Generate declarations in production
   if (!dev) {

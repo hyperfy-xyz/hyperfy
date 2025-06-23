@@ -19,7 +19,14 @@ const billboardModeInts: Record<string, number> = {
 let worker: Worker | null = null
 function getWorker() {
   if (!worker) {
-    worker = new Worker((window as any).PARTICLES_PATH)
+    const particlesPath = (window as any).PARTICLES_PATH
+    if (!particlesPath || particlesPath === '{particlesPath}') {
+      console.warn('[Particles] PARTICLES_PATH not set, using default')
+      // Use a default path for development
+      worker = new Worker('/particles.js')
+    } else {
+      worker = new Worker(particlesPath)
+    }
   }
   return worker
 }

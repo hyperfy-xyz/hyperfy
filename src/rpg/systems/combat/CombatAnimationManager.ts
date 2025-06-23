@@ -303,7 +303,10 @@ export class CombatAnimationManager {
     damage?: number,
     targetId?: string
   ): void {
-    const animationName = this.getAnimationName(attackType, style);
+    const entity = this.world.entities.get(entityId);
+    const animationName = entity ? 
+      this.determineAnimation(entity as RPGEntity, attackType, style) :
+      this.getDefaultAnimationName(attackType);
     const duration = this.getAnimationDuration(animationName);
     
     const task: AnimationTask = {
@@ -324,24 +327,19 @@ export class CombatAnimationManager {
   }
 
   /**
-   * Get animation name for attack type and style
+   * Get default animation name for attack type
    */
-  private getAnimationName(attackType: AttackType, style: CombatStyle): string {
-    const entity = this.world.entities.get('dummy'); // We need entity for weapon check
-    if (!entity) {
-      // Fallback without entity
-      switch (attackType) {
-        case AttackType.MELEE:
-          return 'melee_slash';
-        case AttackType.RANGED:
-          return 'ranged_bow';
-        case AttackType.MAGIC:
-          return 'magic_cast';
-        default:
-          return 'idle';
-      }
+  private getDefaultAnimationName(attackType: AttackType): string {
+    switch (attackType) {
+      case AttackType.MELEE:
+        return 'melee_slash';
+      case AttackType.RANGED:
+        return 'ranged_bow';
+      case AttackType.MAGIC:
+        return 'magic_cast';
+      default:
+        return 'idle';
     }
-    return this.determineAnimation(entity as RPGEntity, attackType, style);
   }
   
   /**

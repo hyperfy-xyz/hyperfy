@@ -30,7 +30,6 @@ import { Entities as EntitiesSystem } from './systems/Entities';
 import { Physics as PhysicsSystem } from './systems/Physics';
 import { Stage as StageSystem } from './systems/Stage';
 import { Scripts as ScriptsSystem } from './systems/Scripts';
-import { Network as NetworkSystem } from './systems/Network';
 
 export class World extends EventEmitter implements IWorld {
   // Time management
@@ -103,7 +102,6 @@ export class World extends EventEmitter implements IWorld {
     this.register('entities', EntitiesSystem);
     this.register('physics', PhysicsSystem);
     this.register('stage', StageSystem);
-    this.register('network', NetworkSystem);
   }
 
   register(key: string, SystemClass: SystemConstructor): System {
@@ -285,7 +283,9 @@ export class World extends EventEmitter implements IWorld {
     
     if (url.startsWith('asset://')) {
       if (this.assetsDir && allowLocal) {
-        return url.replace('asset://', this.assetsDir);
+        // Ensure assetsDir has trailing slash for proper URL construction
+        const assetsDir = this.assetsDir.endsWith('/') ? this.assetsDir : this.assetsDir + '/';
+        return url.replace('asset://', assetsDir);
       } else if (this.assetsUrl) {
         return url.replace('asset://', this.assetsUrl);
       } else {

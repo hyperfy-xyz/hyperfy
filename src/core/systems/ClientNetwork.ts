@@ -38,14 +38,22 @@ export class ClientNetwork extends System {
 
   async init(options: any): Promise<void> {
     const { wsUrl, name, avatar } = options
+    console.log('[ClientNetwork] Initializing with wsUrl:', wsUrl)
     const authToken = storage?.get('authToken') || ''
     let url = `${wsUrl}?authToken=${authToken}`
     if (name) url += `&name=${encodeURIComponent(name)}`
     if (avatar) url += `&avatar=${encodeURIComponent(avatar)}`
+    console.log('[ClientNetwork] Connecting to:', url)
     this.ws = new WebSocket(url)
     this.ws.binaryType = 'arraybuffer'
+    this.ws.addEventListener('open', () => {
+      console.log('[ClientNetwork] WebSocket connected')
+    })
     this.ws.addEventListener('message', this.onPacket)
     this.ws.addEventListener('close', this.onClose)
+    this.ws.addEventListener('error', (e) => {
+      console.error('[ClientNetwork] WebSocket error:', e)
+    })
   }
 
   preFixedUpdate() {
@@ -83,13 +91,20 @@ export class ClientNetwork extends System {
     this.queue.push([method, data])
   }
 
-  flush() {
+  async flush() {
     while (this.queue.length) {
       try {
         const [method, data] = this.queue.shift()!
-        ;(this as any)[method]?.(data)
+        const handler = (this as any)[method]
+        if (handler) {
+          const result = handler.call(this, data)
+          // If the handler returns a promise, await it
+          if (result instanceof Promise) {
+            await result
+          }
+        }
       } catch (err) {
-        console.error(err)
+        console.error('[ClientNetwork] Error in flush:', err)
       }
     }
   }
@@ -102,12 +117,35 @@ export class ClientNetwork extends System {
     const result = readPacket(e.data)
     if (result && result[0]) {
       const [method, data] = result
+      console.log('[ClientNetwork] Received packet:', method)
       this.enqueue(method, data)
     }
     // console.log('<-', method, data)
   }
 
-  onSnapshot(data: any) {
+  async onSnapshot(data: any) {
+    console.log('[ClientNetwork] Received snapshot', {
+      id: data.id,
+      entitiesCount: data.entities?.length,
+      settingsModel: data.settings?.model,
+      blueprintsCount: data.blueprints?.length
+    })
+    
+    // Ensure Physics is fully initialized before processing entities
+    // This is needed because PlayerLocal uses physics extensions during construction
+    if (this.world.physics && !this.world.physics.physics) {
+      console.log('[ClientNetwork] Waiting for Physics to initialize...')
+      // Wait a bit for Physics to initialize
+      let attempts = 0
+      while (!this.world.physics.physics && attempts < 50) {
+        await new Promise(resolve => setTimeout(resolve, 10))
+        attempts++
+      }
+      if (!this.world.physics.physics) {
+        console.error('[ClientNetwork] Physics failed to initialize after waiting')
+      }
+    }
+    
     this.id = data.id
     this.serverTimeOffset = data.serverTime - performance.now()
     this.apiUrl = data.apiUrl
@@ -116,6 +154,7 @@ export class ClientNetwork extends System {
 
     const loader = this.world.loader
     if (loader && typeof loader.preload === 'function' && typeof loader.execPreload === 'function') {
+      console.log('[ClientNetwork] Starting preload...')
       // preload environment model and avatar
       if (data.settings.model) {
         loader.preload('model', data.settings.model.url)
@@ -146,22 +185,31 @@ export class ClientNetwork extends System {
         loader.preload('emote', url as string)
       }
       // preload local player avatar
+      let playerAvatarPreloaded = false
       for (const item of data.entities) {
         if (item.type === 'player' && item.owner === this.id) {
           const url = item.sessionAvatar || item.avatar
           loader.preload('avatar', url)
+          playerAvatarPreloaded = true
+          console.log('[ClientNetwork] Preloading player avatar:', url)
         }
       }
+      if (!playerAvatarPreloaded) {
+        console.warn('[ClientNetwork] No player entity found for preloading avatar')
+      }
+      console.log('[ClientNetwork] Executing preload...')
       loader.execPreload()
     }
 
+    console.log('[ClientNetwork] Deserializing world data...')
     ;(this.world.collections as any).deserialize(data.collections)
     ;(this.world.settings as any).deserialize(data.settings)
     ;(this.world.chat as any).deserialize(data.chat)
     ;(this.world.blueprints as any).deserialize(data.blueprints)
-    ;(this.world.entities as any).deserialize(data.entities)
+    await (this.world.entities as any).deserialize(data.entities)
     ;(this.world as any).livekit?.deserialize(data.livekit)
     storage?.set('authToken', data.authToken)
+    console.log('[ClientNetwork] World data deserialized')
   }
 
   onSettingsModified = (data: any) => {
@@ -247,3 +295,4 @@ export class ClientNetwork extends System {
     }
   }
 }
+

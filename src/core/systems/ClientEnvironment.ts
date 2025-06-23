@@ -128,6 +128,9 @@ export class ClientEnvironment extends System {
   override async start() {
     this.buildCSM()
     this.updateSky()
+    
+    // Load initial model
+    await this.updateModel()
 
     const worldAny = this.world as any
     worldAny.settings?.on('change', this.onSettingsChange)

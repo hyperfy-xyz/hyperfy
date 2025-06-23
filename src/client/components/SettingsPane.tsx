@@ -1,13 +1,10 @@
 import React from 'react'
-import { css } from '@firebolt-dev/css'
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { SettingsIcon, SunIcon, UserIcon, Volume2Icon, XIcon } from 'lucide-react'
+import { Settings, Sun, User, Volume2, X } from 'lucide-react'
 
-import { usePane } from './usePane'
-import { AvatarPreview } from '../AvatarPreview'
-import { cls } from './cls'
 import { hasRole } from '../../core/utils'
 import { InputDropdown, InputNumber, InputRange, InputSwitch, InputText } from './Inputs'
+import { usePane } from './usePane'
 
 export function SettingsPane({ world, player, close }) {
   const paneRef = useRef<HTMLDivElement | null>(null)
@@ -91,7 +88,7 @@ export function SettingsPane({ world, player, close }) {
         }
       `}</style>
       <div className='spane-head' ref={headRef}>
-        <SettingsIcon size={16} />
+        <Settings size={16} />
         <div className='spane-head-title'>Settings</div>
         {/* <div className='spane-head-tabs'>
           {canBuild && (
@@ -106,7 +103,7 @@ export function SettingsPane({ world, player, close }) {
           )}
         </div> */}
         <div className='spane-head-close' onClick={close}>
-          <XIcon size={20} />
+          <X size={20} />
         </div>
       </div>
       {tab === 'general' && <GeneralSettings world={world} player={player} />}
@@ -138,15 +135,11 @@ function GeneralSettings({ world, player }) {
     const width = world.graphics.width
     const height = world.graphics.height
     const dpr = window.devicePixelRatio
-    interface DprOption {
-      label: string;
-      value: number;
-    }
-    const options: DprOption[] = []
+    const options: { label: string; value: string }[] = []
     const add = (label: string, dpr: number) => {
       options.push({
         label: `${label} (${Math.round(width * dpr)} x ${Math.round(height * dpr)})`,
-        value: dpr,
+        value: dpr.toString(),
       })
     }
     add('Low', 0.5)
@@ -215,7 +208,7 @@ function GeneralSettings({ world, player }) {
         }
       `}</style>
       <div className='general-section'>
-        <UserIcon size={16} />
+        <User size={16} />
         <span>Player</span>
       </div>
       <div className='general-field'>
@@ -233,26 +226,33 @@ function GeneralSettings({ world, player }) {
         </div>
       </div>
       <div className='general-section'>
-        <SunIcon size={16} />
+        <Sun size={16} />
         <span>Graphics</span>
       </div>
       <div className='general-field'>
         <div className='general-field-label'>Resolution</div>
         <div className='general-field-input'>
-          <InputDropdown options={dprOptions} value={dpr} onChange={dpr => world.prefs.setDPR(dpr)} />
+          <InputDropdown 
+            options={dprOptions} 
+            value={dpr.toString()} 
+            onChange={dpr => world.prefs.setDPR(parseFloat(dpr))} 
+          />
         </div>
       </div>
       <div className='general-field'>
         <div className='general-field-label'>Shadows</div>
         <div className='general-field-input'>
-          <InputSwitch options={shadowOptions} value={shadows} onChange={shadows => world.prefs.setShadows(shadows)} />
+          <InputDropdown 
+            options={shadowOptions} 
+            value={shadows} 
+            onChange={shadows => world.prefs.setShadows(shadows)} 
+          />
         </div>
       </div>
       <div className='general-field'>
         <div className='general-field-label'>Postprocessing</div>
         <div className='general-field-input'>
           <InputSwitch
-            options={onOffOptions}
             value={postprocessing}
             onChange={postprocessing => world.prefs.setPostprocessing(postprocessing)}
           />
@@ -262,43 +262,47 @@ function GeneralSettings({ world, player }) {
         <div className='general-field'>
           <div className='general-field-label'>Bloom</div>
           <div className='general-field-input'>
-            <InputSwitch options={onOffOptions} value={bloom} onChange={bloom => world.prefs.setBloom(bloom)} />
+            <InputSwitch value={bloom} onChange={bloom => world.prefs.setBloom(bloom)} />
           </div>
         </div>
       )}
       <div className='general-section'>
-        <Volume2Icon size={16} />
+        <Volume2 size={16} />
         <span>Audio</span>
       </div>
       <div className='general-field'>
         <div className='general-field-label'>Music</div>
         <div className='general-field-input'>
           <InputRange
-            value={music}
-            onChange={volume => world.prefs.setMusic(volume)}
+            value={music * 100}
+            onChange={volume => world.prefs.setMusic(volume / 100)}
             min={0}
-            max={2}
-            step={0.05}
-            instant
+            max={200}
+            step={5}
           />
         </div>
       </div>
       <div className='general-field'>
         <div className='general-field-label'>SFX</div>
         <div className='general-field-input'>
-          <InputRange value={sfx} onChange={volume => world.prefs.setSFX(volume)} min={0} max={2} step={0.05} instant />
+          <InputRange 
+            value={sfx * 100} 
+            onChange={volume => world.prefs.setSFX(volume / 100)} 
+            min={0} 
+            max={200} 
+            step={5} 
+          />
         </div>
       </div>
       <div className='general-field'>
         <div className='general-field-label'>Voice</div>
         <div className='general-field-input'>
           <InputRange
-            value={voice}
-            onChange={volume => world.prefs.setVoice(volume)}
+            value={voice * 100}
+            onChange={volume => world.prefs.setVoice(volume / 100)}
             min={0}
-            max={2}
-            step={0.05}
-            instant
+            max={200}
+            step={5}
           />
         </div>
       </div>

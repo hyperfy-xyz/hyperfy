@@ -65,7 +65,6 @@ export default defineConfig({
       '@node-client': resolve(__dirname, './src/node-client'),
       '@types': resolve(__dirname, './src/types'),
       '@test': resolve(__dirname, './src/__tests__'),
-      'three': resolve(__dirname, './node_modules/three/build/three.module.js'),
     },
     extensions: ['.ts', '.tsx', '.js', '.jsx', '.json']
   },

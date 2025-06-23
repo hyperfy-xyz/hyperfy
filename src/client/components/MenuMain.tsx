@@ -43,8 +43,7 @@ function MenuMainIndex({ world, pop, push }) {
   const [name, setName] = useState(() => player.data.name)
   const changeName = name => {
     if (!name) return setName(player.data.name)
-    player.modify({ name })
-    world.network.send('entityModified', { id: player.data.id, name })
+    player.setName(name)
   }
   return (
     <Menu title='Menu' blur={false}>
