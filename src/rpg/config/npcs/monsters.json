@@ -1,0 +1,117 @@
+[
+  {
+    "id": 1,
+    "name": "Goblin",
+    "examine": "An ugly green creature.",
+    "npcType": "monster",
+    "behavior": "aggressive",
+    "level": 2,
+    "combatLevel": 2,
+    "maxHitpoints": 5,
+    "attackStyle": "melee",
+    "aggressionLevel": 1,
+    "aggressionRange": 3,
+    "combat": {
+      "attackBonus": 1,
+      "strengthBonus": 1,
+      "defenseBonus": 1,
+      "maxHit": 1,
+      "attackSpeed": 4
+    },
+    "lootTable": "goblin_drops",
+    "respawnTime": 30000,
+    "wanderRadius": 5
+  },
+  {
+    "id": 3,
+    "name": "Cow",
+    "examine": "A docile farm animal.",
+    "npcType": "animal",
+    "behavior": "passive",
+    "level": 2,
+    "combatLevel": 2,
+    "maxHitpoints": 8,
+    "attackStyle": "melee",
+    "aggressionLevel": 0,
+    "aggressionRange": 0,
+    "combat": {
+      "attackBonus": 0,
+      "strengthBonus": 0,
+      "defenseBonus": 0,
+      "maxHit": 1,
+      "attackSpeed": 4
+    },
+    "lootTable": "cow_drops",
+    "respawnTime": 60000,
+    "wanderRadius": 10
+  },
+  {
+    "id": 4,
+    "name": "Giant Rat",
+    "examine": "A rat the size of a small dog!",
+    "npcType": "monster",
+    "behavior": "aggressive",
+    "level": 3,
+    "combatLevel": 3,
+    "maxHitpoints": 5,
+    "attackStyle": "melee",
+    "aggressionLevel": 1,
+    "aggressionRange": 2,
+    "combat": {
+      "attackBonus": 2,
+      "strengthBonus": 1,
+      "defenseBonus": 1,
+      "maxHit": 1,
+      "attackSpeed": 3
+    },
+    "lootTable": "rat_drops",
+    "respawnTime": 45000,
+    "wanderRadius": 3
+  },
+  {
+    "id": 5,
+    "name": "Skeleton",
+    "examine": "An undead warrior.",
+    "npcType": "monster",
+    "behavior": "aggressive",
+    "level": 13,
+    "combatLevel": 13,
+    "maxHitpoints": 17,
+    "attackStyle": "melee",
+    "aggressionLevel": 2,
+    "aggressionRange": 5,
+    "combat": {
+      "attackBonus": 10,
+      "strengthBonus": 8,
+      "defenseBonus": 10,
+      "maxHit": 2,
+      "attackSpeed": 4
+    },
+    "lootTable": "skeleton_drops",
+    "respawnTime": 60000,
+    "wanderRadius": 5
+  },
+  {
+    "id": 10,
+    "name": "Hill Giant",
+    "examine": "A huge, lumbering giant.",
+    "npcType": "monster",
+    "behavior": "aggressive",
+    "level": 28,
+    "combatLevel": 28,
+    "maxHitpoints": 35,
+    "attackStyle": "melee",
+    "aggressionLevel": 2,
+    "aggressionRange": 1,
+    "combat": {
+      "attackBonus": 18,
+      "strengthBonus": 22,
+      "defenseBonus": 26,
+      "maxHit": 4,
+      "attackSpeed": 6
+    },
+    "lootTable": "hill_giant_drops",
+    "respawnTime": 90000,
+    "wanderRadius": 3
+  }
+] 

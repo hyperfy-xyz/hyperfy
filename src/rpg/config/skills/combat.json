@@ -1,0 +1,75 @@
+{
+  "id": "combat",
+  "name": "Combat Skills",
+  "description": "Configuration for combat-related skills",
+  "skills": {
+    "attack": {
+      "name": "Attack",
+      "maxLevel": 99,
+      "experienceTable": {
+        "formula": "floor(level/4 * (level - 1 + 300 * 2^((level-1)/7)))",
+        "multiplier": 1.0
+      },
+      "levelBonuses": {
+        "1": { "unlocks": ["Bronze weapons"] },
+        "5": { "unlocks": ["Iron weapons"] },
+        "10": { "unlocks": ["Steel weapons"] },
+        "20": { "unlocks": ["Mithril weapons"] },
+        "30": { "unlocks": ["Adamant weapons"] },
+        "40": { "unlocks": ["Rune weapons"] },
+        "60": { "unlocks": ["Dragon weapons"] }
+      }
+    },
+    "strength": {
+      "name": "Strength", 
+      "maxLevel": 99,
+      "experienceTable": {
+        "formula": "floor(level/4 * (level - 1 + 300 * 2^((level-1)/7)))",
+        "multiplier": 1.0
+      },
+      "levelBonuses": {
+        "10": { "damageBonus": 1 },
+        "20": { "damageBonus": 2 },
+        "30": { "damageBonus": 3 },
+        "40": { "damageBonus": 4 },
+        "50": { "damageBonus": 5 }
+      }
+    },
+    "defense": {
+      "name": "Defense",
+      "maxLevel": 99,
+      "experienceTable": {
+        "formula": "floor(level/4 * (level - 1 + 300 * 2^((level-1)/7)))",
+        "multiplier": 1.0
+      },
+      "levelBonuses": {
+        "1": { "unlocks": ["Bronze armor"] },
+        "5": { "unlocks": ["Iron armor"] },
+        "10": { "unlocks": ["Steel armor"] },
+        "20": { "unlocks": ["Mithril armor"] },
+        "30": { "unlocks": ["Adamant armor"] },
+        "40": { "unlocks": ["Rune armor"] },
+        "60": { "unlocks": ["Dragon armor"] }
+      }
+    },
+    "hitpoints": {
+      "name": "Hitpoints",
+      "maxLevel": 99,
+      "experienceTable": {
+        "formula": "floor(level/4 * (level - 1 + 300 * 2^((level-1)/7)))",
+        "multiplier": 1.33
+      },
+      "levelBonuses": {
+        "10": { "baseHitpoints": 11 },
+        "20": { "baseHitpoints": 21 },
+        "50": { "baseHitpoints": 51 },
+        "99": { "baseHitpoints": 99 }
+      }
+    }
+  },
+  "combatFormulas": {
+    "combatLevel": "((attack + strength + defense) * 0.25) + (hitpoints * 0.5) + (prayer * 0.125) + (ranged * 0.375) + (magic * 0.375)",
+    "maxHit": "floor((strength * 0.5) + strengthBonus + 0.5)",
+    "accuracy": "floor((attack * 0.5) + attackBonus)"
+  }
+} 

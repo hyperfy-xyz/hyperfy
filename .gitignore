@@ -1,9 +1,67 @@
-.DS_Store
-.env*
-!.env.example
-*.notes.md
-localstorage.json
-.notes/
+# Dependencies
 node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Build outputs
 build/
-/world*
+dist/
+*.tsbuildinfo
+
+# TypeScript cache
+*.tscache
+.tscache/
+
+# Environment files
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Test coverage
+coverage/
+.nyc_output/
+
+# Logs
+logs/
+*.log
+
+# Temporary files
+tmp/
+temp/
+.tmp/
+
+# OS files
+Thumbs.db
+
+# ESLint cache
+.eslintcache
+
+# Prettier cache
+.prettiercache
+
+# Build metadata
+meta.json
+client-meta.json
+
+# PhysX generated files (keep source)
+build/physx-js-webidl.js
+build/physx-js-webidl.wasm
+
+# Visual testing artifacts
+screenshots/
+visual-test-results.log
+visual-test-summary.json
+test-results/
+playwright-report/

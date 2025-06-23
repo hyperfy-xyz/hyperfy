@@ -57,6 +57,75 @@ For containerized deployment, check [DOCKER.md](DOCKER.md) for detailed instruct
 - **Educational Experiences** - Develop interactive learning spaces
 - **Creative Showcases** - Display 3D art and interactive installations
 
+## 📦 Using Hyperfy as a Node.js Module
+
+Beyond running a full Hyperfy server, you can integrate Hyperfy's core functionalities into your own Node.js applications by using the official NPM package. This allows you to create and manage Hyperfy worlds, entities, and systems programmatically.
+
+### Installation
+
+To install the Hyperfy Node.js client package, use npm:
+
+```bash
+npm install hyperfy
+```
+*(Note: Ensure the package name `hyperfy` matches the name intended for NPM publication.)*
+
+### Example Usage
+
+Here's a basic example of how to import and use components from the `hyperfy` package:
+
+```javascript
+// example.js
+import { createNodeClientWorld, System, Node, World } from 'hyperfy';
+
+async function main() {
+  // The createNodeClientWorld function initializes a world suitable for server-side/headless operations.
+  // It may require specific options depending on your setup (e.g., for PhysX, assets).
+  const world = await createNodeClientWorld({
+    // Example options (refer to documentation for details):
+    // physxWorker: new Worker(new URL('./physx-worker.js', import.meta.url)), // If PhysX is needed
+    // assetsDir: './assets', // Path to your assets directory
+  });
+  
+  console.log('Hyperfy World instance created:', world);
+
+  // Example: Define a simple system
+  class MySystem extends System {
+    start() {
+      console.log('MySystem started!');
+    }
+
+    update(delta) {
+      // Called every frame
+    }
+  }
+
+  // Register the system with the world
+  world.register('mySystem', MySystem);
+
+  // Example: Create and add a node
+  const myNode = new Node({ id: 'myCube', name: 'My Cube' });
+  myNode.position.set(0, 1, -2); // Set position (Vector3)
+  // world.addNode(myNode); // How nodes are added might depend on specific world setup
+
+  // Initialize and start the world (if not auto-started by createNodeClientWorld)
+  // await world.init({}); // Pass necessary initialization options
+  // world.start();
+
+  console.log('Node created:', myNode.id, myNode.name, myNode.position.x, myNode.position.y, myNode.position.z);
+
+  // To run the world's simulation loop (if applicable for your use case):
+  // function gameLoop() {
+  //   world.tick(performance.now());
+  //   setImmediate(gameLoop); // or requestAnimationFrame if in a context that supports it
+  // }
+  // gameLoop();
+}
+
+main().catch(console.error);
+```
+This example demonstrates basic setup. Refer to the core module documentation for more in-depth usage of `World`, `Node`, `System`, and other components.
+
 ## 📚 Documentation & Resources
 
 - **[Community Documentation](https://hyperfy.how)** - Comprehensive guides and reference
@@ -110,6 +179,36 @@ Contributions are welcome! Please check out our [contributing guidelines](CONTRI
 3. Commit your changes: `git commit -m 'Add amazing feature'`
 4. Push to the branch: `git push origin feature/amazing-feature`
 5. Open a pull request
+
+### Publishing the Node.js Client Package
+
+The Hyperfy Node.js client is packaged for NPM distribution. Publishing is handled both automatically via GitHub Actions and can be done manually.
+
+#### Automated Publishing (GitHub Releases)
+
+- **Trigger**: New versions of the `hyperfy` NPM package are automatically built and published when a new release is created on the GitHub repository.
+- **Workflow**: This process is managed by the `.github/workflows/npm-publish.yml` GitHub Actions workflow.
+- **Requirements**: For automated publishing to succeed, the `NPM_TOKEN` secret must be configured in the GitHub repository settings. This token grants the workflow permission to publish to NPM.
+
+#### Manual Publishing
+
+To publish the package manually, follow these steps:
+
+1.  **Ensure Version is Updated**: Before publishing, verify that the `version` field in the main `package.json` is updated to the new version number you intend to release. The build script (`scripts/build-node-client.mjs`) uses this version for the package generated in `dist/npm/`.
+2.  **Authenticate with NPM**: You must be logged into NPM on your local machine with an account that has publish permissions for the `hyperfy` package. If you are not logged in, run:
+    ```bash
+    npm login
+    ```
+3.  **Run Publish Script**: Execute the following command from the root of the repository:
+    ```bash
+    npm run publish:node
+    ```
+    This script will:
+    *   Build the Node.js client package into the `dist/npm/` directory.
+    *   Change the current directory to `dist/npm/`.
+    *   Run `npm publish` from within `dist/npm/`.
+
+**Important**: Always ensure that the package is thoroughly tested and the version number is correct before publishing, whether manually or by creating a GitHub release.
 
 ## 🌱 Project Status
 

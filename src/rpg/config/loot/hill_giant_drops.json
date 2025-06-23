@@ -1,0 +1,40 @@
+{
+  "id": "hill_giant_drops",
+  "name": "Hill Giant Loot Table",
+  "description": "Drops from hill giants", 
+  "drops": [
+    {
+      "itemId": 532,
+      "quantity": 1,
+      "weight": 100,
+      "rarity": "always"
+    },
+    {
+      "itemId": 995,
+      "quantity": 25,
+      "weight": 90,
+      "rarity": "common"
+    },
+    {
+      "itemId": 1277,
+      "quantity": 1,
+      "weight": 30,
+      "rarity": "common"
+    },
+    {
+      "itemId": 1383,
+      "quantity": 1,
+      "weight": 20,
+      "rarity": "uncommon"
+    },
+    {
+      "itemId": 1147,
+      "quantity": 1,
+      "weight": 10,
+      "rarity": "rare"
+    }
+  ],
+  "rareDropTable": true,
+  "rareTableAccess": 64,
+  "maxDrops": 3
+} 

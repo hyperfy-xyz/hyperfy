@@ -1,0 +1,70 @@
+[
+  {
+    "id": 2,
+    "name": "Guard",
+    "examine": "He tries to keep order around here.",
+    "npcType": "guard",
+    "behavior": "defensive",
+    "level": 21,
+    "combatLevel": 21,
+    "maxHitpoints": 22,
+    "attackStyle": "melee",
+    "aggressionLevel": 0,
+    "aggressionRange": 1,
+    "combat": {
+      "attackBonus": 18,
+      "strengthBonus": 16,
+      "defenseBonus": 19,
+      "maxHit": 3,
+      "attackSpeed": 4
+    },
+    "respawnTime": 60000,
+    "wanderRadius": 2
+  },
+  {
+    "id": 20,
+    "name": "City Guard",
+    "examine": "A well-trained guard of the city.",
+    "npcType": "guard",
+    "behavior": "defensive",
+    "level": 45,
+    "combatLevel": 45,
+    "maxHitpoints": 47,
+    "attackStyle": "melee",
+    "aggressionLevel": 0,
+    "aggressionRange": 1,
+    "combat": {
+      "attackBonus": 34,
+      "strengthBonus": 31,
+      "defenseBonus": 36,
+      "maxHit": 5,
+      "attackSpeed": 4
+    },
+    "respawnTime": 120000,
+    "wanderRadius": 2,
+    "faction": "city"
+  },
+  {
+    "id": 21,
+    "name": "Palace Guard",
+    "examine": "An elite guard protecting the palace.",
+    "npcType": "guard",
+    "behavior": "defensive",
+    "level": 83,
+    "combatLevel": 83,
+    "maxHitpoints": 84,
+    "attackStyle": "melee",
+    "aggressionLevel": 0,
+    "aggressionRange": 1,
+    "combat": {
+      "attackBonus": 65,
+      "strengthBonus": 66,
+      "defenseBonus": 65,
+      "maxHit": 8,
+      "attackSpeed": 4
+    },
+    "respawnTime": 180000,
+    "wanderRadius": 1,
+    "faction": "palace"
+  }
+] 

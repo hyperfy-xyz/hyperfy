@@ -1,0 +1,68 @@
+{
+  "id": "tutorial_quest",
+  "name": "Tutorial Island",
+  "description": "Learn the basics of the game.",
+  "questPoints": 1,
+  "difficulty": "Novice",
+  "length": "Short",
+  "requirements": {
+    "skills": {},
+    "quests": [],
+    "items": []
+  },
+  "startConditions": {
+    "minCombatLevel": 3,
+    "location": "tutorial_island"
+  },
+  "rewards": {
+    "experience": {
+      "attack": 100,
+      "strength": 100,
+      "defense": 100,
+      "hitpoints": 100
+    },
+    "items": [
+      { "itemId": 1, "quantity": 1 },
+      { "itemId": 2, "quantity": 5 },
+      { "itemId": 995, "quantity": 25 }
+    ],
+    "questPoints": 1
+  },
+  "steps": [
+    {
+      "id": "talk_to_instructor",
+      "type": "talk",
+      "npcId": 200,
+      "description": "Talk to the Combat Instructor",
+      "dialogue": {
+        "greeting": "Welcome to Tutorial Island! I'll teach you how to fight.",
+        "objective": "Follow my instructions to learn combat basics."
+      }
+    },
+    {
+      "id": "equip_sword",
+      "type": "equip",
+      "itemId": 1,
+      "description": "Equip the bronze sword",
+      "instructions": "Right-click the sword and select 'Wield'"
+    },
+    {
+      "id": "kill_rat",
+      "type": "kill",
+      "npcId": 4,
+      "quantity": 1,
+      "description": "Kill a giant rat",
+      "instructions": "Click on the rat to attack it"
+    },
+    {
+      "id": "return_to_instructor",
+      "type": "talk",
+      "npcId": 200,
+      "description": "Return to the Combat Instructor",
+      "dialogue": {
+        "completion": "Well done! You've completed the tutorial."
+      }
+    }
+  ],
+  "completionText": "Congratulations! You have completed Tutorial Island. You're now ready to explore the main world!"
+} 
