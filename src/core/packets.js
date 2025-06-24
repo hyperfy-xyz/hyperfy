@@ -22,6 +22,7 @@ const names = [
   'kick',
   'ping',
   'pong',
+  'clearScriptCache',
 ]
 
 const byName = {}

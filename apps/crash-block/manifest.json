@@ -1,0 +1,6 @@
+{
+    "name": "Crash Block",
+    "description": "A simple block that is loaded locally.",
+    "model": "model.glb",
+    "script": "script.js"
+  }

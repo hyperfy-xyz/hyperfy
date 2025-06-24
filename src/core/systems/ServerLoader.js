@@ -68,7 +68,13 @@ export class ServerLoader extends System {
       const arrayBuffer = await response.arrayBuffer()
       return arrayBuffer
     } else {
-      const buffer = await fs.readFile(url)
+      // Strip query parameters for local files
+      let cleanUrl = url.split('?')[0]
+      // Handle /apps/ paths - make them relative to project root
+      if (cleanUrl.startsWith('/apps/')) {
+        cleanUrl = path.join(process.cwd(), cleanUrl)
+      }
+      const buffer = await fs.readFile(cleanUrl)
       const arrayBuffer = buffer.buffer.slice(buffer.byteOffset, buffer.byteOffset + buffer.byteLength)
       return arrayBuffer
     }
@@ -81,7 +87,13 @@ export class ServerLoader extends System {
       const text = await response.text()
       return text
     } else {
-      const text = await fs.readFile(url, { encoding: 'utf8' })
+      // Strip query parameters for local files
+      let cleanUrl = url.split('?')[0]
+      // Handle /apps/ paths - make them relative to project root
+      if (cleanUrl.startsWith('/apps/')) {
+        cleanUrl = path.join(process.cwd(), cleanUrl)
+      }
+      const text = await fs.readFile(cleanUrl, { encoding: 'utf8' })
       return text
     }
   }

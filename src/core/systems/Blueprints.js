@@ -33,13 +33,19 @@ export class Blueprints extends System {
     }
     const changed = !isEqual(blueprint, modified)
     if (!changed) return
+    console.log(`[Blueprints] Modifying blueprint ${blueprint.id}, changed:`, changed)
     this.items.set(blueprint.id, modified)
+    let rebuiltCount = 0
     for (const [_, entity] of this.world.entities.items) {
       if (entity.data.blueprint === blueprint.id) {
+        console.log(`[Blueprints] Found entity ${entity.data.id} with matching blueprint`)
         entity.data.state = {}
         entity.build()
+        rebuiltCount++
       }
     }
+    console.log(`[Blueprints] Rebuilt ${rebuiltCount} entities`)
+
     this.emit('modify', modified)
   }
 

@@ -24,6 +24,8 @@ COPY --from=builder /app/build ./build
 COPY --from=builder /app/src ./src
 COPY --from=builder /app/package*.json ./
 COPY --from=builder /app/scripts ./scripts
+COPY --from=builder /app/apps ./apps
+
 
 # Set build argument and environment variable
 ARG COMMIT_HASH=local

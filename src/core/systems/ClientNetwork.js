@@ -162,7 +162,46 @@ export class ClientNetwork extends System {
   }
 
   onBlueprintModified = change => {
+    console.log('[ClientNetwork] Blueprint modified:', change)
     this.world.blueprints.modify(change)
+  }
+
+  onClearScriptCache = data => {
+    console.log(`[ClientNetwork] Clearing script cache for blueprint: ${data.blueprintId}`)
+
+    // Clear using the scriptPath directly
+    const scriptKey = `script/${data.scriptPath}`
+    console.log(`[ClientNetwork] Clearing cache key: ${scriptKey}`)
+
+    if (this.world.loader.results) {
+      this.world.loader.results.delete(scriptKey)
+    }
+    if (this.world.loader.promises) {
+      this.world.loader.promises.delete(scriptKey)
+    }
+
+    // Also clear the file cache
+    if (this.world.loader.files) {
+      this.world.loader.files.delete(data.scriptPath)
+      // Also clear with resolved URL
+      const resolvedUrl = this.world.resolveURL(data.scriptPath)
+      if (resolvedUrl !== data.scriptPath) {
+        this.world.loader.files.delete(resolvedUrl)
+        const resolvedKey = `script/${resolvedUrl}`
+        if (this.world.loader.results) {
+          this.world.loader.results.delete(resolvedKey)
+        }
+        if (this.world.loader.promises) {
+          this.world.loader.promises.delete(resolvedKey)
+        }
+      }
+    }
+
+    console.log('[ClientNetwork] Current cache state after clearing:', {
+      results: this.world.loader.results ? Array.from(this.world.loader.results.keys()).filter(k => k.includes('crash-block')) : [],
+      promises: this.world.loader.promises ? Array.from(this.world.loader.promises.keys()).filter(k => k.includes('crash-block')) : [],
+      files: this.world.loader.files ? Array.from(this.world.loader.files.keys()).filter(k => k.includes('crash-block')) : []
+    })
   }
 
   onEntityAdded = data => {

@@ -135,6 +135,7 @@ export class ClientLoader extends System {
         texture.type = result.type
         texture.needsUpdate = true
         this.results.set(key, texture)
+        console.log(`[ClientLoader] Cached script with key: ${key}`)
         return texture
       }
       if (type === 'image') {

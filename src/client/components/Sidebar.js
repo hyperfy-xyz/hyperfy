@@ -196,13 +196,15 @@ export function Sidebar({ world, ui }) {
               >
                 <SquareMenuIcon size='1.25rem' />
               </Btn>
-              <Btn
-                active={activePane === 'script'}
-                suspended={ui.pane === 'script' && !activePane}
-                onClick={() => world.ui.togglePane('script')}
-              >
-                <CodeIcon size='1.25rem' />
-              </Btn>
+              {!ui.app.blueprint.isLocal && (
+                <Btn
+                  active={activePane === 'script'}
+                  suspended={ui.pane === 'script' && !activePane}
+                  onClick={() => world.ui.togglePane('script')}
+                >
+                  <CodeIcon size='1.25rem' />
+                </Btn>
+              )}
               <Btn
                 active={activePane === 'nodes'}
                 suspended={ui.pane === 'nodes' && !activePane}
@@ -225,7 +227,7 @@ export function Sidebar({ world, ui }) {
         {ui.pane === 'apps' && <Apps world={world} hidden={!ui.active} />}
         {ui.pane === 'add' && <Add world={world} hidden={!ui.active} />}
         {ui.pane === 'app' && <App key={ui.app.data.id} world={world} hidden={!ui.active} />}
-        {ui.pane === 'script' && <Script key={ui.app.data.id} world={world} hidden={!ui.active} />}
+        {ui.pane === 'script' && !ui.app.blueprint.isLocal && <Script key={ui.app.data.id} world={world} hidden={!ui.active} />}
         {ui.pane === 'nodes' && <Nodes key={ui.app.data.id} world={world} hidden={!ui.active} />}
         {ui.pane === 'meta' && <Meta key={ui.app.data.id} world={world} hidden={!ui.active} />}
       </div>
@@ -849,8 +851,15 @@ function Apps({ world, hidden }) {
 function Add({ world, hidden }) {
   // note: multiple collections are supported by the engine but for now we just use the 'default' collection.
   const collection = world.collections.get('default')
+  const [localApps, setLocalApps] = useState([])
   const span = 4
   const gap = '0.5rem'
+  useEffect(() => {
+    fetch('/api/apps')
+      .then(res => res.json())
+      .then(apps => setLocalApps(apps))
+      .catch(err => console.error('Failed to load local apps:', err))
+  }, [])
   const add = blueprint => {
     blueprint = cloneDeep(blueprint)
     blueprint.id = uuid()
@@ -935,6 +944,22 @@ function Add({ world, hidden }) {
         </div>
         <div className='add-content noscrollbar'>
           <div className='add-items'>
+            {/* Local Apps */}
+            {localApps.map(app => (
+              <div className='add-item' key={app.id} onClick={() => add(app)}>
+                <div
+                  className='add-item-image'
+                  css={css`
+                    background-image: url(${app.image || '/assets/default-app.png'});
+                    ${!app.image && 'display: flex; align-items: center; justify-content: center;'}
+                  `}
+                >
+                  {!app.image && '📦'}
+                </div>
+                <div className='add-item-name'>{app.name} 🛠️</div>
+              </div>
+            ))}
+            {/* Collection Apps */}
             {collection.blueprints.map(blueprint => (
               <div className='add-item' key={blueprint.id} onClick={() => add(blueprint)}>
                 <div
@@ -1167,6 +1192,12 @@ function App({ world, hidden }) {
           </div>
         </div>
         <div className='app-content noscrollbar'>
+          {blueprint.isLocal && (
+            <div style={{ padding: '1rem', color: 'rgba(255,255,255,0.6)', fontSize: '0.875rem' }}>
+              This is a local app. Edit the script at: <br />
+              <code style={{ color: '#4088ff', fontSize: '0.8rem' }}>apps/{blueprint.id}/script.js</code>
+            </div>
+          )}
           {transforms && <AppTransformFields app={app} />}
           <AppFields world={world} app={app} blueprint={blueprint} />
         </div>

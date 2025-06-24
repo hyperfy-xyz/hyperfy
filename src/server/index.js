@@ -85,6 +85,16 @@ fastify.register(statics, {
     res.setHeader('Expires', new Date(Date.now() + 31536000000).toUTCString()) // older browsers
   },
 })
+fastify.register(statics, {
+  root: path.join(rootDir, 'apps'),
+  prefix: '/apps/',
+  decorateReply: false,
+  setHeaders: res => {
+    res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate')
+    res.setHeader('Pragma', 'no-cache')
+    res.setHeader('Expires', '0')
+  },
+})
 fastify.register(multipart, {
   limits: {
     fileSize: 200 * 1024 * 1024, // 200MB
@@ -179,6 +189,19 @@ fastify.get('/status', async (request, reply) => {
       status: 'error',
       timestamp: new Date().toISOString(),
     })
+  }
+})
+
+fastify.get('/api/apps', async (request, reply) => {
+  try {
+    if (!world.localApps) {
+      return reply.send([])
+    }
+    const apps = world.localApps.getAppsList()
+    return reply.send(apps)
+  } catch (error) {
+    console.error('Error fetching local apps:', error)
+    return reply.send([])
   }
 })
 

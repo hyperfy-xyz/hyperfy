@@ -87,7 +87,12 @@ export class App extends Entity {
       if (blueprint.script) {
         try {
           script = this.world.loader.get('script', blueprint.script)
-          if (!script) script = await this.world.loader.load('script', blueprint.script)
+          if (!script) {
+            console.log(`[App] Loading script: ${blueprint.script}`)
+            script = await this.world.loader.load('script', blueprint.script)
+          } else {
+            console.log(`[App] Using cached script: ${blueprint.script}`)
+          }
         } catch (err) {
           console.error(err)
           crashed = true
