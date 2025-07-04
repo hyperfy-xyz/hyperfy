@@ -213,6 +213,97 @@ export class Apps extends System {
           }
         })
       },
+      spawnMesh(entity, opts = {}) {
+        const node = entity.createNode('mesh', opts)
+        self.worldMethods.add(entity, node)
+        
+        // Optionally add rigidbody with matching collider
+        if (opts.rigidbody) {
+          const rbOpts = typeof opts.rigidbody === 'object' ? opts.rigidbody : {}
+          
+          // Create rigidbody as a parent
+          const rigidbody = entity.createNode('rigidbody', {
+            type: rbOpts.type || 'dynamic',
+            mass: rbOpts.mass || 1,
+            linearDamping: rbOpts.linearDamping || 0,
+            angularDamping: rbOpts.angularDamping || 0.05,
+            tag: rbOpts.tag,
+            onContactStart: rbOpts.onContactStart,
+            onContactEnd: rbOpts.onContactEnd,
+            onTriggerEnter: rbOpts.onTriggerEnter,
+            onTriggerLeave: rbOpts.onTriggerLeave
+          })
+          
+          // Create matching collider
+          const colliderOpts = {
+            type: opts.type, // Use same type as mesh
+            trigger: rbOpts.trigger || false,
+            convex: rbOpts.convex || false,
+            layer: rbOpts.layer || 'prop'
+          }
+          
+          // Set dimensions based on primitive type
+          if (opts.type === 'box') {
+            colliderOpts.width = opts.width || 1
+            colliderOpts.height = opts.height || 1
+            colliderOpts.depth = opts.depth || 1
+          } else if (opts.type === 'sphere') {
+            colliderOpts.radius = opts.radius || 0.5
+          } else if (opts.type === 'cylinder' || opts.type === 'cone') {
+            // For cylinder/cone, use box approximation or custom geometry
+            // Box approximation based on dimensions
+            colliderOpts.type = 'box'
+            colliderOpts.width = (opts.radiusBottom || opts.radius || 0.5) * 2
+            colliderOpts.height = opts.height || 1
+            colliderOpts.depth = (opts.radiusBottom || opts.radius || 0.5) * 2
+          }
+          
+          const collider = entity.createNode('collider', colliderOpts)
+          rigidbody.add(collider)
+          
+          // Copy mesh position to rigidbody and clear mesh position
+          rigidbody.position.copy(node.position)
+          rigidbody.rotation.copy(node.rotation)
+          rigidbody.scale.copy(node.scale)
+          node.position.set(0, 0, 0)
+          node.rotation.set(0, 0, 0)
+          node.scale.set(1, 1, 1)
+          
+          // Add mesh as child of rigidbody
+          rigidbody.add(node)
+          self.worldMethods.add(entity, rigidbody)
+          
+          // Get proxies
+          const rbProxy = rigidbody.getProxy()
+          const meshProxy = node.getProxy()
+          
+          // Add material property that forwards to the mesh child
+          Object.defineProperty(rbProxy, 'material', {
+            get() {
+              // Return the mesh proxy's material
+              return meshProxy.material
+            },
+            configurable: true
+          })
+          
+          // Return the enhanced rigidbody proxy
+          return rbProxy
+        }
+        
+        return node.getProxy()
+      },
+      box(entity, dims = {}) {
+        return self.worldMethods.spawnMesh(entity, { type: 'box', ...dims })
+      },
+      sphere(entity, dims = {}) {
+        return self.worldMethods.spawnMesh(entity, { type: 'sphere', ...dims })
+      },
+      cylinder(entity, dims = {}) {
+        return self.worldMethods.spawnMesh(entity, { type: 'cylinder', ...dims })
+      },
+      cone(entity, dims = {}) {
+        return self.worldMethods.spawnMesh(entity, { type: 'cone', ...dims })
+      },
     }
   }
 

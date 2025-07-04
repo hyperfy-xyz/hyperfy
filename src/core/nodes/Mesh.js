@@ -14,6 +14,9 @@ const defaults = {
   height: 1,
   depth: 1,
   radius: 0.5,
+  radiusTop: 0.5,
+  radiusBottom: 0.5,
+  radialSegments: 8,
   geometry: null,
   material: null,
   linked: true,
@@ -22,7 +25,7 @@ const defaults = {
   visible: true, // DEPRECATED: use Node.active
 }
 
-const types = ['box', 'sphere', 'geometry']
+const types = ['box', 'sphere', 'cylinder', 'cone', 'geometry']
 
 let boxes = {}
 const getBox = (width, height, depth) => {
@@ -42,6 +45,24 @@ const getSphere = radius => {
   return spheres[key]
 }
 
+let cylinders = {}
+const getCylinder = (radiusTop, radiusBottom, height, radialSegments) => {
+  const key = `${radiusTop},${radiusBottom},${height},${radialSegments}`
+  if (!cylinders[key]) {
+    cylinders[key] = new THREE.CylinderGeometry(radiusTop, radiusBottom, height, radialSegments)
+  }
+  return cylinders[key]
+}
+
+let cones = {}
+const getCone = (radius, height, radialSegments) => {
+  const key = `${radius},${height},${radialSegments}`
+  if (!cones[key]) {
+    cones[key] = new THREE.ConeGeometry(radius, height, radialSegments)
+  }
+  return cones[key]
+}
+
 export class Mesh extends Node {
   constructor(data = {}) {
     super(data)
@@ -52,40 +73,70 @@ export class Mesh extends Node {
     this.height = data.height
     this.depth = data.depth
     this.radius = data.radius
+    this.radiusTop = data.radiusTop
+    this.radiusBottom = data.radiusBottom
+    this.radialSegments = data.radialSegments
     this.geometry = data.geometry
     this.material = data.material
     this.linked = data.linked
     this.castShadow = data.castShadow
     this.receiveShadow = data.receiveShadow
     this.visible = data.visible
+    
+    // Store pending material properties until handle is created
+    this._pendingMaterialProps = {}
   }
 
   mount() {
     this.needsRebuild = false
-    if (!this._geometry) return
     let geometry
     if (this._type === 'box') {
       geometry = getBox(this._width, this._height, this._depth)
     } else if (this._type === 'sphere') {
       geometry = getSphere(this._radius)
+    } else if (this._type === 'cylinder') {
+      geometry = getCylinder(this._radiusTop, this._radiusBottom, this._height, this._radialSegments)
+    } else if (this._type === 'cone') {
+      geometry = getCone(this._radius, this._height, this._radialSegments)
     } else if (this._type === 'geometry') {
       geometry = this._geometry
+    }
+    
+    // Ensure we have geometry
+    if (!geometry) {
+      console.warn('[Mesh] No geometry available for type:', this._type)
+      return
+    }
+    // Ensure we have a material, create default if needed
+    let material = this._material
+    if (!material) {
+      const defaultMat = this.ctx.world.stage.getDefaultMaterial()
+      material = defaultMat.raw  // Use the raw THREE.js material
     }
     if (this._visible) {
       this.handle = this.ctx.world.stage.insert({
         geometry,
-        material: this._material,
+        material,
         linked: this._linked,
         castShadow: this._castShadow,
         receiveShadow: this._receiveShadow,
         matrix: this.matrixWorld,
         node: this,
       })
+      // Apply any pending material properties
+      if (this.handle && this.handle.material && this._pendingMaterialProps) {
+        for (const [key, value] of Object.entries(this._pendingMaterialProps)) {
+          if (key in this.handle.material) {
+            this.handle.material[key] = value
+          }
+        }
+        this._pendingMaterialProps = {}
+      }
     } else {
       this.sItem = {
         matrix: this.matrixWorld,
         geometry,
-        material: this._material,
+        material,
         getEntity: () => this.ctx.entity,
         node: this,
       }
@@ -125,6 +176,9 @@ export class Mesh extends Node {
     this._height = source._height
     this._depth = source._depth
     this._radius = source._radius
+    this._radiusTop = source._radiusTop
+    this._radiusBottom = source._radiusBottom
+    this._radialSegments = source._radialSegments
     this._geometry = source._geometry
     this._material = source._material
     this._linked = source._linked
@@ -187,7 +241,7 @@ export class Mesh extends Node {
     }
     if (this._height === value) return
     this._height = value
-    if (this.handle && this._type === 'box') {
+    if (this.handle && (this._type === 'box' || this._type === 'cylinder' || this._type === 'cone')) {
       this.needsRebuild = true
       this.setDirty()
     }
@@ -225,7 +279,55 @@ export class Mesh extends Node {
     }
     if (this._radius === value) return
     this._radius = value
-    if (this.handle && this._type === 'sphere') {
+    if (this.handle && (this._type === 'sphere' || this._type === 'cone')) {
+      this.needsRebuild = true
+      this.setDirty()
+    }
+  }
+
+  get radiusTop() {
+    return this._radiusTop
+  }
+
+  set radiusTop(value = defaults.radiusTop) {
+    if (!isNumber(value)) {
+      throw new Error('[mesh] radiusTop not a number')
+    }
+    if (this._radiusTop === value) return
+    this._radiusTop = value
+    if (this.handle && this._type === 'cylinder') {
+      this.needsRebuild = true
+      this.setDirty()
+    }
+  }
+
+  get radiusBottom() {
+    return this._radiusBottom
+  }
+
+  set radiusBottom(value = defaults.radiusBottom) {
+    if (!isNumber(value)) {
+      throw new Error('[mesh] radiusBottom not a number')
+    }
+    if (this._radiusBottom === value) return
+    this._radiusBottom = value
+    if (this.handle && this._type === 'cylinder') {
+      this.needsRebuild = true
+      this.setDirty()
+    }
+  }
+
+  get radialSegments() {
+    return this._radialSegments
+  }
+
+  set radialSegments(value = defaults.radialSegments) {
+    if (!isNumber(value)) {
+      throw new Error('[mesh] radialSegments not a number')
+    }
+    if (this._radialSegments === value) return
+    this._radialSegments = value
+    if (this.handle && (this._type === 'cylinder' || this._type === 'cone')) {
       this.needsRebuild = true
       this.setDirty()
     }
@@ -356,6 +458,24 @@ export class Mesh extends Node {
         set radius(value) {
           self.radius = value
         },
+        get radiusTop() {
+          return self.radiusTop
+        },
+        set radiusTop(value) {
+          self.radiusTop = value
+        },
+        get radiusBottom() {
+          return self.radiusBottom
+        },
+        set radiusBottom(value) {
+          self.radiusBottom = value
+        },
+        get radialSegments() {
+          return self.radialSegments
+        },
+        set radialSegments(value) {
+          self.radialSegments = value
+        },
         get geometry() {
           return self.geometry
         },
@@ -363,7 +483,23 @@ export class Mesh extends Node {
           self.geometry = value
         },
         get material() {
-          return self.material
+          // If handle exists, return the actual material proxy
+          if (self.handle && self.handle.material) {
+            return self.handle.material
+          }
+          // Otherwise return a temporary proxy that stores properties
+          if (!self._tempMaterialProxy) {
+            self._tempMaterialProxy = new Proxy({}, {
+              set(target, prop, value) {
+                self._pendingMaterialProps[prop] = value
+                return true
+              },
+              get(target, prop) {
+                return self._pendingMaterialProps[prop]
+              }
+            })
+          }
+          return self._tempMaterialProxy
         },
         set material(value) {
           throw new Error('[mesh] set material not supported')
