@@ -4,37 +4,26 @@ import moment from 'moment'
 let db
 
 function getDBConfig(sqlitePath) {
-  const { DB_HOST, DB_PORT, DB_USER, DB_PASSWORD, DB_NAME, DB_TYPE, DB_SCHEMA } = process.env;
+  const { DB_TYPE = '', DB_URL = '' } = process.env;
 
-  const config = {
-    client: DB_TYPE || 'better-sqlite3',
+  if (!DB_TYPE && !DB_URL) {
+    // Default: sqlite in world folder
+    return {
+      client: 'better-sqlite3',
+      connection: { filename: sqlitePath },
+      useNullAsDefault: true,
+    };
   }
 
-  if (DB_TYPE === 'pg' && DB_HOST && DB_PORT && DB_USER && DB_PASSWORD && DB_NAME && DB_SCHEMA) {
-    config.connection = {
-      host: DB_HOST,
-      port: parseInt(DB_PORT),
-      user: DB_USER,
-      database: DB_NAME,
-      password: DB_PASSWORD,
-      ...(DB_TYPE === 'mysql2' && {
-        charset: 'utf8mb4',
-        timezone: 'UTC'
-      })
-    }
-    config.searchPath = [DB_SCHEMA]
-    config.pool = {
-      min: 2,
-      max: 10
-    }
-  } else {
-    config.connection = {
-      filename: sqlitePath,
-    }
-    config.useNullAsDefault = true
+  if (DB_TYPE === 'pg' && DB_URL) {
+    return {
+      client: 'pg',
+      connection: DB_URL,
+      pool: { min: 2, max: 10 },
+    };
   }
 
-  return config;
+  throw new Error('Unsupported or incomplete DB configuration. Only sqlite (default) and postgres (pg) via DB_TYPE/DB_URL are supported.');
 }
 
 export async function getDB(sqlitePath) {
