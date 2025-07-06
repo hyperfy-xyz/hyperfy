@@ -1,10 +1,15 @@
 import path from 'path'
 import { throttle } from 'lodash-es'
 
-import { AwsS3Storage } from './AwsS3Storage.js'
+import { S3Storage } from './S3Storage.js'
 import { FileStorage } from './FileStorage.js'
 
 export class StorageManager {
+  static STORAGE_TYPE = {
+    LOCAL: 'local',
+    S3: 's3',
+  }
+
   constructor() {
     this.storage = null
     this.isS3 = false
@@ -19,12 +24,12 @@ export class StorageManager {
    * Initialize storage based on environment configuration
    */
   async initialize() {
-    const storageType = process.env.STORAGE_TYPE || 'local'
+    const storageType = process.env.STORAGE_TYPE || StorageManager.STORAGE_TYPE.LOCAL;
     
-    if (storageType === 'aws') {
+    if (storageType === StorageManager.STORAGE_TYPE.S3) {
       // Validate required S3 configuration
       if (!process.env.S3_BUCKET_NAME) {
-        throw new Error('S3_BUCKET_NAME is required when STORAGE_TYPE=aws')
+        throw new Error('S3_BUCKET_NAME is required when STORAGE_TYPE=s3')
       }
       
       // Initialize S3 storage
@@ -38,16 +43,16 @@ export class StorageManager {
         cloudfrontUrl: process.env.CLOUDFRONT_URL,
       }
       
-      if (process.env.AWS_ACCESS_KEY_ID && process.env.AWS_SECRET_ACCESS_KEY) {
+      if (process.env.S3_ACCESS_KEY_ID && process.env.S3_SECRET_ACCESS_KEY) {
         s3Config.credentials = {
-          accessKeyId: process.env.AWS_ACCESS_KEY_ID,
-          secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
+          accessKeyId: process.env.S3_ACCESS_KEY_ID,
+          secretAccessKey: process.env.S3_SECRET_ACCESS_KEY,
         }
       }
       
-      this.storage = new AwsS3Storage(s3Config)
+      this.storage = new S3Storage(s3Config)
       
-      console.log('Initializing AWS S3 storage...')
+      console.log('Initializing S3 storage...')
       await this.storage.initialize()
       
     } else if (storageType === 'local') {
@@ -60,7 +65,7 @@ export class StorageManager {
       console.log('Initializing local file storage...')
       await this.storage.initialize()
     } else {
-      throw new Error(`Unsupported storage type: ${storageType}. Supported types: 'local', 'aws'`)
+      throw new Error(`Unsupported storage type: ${storageType}. Supported types: 'local', 's3'`)
     }
 
     // Initialize storage data
