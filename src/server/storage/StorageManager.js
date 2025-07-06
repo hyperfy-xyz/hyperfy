@@ -1,16 +1,21 @@
 import path from 'path'
 import { throttle } from 'lodash-es'
 
-import { AwsS3Storage } from './AwsS3Storage.js'
+import { S3Storage } from './S3Storage.js'
 import { FileStorage } from './FileStorage.js'
 
 export class StorageManager {
+  static STORAGE_TYPE = {
+    LOCAL: 'local',
+    S3: 's3',
+  }
+
   constructor() {
     this.storage = null
     this.isS3 = false
     this.storageData = {}
     this.storageLoaded = false
-    
+
     // Throttle saves to avoid too many writes
     this.saveStorageData = throttle(() => this.persistStorageData(), 1000, { leading: true, trailing: true })
   }
@@ -30,26 +35,26 @@ export class StorageManager {
         storagePrefix: process.env.S3_STORAGE_PREFIX || 'storage/',
         cloudfrontUrl: process.env.CLOUDFRONT_URL,
       }
-      
-      if (process.env.AWS_ACCESS_KEY_ID && process.env.AWS_SECRET_ACCESS_KEY) {
+
+      if (process.env.S3_ACCESS_KEY_ID && process.env.S3_SECRET_ACCESS_KEY) {
         s3Config.credentials = {
-          accessKeyId: process.env.AWS_ACCESS_KEY_ID,
-          secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
+          accessKeyId: process.env.S3_ACCESS_KEY_ID,
+          secretAccessKey: process.env.S3_SECRET_ACCESS_KEY,
         }
       }
-      
-      this.storage = new AwsS3Storage(s3Config)
-      
+
+      this.storage = new S3Storage(s3Config)
+
       console.log('Initializing S3 storage...')
       await this.storage.initialize()
-      
+
     } else {
       // Initialize local file storage
       this.isS3 = false
       this.storage = new FileStorage({
         assetsUrl: '/assets/',
       })
-      
+
       console.log('Initializing local file storage...')
       await this.storage.initialize()
     }
@@ -96,7 +101,7 @@ export class StorageManager {
       console.warn('Storage not yet loaded, cannot set value')
       return
     }
-    
+
     try {
       // Ensure value is serializable
       value = JSON.parse(JSON.stringify(value))
@@ -115,7 +120,7 @@ export class StorageManager {
       console.warn('Storage not yet loaded, cannot persist')
       return
     }
-    
+
     try {
       await this.storage.saveStorageData(this.storageData)
       // console.log('Storage data persisted successfully')
@@ -180,7 +185,7 @@ export class StorageManager {
     if (this.isS3) {
       // If CloudFront URL is configured, use it with assets prefix
       if (process.env.CLOUDFRONT_URL) {
-        const baseUrl = process.env.CLOUDFRONT_URL.endsWith('/') 
+        const baseUrl = process.env.CLOUDFRONT_URL.endsWith('/')
           ? process.env.CLOUDFRONT_URL.slice(0, -1)  // Remove trailing slash
           : process.env.CLOUDFRONT_URL
         const assetsPrefix = (process.env.S3_ASSETS_PREFIX || 'assets/').replace(/\/$/, '') // Remove trailing slash

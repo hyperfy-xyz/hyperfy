@@ -4,7 +4,7 @@ import fs from 'fs-extra'
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner'
 import { S3Client, PutObjectCommand, GetObjectCommand, HeadObjectCommand, ListObjectsV2Command, DeleteObjectCommand } from '@aws-sdk/client-s3'
 
-export class AwsS3Storage {
+export class S3Storage {
   constructor(config) {
     this.bucketName = config.bucketName
     this.region = config.region || 'us-east-1'
