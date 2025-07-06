@@ -3,15 +3,33 @@ import moment from 'moment'
 
 let db
 
-export async function getDB(path) {
-  if (!db) {
-    db = Knex({
+function getDBConfig(sqlitePath) {
+  const { DB_TYPE = '', DB_URL = '' } = process.env;
+
+  if (!DB_TYPE && !DB_URL) {
+    // Default: sqlite in world folder
+    return {
       client: 'better-sqlite3',
-      connection: {
-        filename: path,
-      },
+      connection: { filename: sqlitePath },
       useNullAsDefault: true,
-    })
+    };
+  }
+
+  if (DB_TYPE === 'pg' && DB_URL) {
+    return {
+      client: 'pg',
+      connection: DB_URL,
+      pool: { min: 2, max: 10 },
+    };
+  }
+
+  throw new Error('Unsupported or incomplete DB configuration. Only sqlite (default) and postgres (pg) via DB_TYPE/DB_URL are supported.');
+}
+
+export async function getDB(sqlitePath) {
+  if (!db) {
+    const config = getDBConfig(sqlitePath)
+    db = Knex(config)
     await migrate(db)
   }
   return db
