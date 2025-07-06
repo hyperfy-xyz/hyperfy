@@ -15,6 +15,7 @@ export class StorageManager {
     this.isS3 = false
     this.storageData = {}
     this.storageLoaded = false
+
     // Throttle saves to avoid too many writes
     this.saveStorageData = throttle(() => this.persistStorageData(), 1000, { leading: true, trailing: true })
   }
@@ -24,13 +25,13 @@ export class StorageManager {
    */
   async initialize() {
     const storageType = process.env.STORAGE_TYPE || StorageManager.STORAGE_TYPE.LOCAL;
-    
+
     if (storageType === StorageManager.STORAGE_TYPE.S3) {
       // Validate required S3 configuration
       if (!process.env.S3_BUCKET_NAME) {
         throw new Error('S3_BUCKET_NAME is required when STORAGE_TYPE=s3')
       }
-      
+
       // Initialize S3 storage
       this.isS3 = true
       const s3Config = {
@@ -41,6 +42,7 @@ export class StorageManager {
         storagePrefix: process.env.S3_STORAGE_PREFIX || 'storage/',
         cloudfrontUrl: process.env.CLOUDFRONT_URL,
       }
+
       if (process.env.S3_ACCESS_KEY_ID && process.env.S3_SECRET_ACCESS_KEY) {
         s3Config.credentials = {
           accessKeyId: process.env.S3_ACCESS_KEY_ID,
@@ -62,8 +64,6 @@ export class StorageManager {
 
       console.log('Initializing local file storage...')
       await this.storage.initialize()
-    } else {
-      throw new Error(`Unsupported storage type: ${storageType}. Supported types: 'local', 's3'`)
     }
 
     // Initialize storage data
@@ -108,6 +108,7 @@ export class StorageManager {
       console.warn('Storage not yet loaded, cannot set value')
       return
     }
+
     try {
       // Ensure value is serializable
       value = JSON.parse(JSON.stringify(value))
@@ -126,6 +127,7 @@ export class StorageManager {
       console.warn('Storage not yet loaded, cannot persist')
       return
     }
+
     try {
       await this.storage.saveStorageData(this.storageData)
       // console.log('Storage data persisted successfully')
