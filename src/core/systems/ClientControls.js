@@ -538,12 +538,41 @@ export class ClientControls extends System {
 
   async lockPointer() {
     this.pointer.shouldLock = true
+
+    // Check if we're in a sandboxed iframe without pointer lock permission
+    if (this.isInSandboxedFrame()) {
+      console.warn('Pointer lock not available in sandboxed frame - using alternative controls')
+      this.onPointerLockStart() // Simulate pointer lock for consistent behavior
+      return false
+    }
+
     try {
       await this.viewport.requestPointerLock()
       return true
     } catch (err) {
       console.log('pointerlock denied, too quick?')
       return false
+    }
+  }
+
+  isInSandboxedFrame() {
+    try {
+      // Check if we're in an iframe
+      if (window.self === window.top) {
+        return false
+      }
+
+      // Check if pointer lock is available
+      if (!document.documentElement.requestPointerLock) {
+        return true
+      }
+
+      // Try to access parent window (will throw in sandboxed frame)
+      const testAccess = window.parent.location.href
+      return false
+    } catch (err) {
+      // If we can't access parent or get security error, we're likely sandboxed
+      return true
     }
   }
 
