@@ -1,7 +1,6 @@
 import { World } from './World'
 
 import { Client } from './systems/Client'
-import { ClientLiveKit } from './systems/ClientLiveKit'
 import { ClientPointer } from './systems/ClientPointer'
 import { ClientPrefs } from './systems/ClientPrefs'
 import { ClientControls } from './systems/ClientControls'
@@ -25,7 +24,6 @@ import { XR } from './systems/XR'
 export function createClientWorld() {
   const world = new World()
   world.register('client', Client)
-  world.register('livekit', ClientLiveKit)
   world.register('pointer', ClientPointer)
   world.register('prefs', ClientPrefs)
   world.register('controls', ClientControls)
