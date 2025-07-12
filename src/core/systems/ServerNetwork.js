@@ -69,8 +69,6 @@ export class ServerNetwork extends System {
     if (SAVE_INTERVAL) {
       this.saveTimerId = setTimeout(this.save, SAVE_INTERVAL * 1000)
     }
-    // load environment model
-    await this.world.environment.updateModel()
   }
 
   preFixedUpdate() {

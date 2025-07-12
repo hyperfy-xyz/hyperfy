@@ -77,18 +77,8 @@ export class ClientEnvironment extends System {
     this.buildCSM()
     this.updateSky()
 
-    this.world.settings.on('change', this.onSettingsChange)
     this.world.prefs.on('change', this.onPrefsChange)
     this.world.graphics.on('resize', this.onViewportResize)
-  }
-
-  async updateModel() {
-    const url = this.world.settings.model?.url || this.base.model
-    let glb = this.world.loader.get('model', url)
-    if (!glb) glb = await this.world.loader.load('model', url)
-    if (this.model) this.model.deactivate()
-    this.model = glb.toNodes()
-    // this.model.activate({ world: this.world, label: 'base' })
   }
 
   addSky(node) {
@@ -106,7 +96,9 @@ export class ClientEnvironment extends System {
     return handle
   }
 
-  getSky() {}
+  getSky() {
+    // ...
+  }
 
   async updateSky() {
     if (!this.sky) {
@@ -252,12 +244,6 @@ export class ClientEnvironment extends System {
           light.castShadow = false
         }
       }
-    }
-  }
-
-  onSettingsChange = changes => {
-    if (changes.model) {
-      this.updateModel()
     }
   }
 

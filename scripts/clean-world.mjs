@@ -67,7 +67,6 @@ let settings = await db('config').where('key', 'settings').first()
 if (settings) {
   settings = JSON.parse(settings.value)
   if (settings.image) worldImage = settings.image.url.replace('asset://', '')
-  if (settings.model) worldModel = settings.model.url.replace('asset://', '')
   if (settings.avatar) worldAvatar = settings.avatar.url.replace('asset://', '')
 }
 

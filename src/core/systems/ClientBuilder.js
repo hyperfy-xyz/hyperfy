@@ -967,17 +967,6 @@ export class ClientBuilder extends System {
     })
   }
 
-  // setCurrentScene(app) {
-  //   const blueprintId = app.data.blueprint
-  //   this.world.blueprints.items.forEach(blueprint => {
-  //     if (blueprint.scene && blueprint.id !== blueprintId && !blueprint.disabled) {
-  //       const version = blueprint.version + 1
-  //       this.world.blueprints.modify({ id: blueprint.id, version, disabled: true })
-  //       this.world.network.send('blueprintModified', { id: blueprint.id, version, disabled: true })
-  //     }
-  //   })
-  // }
-
   getSpawnTransform(atReticle) {
     const hit = atReticle
       ? this.world.stage.raycastReticle()[0]
