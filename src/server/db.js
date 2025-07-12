@@ -39,12 +39,9 @@ async function migrate(db, worldDir) {
   for (let i = version; i < migrations.length; i++) {
     console.log(`running migration #${i + 1}...`)
     await migrations[i](db, worldDir)
-
-    // DEBUG: disable persist
     await db('config')
       .where('key', 'version')
       .update('value', (i + 1).toString())
-
     version = i + 1
   }
 }
