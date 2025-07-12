@@ -317,20 +317,20 @@ export class Physics extends System {
 
   start() {
     // ground
-    const size = 1000
-    const geometry = new PHYSX.PxBoxGeometry(size / 2, 1 / 2, size / 2)
-    const material = this.physics.createMaterial(0.6, 0.6, 0)
-    const flags = new PHYSX.PxShapeFlags(PHYSX.PxShapeFlagEnum.eSCENE_QUERY_SHAPE | PHYSX.PxShapeFlagEnum.eSIMULATION_SHAPE) // prettier-ignore
-    const shape = this.physics.createShape(geometry, material, true, flags)
-    const layer = Layers.environment
-    const filterData = new PHYSX.PxFilterData(layer.group, layer.mask, 0, 0) // prettier-ignore
-    shape.setQueryFilterData(filterData)
-    shape.setSimulationFilterData(filterData)
-    const transform = new PHYSX.PxTransform(PHYSX.PxIDENTITYEnum.PxIdentity)
-    transform.p.y = -0.5
-    const body = this.physics.createRigidStatic(transform)
-    body.attachShape(shape)
-    this.scene.addActor(body)
+    // const size = 1000
+    // const geometry = new PHYSX.PxBoxGeometry(size / 2, 1 / 2, size / 2)
+    // const material = this.physics.createMaterial(0.6, 0.6, 0)
+    // const flags = new PHYSX.PxShapeFlags(PHYSX.PxShapeFlagEnum.eSCENE_QUERY_SHAPE | PHYSX.PxShapeFlagEnum.eSIMULATION_SHAPE) // prettier-ignore
+    // const shape = this.physics.createShape(geometry, material, true, flags)
+    // const layer = Layers.environment
+    // const filterData = new PHYSX.PxFilterData(layer.group, layer.mask, 0, 0) // prettier-ignore
+    // shape.setQueryFilterData(filterData)
+    // shape.setSimulationFilterData(filterData)
+    // const transform = new PHYSX.PxTransform(PHYSX.PxIDENTITYEnum.PxIdentity)
+    // transform.p.y = -0.5
+    // const body = this.physics.createRigidStatic(transform)
+    // body.attachShape(shape)
+    // this.scene.addActor(body)
   }
 
   addActor(actor, handle) {
