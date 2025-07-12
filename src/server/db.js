@@ -258,7 +258,7 @@ const migrations = [
     // if using a settings model, we'll convert this to the scene app
     if (settings.model) {
       // create blueprint and entity
-      const blueprintId = uuid()
+      const blueprintId = '$scene' // singleton
       const blueprint = {
         id: blueprintId,
         data: JSON.stringify({
@@ -326,7 +326,7 @@ const migrations = [
         await fs.writeFile(dest, buffer)
       }
       // create blueprint and entity
-      app.blueprint.id = uuid()
+      app.blueprint.id = '$scene' // singleton
       app.blueprint.preload = true
       const blueprint = {
         id: app.blueprint.id,

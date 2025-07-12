@@ -12,20 +12,20 @@ export class Blueprints extends System {
   constructor(world) {
     super(world)
     this.items = new Map()
-    this.scene = null
   }
 
   get(id) {
     return this.items.get(id)
   }
 
+  getScene() {
+    return this.items.get('$scene')
+  }
+
   add(data, local) {
     this.items.set(data.id, data)
     if (local) {
       this.world.network.send('blueprintAdded', data)
-    }
-    if (data.scene) {
-      this.scene = data
     }
   }
 

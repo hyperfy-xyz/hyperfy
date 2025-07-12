@@ -743,15 +743,18 @@ export class ClientBuilder extends System {
     }
     // if scene, update existing scene
     if (info.blueprint.scene) {
-      let blueprint = this.world.blueprints.scene
-      let entity = null
-      for (const [_, _entity] of this.world.entities.items) {
-        if (_entity.data.blueprint === blueprint.id) {
-          entity = _entity
-        }
-      }
-      this.world.blueprints.modify({
+      const confirmed = await this.world.ui.confirm({
+        title: 'Scene',
+        message: 'Do you want to replace your current scene with this one?',
+        confirmText: 'Replace',
+        cancelText: 'Cancel',
+      })
+      if (!confirmed) return
+      // modify blueprint optimistically
+      const blueprint = this.world.blueprints.getScene()
+      const change = {
         id: blueprint.id,
+        version: blueprint.version + 1,
         name: info.blueprint.name,
         image: info.blueprint.image,
         author: info.blueprint.author,
@@ -767,9 +770,15 @@ export class ClientBuilder extends System {
         unique: info.blueprint.unique,
         scene: info.blueprint.scene,
         disabled: info.blueprint.disabled,
+      }
+      this.world.blueprints.modify(change)
+      // upload assets
+      const promises = info.assets.map(asset => {
+        return this.world.network.upload(asset.file)
       })
-      // console.log(info)
-      // console.log('FOO', blueprint, entity)
+      await Promise.all(promises)
+      // publish blueprint change for all
+      this.world.network.send('blueprintModified', change)
       return
     }
     // otherwise spawn the app

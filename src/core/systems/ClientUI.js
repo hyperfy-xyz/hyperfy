@@ -92,6 +92,21 @@ export class ClientUI extends System {
     }
   }
 
+  confirm(options) {
+    const promise = new Promise(resolve => {
+      options.confirm = () => {
+        this.world.emit('confirm', null)
+        resolve(true)
+      }
+      options.cancel = () => {
+        this.world.emit('confirm', null)
+        resolve(false)
+      }
+    })
+    this.world.emit('confirm', options)
+    return promise
+  }
+
   broadcast() {
     this.world.emit('ui', { ...this.state })
   }
