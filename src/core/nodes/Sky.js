@@ -6,6 +6,7 @@ import * as THREE from '../extras/three'
 const defaults = {
   bg: null,
   hdr: null,
+  rotationY: null,
   sunDirection: null,
   sunIntensity: null,
   sunColor: null,
@@ -21,6 +22,7 @@ export class Sky extends Node {
 
     this.bg = data.bg
     this.hdr = data.hdr
+    this.rotationY = data.rotationY
     this.sunDirection = data.sunDirection
     this.sunIntensity = data.sunIntensity
     this.sunColor = data.sunColor
@@ -49,9 +51,13 @@ export class Sky extends Node {
     super.copy(source, recursive)
     this._bg = source._bg
     this._hdr = source._hdr
+    this._rotationY = source._rotationY
     this._sunDirection = source._sunDirection
     this._sunIntensity = source._sunIntensity
     this._sunColor = source._sunColor
+    this._fogNear = source._fogNear
+    this._fogFar = source._fogFar
+    this._fogColor = source._fogColor
     return this
   }
 
@@ -79,6 +85,20 @@ export class Sky extends Node {
     }
     if (this._hdr === value) return
     this._hdr = value
+    this.needsRebuild = true
+    this.setDirty()
+  }
+
+  get rotationY() {
+    return this._rotationY
+  }
+
+  set rotationY(value = defaults.rotationY) {
+    if (value !== null && !isNumber(value)) {
+      throw new Error('[sky] rotationY not a number')
+    }
+    if (this._rotationY === value) return
+    this._rotationY = value
     this.needsRebuild = true
     this.setDirty()
   }
@@ -182,6 +202,12 @@ export class Sky extends Node {
         },
         set hdr(value) {
           self.hdr = value
+        },
+        get rotationY() {
+          return self.rotationY
+        },
+        set rotationY(value) {
+          self.rotationY = value
         },
         get sunDirection() {
           return self.sunDirection

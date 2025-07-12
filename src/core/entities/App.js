@@ -111,9 +111,11 @@ export class App extends Entity {
     // setup
     this.blueprint = blueprint
     this.root = root
-    this.root.position.fromArray(this.data.position)
-    this.root.quaternion.fromArray(this.data.quaternion)
-    this.root.scale.fromArray(this.data.scale)
+    if (!blueprint.scene) {
+      this.root.position.fromArray(this.data.position)
+      this.root.quaternion.fromArray(this.data.quaternion)
+      this.root.scale.fromArray(this.data.scale)
+    }
     // activate
     this.root.activate({ world: this.world, entity: this, moving: !!this.data.mover })
     // execute script

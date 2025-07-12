@@ -88,7 +88,7 @@ export class ClientEnvironment extends System {
     if (!glb) glb = await this.world.loader.load('model', url)
     if (this.model) this.model.deactivate()
     this.model = glb.toNodes()
-    this.model.activate({ world: this.world, label: 'base' })
+    // this.model.activate({ world: this.world, label: 'base' })
   }
 
   addSky(node) {
@@ -127,6 +127,7 @@ export class ClientEnvironment extends System {
     const node = this.skys[this.skys.length - 1]?.node
     const bgUrl = node?._bg || base.bg
     const hdrUrl = node?._hdr || base.hdr
+    const rotationY = isNumber(node?._rotationY) ? node._rotationY : base.rotationY
     const sunDirection = node?._sunDirection || base.sunDirection
     const sunIntensity = isNumber(node?._sunIntensity) ? node._sunIntensity : base.sunIntensity
     const sunColor = isString(node?._sunColor) ? node._sunColor : base.sunColor
@@ -161,6 +162,10 @@ export class ClientEnvironment extends System {
       this.world.stage.scene.environment = hdrTexture
     }
 
+    this.world.stage.scene.environmentRotation.y = rotationY
+    this.sky.rotation.y = rotationY
+    this.sky.matrixWorld.compose(this.sky.position, this.sky.quaternion, this.sky.scale)
+
     this.csm.lightDirection = sunDirection
 
     for (const light of this.csm.lights) {
@@ -178,6 +183,7 @@ export class ClientEnvironment extends System {
     this.skyInfo = {
       bgUrl,
       hdrUrl,
+      rotationY,
       sunDirection,
       sunIntensity,
       sunColor,

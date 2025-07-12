@@ -12,6 +12,7 @@ export class Blueprints extends System {
   constructor(world) {
     super(world)
     this.items = new Map()
+    this.scene = null
   }
 
   get(id) {
@@ -22,6 +23,9 @@ export class Blueprints extends System {
     this.items.set(data.id, data)
     if (local) {
       this.world.network.send('blueprintAdded', data)
+    }
+    if (data.scene) {
+      this.scene = data
     }
   }
 

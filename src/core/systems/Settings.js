@@ -8,7 +8,6 @@ export class Settings extends System {
     this.title = null
     this.desc = null
     this.image = null
-    this.model = null
     this.avatar = null
     this.public = null
     this.playerLimit = null
@@ -21,7 +20,6 @@ export class Settings extends System {
     this.title = data.title
     this.desc = data.desc
     this.image = data.image
-    this.model = data.model
     this.avatar = data.avatar
     this.public = data.public
     this.playerLimit = data.playerLimit
@@ -30,7 +28,6 @@ export class Settings extends System {
       title: { value: this.title },
       desc: { value: this.desc },
       image: { value: this.image },
-      model: { value: this.model },
       avatar: { value: this.avatar },
       public: { value: this.public },
       playerLimit: { value: this.playerLimit },
@@ -43,7 +40,6 @@ export class Settings extends System {
       desc: this.desc,
       title: this.title,
       image: this.image,
-      model: this.model,
       avatar: this.avatar,
       public: this.public,
       playerLimit: this.playerLimit,

@@ -188,6 +188,7 @@ export class ClientBuilder extends System {
           locked: entity.blueprint.locked,
           frozen: entity.blueprint.frozen,
           unique: entity.blueprint.unique,
+          scene: entity.blueprint.scene,
           disabled: entity.blueprint.disabled,
         }
         this.world.blueprints.add(blueprint, true)
@@ -238,7 +239,7 @@ export class ClientBuilder extends System {
       // if nothing selected, attempt to select
       if (!this.selected) {
         const entity = this.getEntityAtReticle()
-        if (entity?.isApp && !entity.data.pinned) this.select(entity)
+        if (entity?.isApp && !entity.data.pinned && !entity.blueprint.scene) this.select(entity)
       }
       // if selected in grab mode, place
       else if (this.selected && this.mode === 'grab') {
@@ -268,7 +269,7 @@ export class ClientBuilder extends System {
       !this.control.controlLeft.down
     ) {
       const entity = this.selected || this.getEntityAtReticle()
-      if (entity?.isApp) {
+      if (entity?.isApp && !entity.blueprint.scene) {
         let blueprintId = entity.data.blueprint
         // if unique, we also duplicate the blueprint
         if (entity.blueprint.unique) {
@@ -288,6 +289,7 @@ export class ClientBuilder extends System {
             locked: entity.blueprint.locked,
             frozen: entity.blueprint.frozen,
             unique: entity.blueprint.unique,
+            scene: entity.blueprint.scene,
             disabled: entity.blueprint.disabled,
           }
           this.world.blueprints.add(blueprint, true)
@@ -316,7 +318,7 @@ export class ClientBuilder extends System {
     // destroy
     if (this.control.keyX.pressed) {
       const entity = this.selected || this.getEntityAtReticle()
-      if (entity?.isApp && !entity.data.pinned) {
+      if (entity?.isApp && !entity.data.pinned && !entity.blueprint.scene) {
         this.select(null)
         this.addUndo({
           name: 'add-entity',
@@ -739,6 +741,38 @@ export class ClientBuilder extends System {
     for (const asset of info.assets) {
       this.world.loader.insert(asset.type, asset.url, asset.file)
     }
+    // if scene, update existing scene
+    if (info.blueprint.scene) {
+      let blueprint = this.world.blueprints.scene
+      let entity = null
+      for (const [_, _entity] of this.world.entities.items) {
+        if (_entity.data.blueprint === blueprint.id) {
+          entity = _entity
+        }
+      }
+      this.world.blueprints.modify({
+        id: blueprint.id,
+        name: info.blueprint.name,
+        image: info.blueprint.image,
+        author: info.blueprint.author,
+        url: info.blueprint.url,
+        desc: info.blueprint.desc,
+        model: info.blueprint.model,
+        script: info.blueprint.script,
+        props: info.blueprint.props,
+        preload: info.blueprint.preload,
+        public: info.blueprint.public,
+        locked: info.blueprint.locked,
+        frozen: info.blueprint.frozen,
+        unique: info.blueprint.unique,
+        scene: info.blueprint.scene,
+        disabled: info.blueprint.disabled,
+      })
+      // console.log(info)
+      // console.log('FOO', blueprint, entity)
+      return
+    }
+    // otherwise spawn the app
     const blueprint = {
       id: uuid(),
       version: 0,
@@ -755,9 +789,9 @@ export class ClientBuilder extends System {
       locked: info.blueprint.locked,
       frozen: info.blueprint.frozen,
       unique: info.blueprint.unique,
+      scene: info.blueprint.scene,
       disabled: info.blueprint.disabled,
     }
-    this.world.blueprints.add(blueprint, true)
     const data = {
       id: uuid(),
       type: 'app',
@@ -770,6 +804,7 @@ export class ClientBuilder extends System {
       pinned: false,
       state: {},
     }
+    this.world.blueprints.add(blueprint, true)
     const app = this.world.entities.add(data, true)
     const promises = info.assets.map(asset => {
       return this.world.network.upload(asset.file)
@@ -809,6 +844,7 @@ export class ClientBuilder extends System {
       public: false,
       locked: false,
       unique: false,
+      scene: false,
       disabled: false,
     }
     // register blueprint
@@ -867,6 +903,7 @@ export class ClientBuilder extends System {
           public: false,
           locked: false,
           unique: false,
+          scene: false,
           disabled: false,
         }
         // register blueprint
@@ -920,6 +957,17 @@ export class ClientBuilder extends System {
       },
     })
   }
+
+  // setCurrentScene(app) {
+  //   const blueprintId = app.data.blueprint
+  //   this.world.blueprints.items.forEach(blueprint => {
+  //     if (blueprint.scene && blueprint.id !== blueprintId && !blueprint.disabled) {
+  //       const version = blueprint.version + 1
+  //       this.world.blueprints.modify({ id: blueprint.id, version, disabled: true })
+  //       this.world.network.send('blueprintModified', { id: blueprint.id, version, disabled: true })
+  //     }
+  //   })
+  // }
 
   getSpawnTransform(atReticle) {
     const hit = atReticle
