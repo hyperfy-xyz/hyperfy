@@ -164,5 +164,20 @@ export function createPlayerProxy(entity, player) {
       }
       world.livekit.setScreenShareTarget(targetId)
     },
+    get wallet() {
+      return player.data.wallet
+    },
+    connect() {
+      return world.solana.connect()
+    },
+    disconnect() {
+      return world.solana.disconnect()
+    },
+    deposit(amount) {
+      return world.solana.deposit(entity, player, amount)
+    },
+    withdraw(amount) {
+      return world.solana.withdraw(entity, player, amount)
+    },
   }
 }

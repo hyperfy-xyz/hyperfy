@@ -22,6 +22,10 @@ const names = [
   'kick',
   'ping',
   'pong',
+  'depositRequest',
+  'depositResponse',
+  'withdrawRequest',
+  'withdrawResponse',
 ]
 
 const byName = {}
