@@ -1108,6 +1108,10 @@ export class PlayerLocal extends Entity {
       this.data.roles = data.roles
       changed = true
     }
+    if (data.hasOwnProperty('wallet')) {
+      this.data.wallet = data.wallet
+      this.world.events.emit('wallet', { playerId: this.data.id, wallet: data.wallet })
+    }
     if (avatarChanged) {
       this.applyAvatar()
     }

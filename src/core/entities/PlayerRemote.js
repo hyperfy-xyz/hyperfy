@@ -189,6 +189,10 @@ export class PlayerRemote extends Entity {
     if (data.hasOwnProperty('roles')) {
       this.data.roles = data.roles
     }
+    if (data.hasOwnProperty('wallet')) {
+      this.data.wallet = data.wallet
+      this.world.events.emit('wallet', { playerId: this.data.id, wallet: data.wallet })
+    }
     if (avatarChanged) {
       this.applyAvatar()
     }
