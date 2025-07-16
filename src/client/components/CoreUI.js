@@ -18,6 +18,7 @@ import { ControlPriorities } from '../../core/extras/ControlPriorities'
 // import { MenuApp } from './MenuApp'
 import { ChevronDoubleUpIcon, HandIcon } from './Icons'
 import { Sidebar } from './Sidebar'
+import { ContextMenu } from './ContextMenu'
 
 export function CoreUI({ world }) {
   const ref = useRef()
@@ -31,6 +32,7 @@ export function CoreUI({ world }) {
   const [disconnected, setDisconnected] = useState(false)
   const [apps, setApps] = useState(false)
   const [kicked, setKicked] = useState(null)
+  const [contextMenu, setContextMenu] = useState({ visible: false, position: { x: 0, y: 0 } })
   useEffect(() => {
     world.on('ready', setReady)
     world.on('player', setPlayer)
@@ -70,6 +72,24 @@ export function CoreUI({ world }) {
     // elem.addEventListener('touchmove', onEvent)
     // elem.addEventListener('touchend', onEvent)
   }, [])
+
+  useEffect(() => {
+    const handleContextMenu = (e) => {
+      // Only show context menu when not in pointer lock mode
+      if (!world.controls.pointer.locked) {
+        e.preventDefault()
+        setContextMenu({
+          visible: true,
+          position: { x: e.clientX, y: e.clientY }
+        })
+      }
+    }
+
+    document.addEventListener('contextmenu', handleContextMenu)
+    return () => {
+      document.removeEventListener('contextmenu', handleContextMenu)
+    }
+  }, [world])
   useEffect(() => {
     document.documentElement.style.fontSize = `${16 * world.prefs.ui}px`
     function onChange(changes) {
@@ -109,6 +129,12 @@ export function CoreUI({ world }) {
       {ready && isTouch && <TouchBtns world={world} />}
       {ready && isTouch && <TouchStick world={world} />}
       {confirm && <Confirm options={confirm} />}
+      <ContextMenu
+        world={world}
+        visible={contextMenu.visible}
+        position={contextMenu.position}
+        onClose={() => setContextMenu({ visible: false, position: { x: 0, y: 0 } })}
+      />
       <div id='core-ui-portal' />
     </div>
   )

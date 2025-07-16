@@ -209,11 +209,18 @@ export class ClientControls extends System {
         this.world.rig.position.copy(camera.position)
         this.world.rig.quaternion.copy(camera.quaternion)
         this.world.camera.position.z = camera.zoom
+        if (camera.fov !== undefined && camera.fov !== this.world.camera.fov) {
+          this.world.camera.fov = camera.fov
+          this.world.camera.updateProjectionMatrix()
+          // Trigger graphics system to recalculate worldToScreenFactor
+          this.world.graphics?.preTick()
+        }
         written = true
       } else if (camera) {
         camera.position.copy(this.world.rig.position)
         camera.quaternion.copy(this.world.rig.quaternion)
         camera.zoom = this.world.camera.position.z
+        camera.fov = this.world.camera.fov
       }
     }
     // clear touch deltas
@@ -586,7 +593,11 @@ export class ClientControls extends System {
   }
 
   onContextMenu = e => {
-    e.preventDefault()
+    // Only prevent default if in pointer lock mode
+    // Otherwise let the CoreUI handle the context menu
+    if (this.pointer.locked) {
+      e.preventDefault()
+    }
   }
 
   onTouchStart = e => {
@@ -755,12 +766,14 @@ function createCamera(controls, control) {
   const rotation = new THREE.Euler(0, 0, 0, 'YXZ').copy(world.rig.rotation)
   bindRotations(quaternion, rotation)
   const zoom = world.camera.position.z
+  const fov = world.camera.fov
   return {
     $camera: true,
     position,
     quaternion,
     rotation,
     zoom,
+    fov,
     write: false,
   }
 }
