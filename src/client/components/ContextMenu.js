@@ -3,14 +3,14 @@ import { css } from '@firebolt-dev/css'
 import { Menu, MenuItemBtn, MenuItemNumber } from './Menu'
 
 export function ContextMenu({ world, visible, position, onClose }) {
-	const [fov, setFov] = useState(world?.camera?.fov || 70)
+	const [fov, setFov] = useState(world?.settings?.fov || 70)
 	const menuRef = useRef()
 
 	useEffect(() => {
-		if (visible && world?.camera) {
-			setFov(world.camera.fov)
+		if (visible && world?.settings) {
+			setFov(world.settings.fov)
 		}
-	}, [visible, world?.camera?.fov])
+	}, [visible, world?.settings?.fov])
 
 	useEffect(() => {
 		if (!visible) return
@@ -40,11 +40,12 @@ export function ContextMenu({ world, visible, position, onClose }) {
 
 	const handleFovChange = (newFov) => {
 		setFov(newFov)
+		// Update settings which will update the camera
+		world.settings.set('fov', newFov, true)
+		// Also directly update camera for immediate feedback
 		if (world.camera) {
 			world.camera.fov = newFov
 			world.camera.updateProjectionMatrix()
-			// Trigger graphics system to recalculate worldToScreenFactor
-			world.graphics?.preTick()
 		}
 	}
 
@@ -62,6 +63,8 @@ export function ContextMenu({ world, visible, position, onClose }) {
         left: ${position.x}px;
         z-index: 1000;
         pointer-events: auto;
+        border-radius: 1.375rem;
+        overflow: hidden;
       `}
 		>
 			<Menu title="Camera Settings" blur={false}>

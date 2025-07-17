@@ -71,6 +71,7 @@ export class ClientControls extends System {
 
   start() {
     this.world.on('xrSession', this.onXRSession)
+    this.world.settings.on('change', this.onSettingsChange)
   }
 
   preFixedUpdate() {
@@ -212,6 +213,8 @@ export class ClientControls extends System {
         if (camera.fov !== undefined && camera.fov !== this.world.camera.fov) {
           this.world.camera.fov = camera.fov
           this.world.camera.updateProjectionMatrix()
+          // Update settings
+          this.world.settings.set('fov', camera.fov, true)
           // Trigger graphics system to recalculate worldToScreenFactor
           this.world.graphics?.preTick()
         }
@@ -664,6 +667,16 @@ export class ClientControls extends System {
 
   onXRSession = session => {
     this.xrSession = session
+  }
+
+  onSettingsChange = changes => {
+    if (changes.fov) {
+      // Update camera FOV from settings
+      this.world.camera.fov = changes.fov.value
+      this.world.camera.updateProjectionMatrix()
+      // Trigger graphics system to recalculate worldToScreenFactor
+      this.world.graphics?.preTick()
+    }
   }
 
   isInputFocused() {

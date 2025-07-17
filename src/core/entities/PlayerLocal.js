@@ -211,11 +211,11 @@ export class PlayerLocal extends Entity {
       Layers.player.group,
       Layers.player.mask,
       PHYSX.PxPairFlagEnum.eNOTIFY_TOUCH_FOUND |
-        PHYSX.PxPairFlagEnum.eNOTIFY_TOUCH_LOST |
-        PHYSX.PxPairFlagEnum.eNOTIFY_CONTACT_POINTS |
-        PHYSX.PxPairFlagEnum.eDETECT_CCD_CONTACT |
-        PHYSX.PxPairFlagEnum.eSOLVE_CONTACT |
-        PHYSX.PxPairFlagEnum.eDETECT_DISCRETE_CONTACT,
+      PHYSX.PxPairFlagEnum.eNOTIFY_TOUCH_LOST |
+      PHYSX.PxPairFlagEnum.eNOTIFY_CONTACT_POINTS |
+      PHYSX.PxPairFlagEnum.eDETECT_CCD_CONTACT |
+      PHYSX.PxPairFlagEnum.eSOLVE_CONTACT |
+      PHYSX.PxPairFlagEnum.eDETECT_DISCRETE_CONTACT,
       0
     )
     shape.setContactOffset(0.08) // just enough to fire contacts (because we muck with velocity sometimes standing on a thing doesn't contact)
@@ -981,6 +981,11 @@ export class PlayerLocal extends Entity {
     } else {
       // otherwise interpolate camera towards target
       simpleCamLerp(this.world, this.control.camera, this.cam, delta)
+    }
+    // Sync FOV from world settings to player camera
+    if (this.world.settings?.fov && this.control.camera.fov !== this.world.settings.fov) {
+      this.control.camera.fov = this.world.settings.fov
+      // Don't call updateProjectionMatrix on control camera - it's not a real camera
     }
     if (this.avatar) {
       const matrix = this.avatar.getBoneTransform('head')

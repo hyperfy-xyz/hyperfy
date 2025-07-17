@@ -12,6 +12,7 @@ export class Settings extends System {
     this.public = null
     this.playerLimit = null
     this.ao = null
+    this.fov = null
 
     this.changes = null
   }
@@ -24,6 +25,15 @@ export class Settings extends System {
     this.public = data.public
     this.playerLimit = data.playerLimit
     this.ao = isBoolean(data.ao) ? data.ao : true // default true
+    this.fov = data.fov || 70 // default 70 degrees
+
+    // Update camera FOV when settings are loaded
+    if (this.world.camera) {
+      console.log('Settings: Setting camera FOV to:', this.fov)
+      this.world.camera.fov = this.fov
+      this.world.camera.updateProjectionMatrix()
+    }
+
     this.emit('change', {
       title: { value: this.title },
       desc: { value: this.desc },
@@ -32,7 +42,13 @@ export class Settings extends System {
       public: { value: this.public },
       playerLimit: { value: this.playerLimit },
       ao: { value: this.ao },
+      fov: { value: this.fov },
     })
+
+    // Force apply settings to camera after a short delay to ensure everything is initialized
+    setTimeout(() => {
+      this.forceApplyToCamera()
+    }, 100)
   }
 
   serialize() {
@@ -44,6 +60,7 @@ export class Settings extends System {
       public: this.public,
       playerLimit: this.playerLimit,
       ao: this.ao,
+      fov: this.fov,
     }
   }
 
@@ -64,8 +81,80 @@ export class Settings extends System {
 
   set(key, value, broadcast) {
     this.modify(key, value)
+
+    // Immediately apply FOV changes to camera
+    if (key === 'fov' && this.world.camera) {
+      console.log('Settings: Applying FOV change to camera:', value)
+      this.world.camera.fov = value
+      this.world.camera.updateProjectionMatrix()
+      // Also update the graphics system if available
+      if (this.world.graphics) {
+        this.world.graphics.preTick()
+      }
+    }
+
     if (broadcast) {
       this.world.network.send('settingsModified', { key, value })
+    }
+  }
+
+  syncCameraFOV() {
+    if (this.world.camera) {
+      // If settings FOV is not set, use current camera FOV
+      if (!this.fov) {
+        console.log('Settings: Syncing settings FOV from camera:', this.world.camera.fov)
+        this.fov = this.world.camera.fov
+        this.emit('change', { fov: { value: this.fov } })
+      } else if (this.world.camera.fov !== this.fov) {
+        // If settings FOV is set but different from camera, update camera
+        console.log('Settings: Updating camera FOV from settings:', this.fov)
+        this.world.camera.fov = this.fov
+        this.world.camera.updateProjectionMatrix()
+      }
+    }
+  }
+
+  start() {
+    // Initialize camera FOV from settings if available
+    if (this.fov && this.world.camera) {
+      console.log('Settings: Initializing camera FOV to:', this.fov)
+      this.world.camera.fov = this.fov
+      this.world.camera.updateProjectionMatrix()
+    } else if (this.world.camera && !this.fov) {
+      // If no FOV setting but camera exists, sync current camera FOV to settings
+      console.log('Settings: Syncing settings FOV from camera:', this.world.camera.fov)
+      this.fov = this.world.camera.fov
+      this.emit('change', { fov: { value: this.fov } })
+    }
+  }
+
+  // Method to force apply settings to camera
+  forceApplyToCamera() {
+    if (this.world.camera) {
+      console.log('Settings: Force applying FOV to camera:', this.fov)
+      this.world.camera.fov = this.fov
+      this.world.camera.updateProjectionMatrix()
+      // Also update the graphics system if available
+      if (this.world.graphics) {
+        this.world.graphics.preTick()
+      }
+    }
+  }
+
+  // Method to ensure settings are properly synchronized with camera
+  ensureFOVSync() {
+    if (this.world.camera) {
+      if (!this.fov) {
+        // If no FOV setting, use current camera FOV
+        console.log('Settings: Syncing settings FOV from camera:', this.world.camera.fov)
+        this.fov = this.world.camera.fov
+        this.emit('change', { fov: { value: this.fov } })
+      } else if (this.world.camera.fov !== this.fov) {
+        // If settings FOV is set but different from camera, update camera
+        console.log('Settings: Updating camera FOV from settings:', this.fov)
+        this.world.camera.fov = this.fov
+        this.world.camera.updateProjectionMatrix()
+      }
     }
   }
 }

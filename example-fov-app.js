@@ -1,49 +1,138 @@
-// Example app demonstrating FOV manipulation
-// This app shows how to control camera FOV through the app.control() API
+// FOV Demo App
+// Demonstrates camera FOV manipulation through the app.control() API
 
-export default {
-	name: 'FOV Demo',
-	version: '1.0.0',
-
-	// App lifecycle
-	start() {
-		// Get control of the camera
-		this.control = app.control()
-
-		// Set initial FOV to 90 degrees (wide angle)
-		this.control.camera.fov = 90
-		this.control.camera.write = true
-
-		// Log current FOV
-		console.log('Current FOV:', this.control.camera.fov)
-
-		// Set up keyboard controls for FOV adjustment
-		this.control.keyF.onPress = () => {
-			// Increase FOV (wider angle)
-			this.control.camera.fov = Math.min(120, this.control.camera.fov + 10)
-			console.log('FOV increased to:', this.control.camera.fov)
-		}
-
-		this.control.keyG.onPress = () => {
-			// Decrease FOV (narrower angle)
-			this.control.camera.fov = Math.max(30, this.control.camera.fov - 10)
-			console.log('FOV decreased to:', this.control.camera.fov)
-		}
-
-		this.control.keyR.onPress = () => {
-			// Reset to default FOV
-			this.control.camera.fov = 70
-			console.log('FOV reset to:', this.control.camera.fov)
-		}
-
-		// Display instructions
-		app.chat('FOV Demo loaded! Press F to increase FOV, G to decrease, R to reset')
+// Configuration for the app
+app.configure([
+	{
+		key: 'initialFov',
+		type: 'number',
+		label: 'Initial FOV',
+		hint: 'Starting field of view in degrees (30-120)',
+		min: 30,
+		max: 120,
+		initial: 70
 	},
+	{
+		key: 'showUI',
+		type: 'switch',
+		label: 'Show UI',
+		hint: 'Whether to show the FOV control UI',
+		options: [
+			{ label: 'Show', value: 'show', hint: 'Display FOV controls' },
+			{ label: 'Hide', value: 'hide', hint: 'Hide FOV controls' }
+		],
+		initial: 'show'
+	}
+]);
 
-	// Clean up when app is destroyed
-	destroy() {
-		if (this.control) {
-			this.control.release()
+app.keepActive = true;
+
+// Variables to track state
+let control, ui, fovText, currentFov;
+
+// Initialize the app
+if (world.isClient) {
+	// Set initial FOV through settings (doesn't take control from player)
+	currentFov = props.initialFov || 70;
+	world.settings.set('fov', currentFov, true);
+
+	console.log('FOV Demo loaded! Current FOV:', currentFov);
+
+	// Set up keyboard controls for FOV adjustment
+	control = app.control();
+	control.keyF.onPress = () => {
+		currentFov = Math.min(120, currentFov + 10);
+		world.settings.set('fov', currentFov, true);
+		console.log('FOV increased to:', currentFov);
+		updateFovDisplay();
+	};
+
+	control.keyG.onPress = () => {
+		currentFov = Math.max(30, currentFov - 10);
+		world.settings.set('fov', currentFov, true);
+		console.log('FOV decreased to:', currentFov);
+		updateFovDisplay();
+	};
+
+	control.keyR.onPress = () => {
+		currentFov = 70;
+		world.settings.set('fov', currentFov, true);
+		console.log('FOV reset to:', currentFov);
+		updateFovDisplay();
+	};
+
+	// Create UI if enabled
+	if (props.showUI === 'show') {
+		createUI();
+	}
+
+	// Display instructions
+	app.chat('FOV Demo loaded! Press F to increase FOV, G to decrease, R to reset');
+}
+
+// Create UI for FOV display and controls
+function createUI() {
+	// Create UI container
+	ui = app.create('ui', {
+		width: 200,
+		height: 120,
+		backgroundColor: 'rgba(0,15,30,0.9)',
+		borderRadius: 8,
+		padding: 10,
+		justifyContent: 'center',
+		gap: 8,
+		alignItems: 'center'
+	});
+	ui.billboard = 'y'; // Face camera on Y-axis
+	ui.position.set(0, 1, 0); // Position above app
+
+	// Create FOV display text
+	fovText = app.create('uitext', {
+		value: `FOV: ${currentFov}°`,
+		fontSize: 18,
+		color: '#ffffff',
+		textAlign: 'center'
+	});
+
+	// Create instructions text
+	const instructionsText = app.create('uitext', {
+		value: 'F: +10°\nG: -10°\nR: Reset',
+		fontSize: 14,
+		color: '#cccccc',
+		textAlign: 'center'
+	});
+
+	// Add text to UI container
+	ui.add(fovText);
+	ui.add(instructionsText);
+
+	// Add UI to app
+	app.add(ui);
+}
+
+// Update FOV display
+function updateFovDisplay() {
+	if (fovText) {
+		fovText.value = `FOV: ${currentFov}°`;
+	}
+}
+
+// Update loop
+app.on('update', () => {
+	// Keep the app active and update FOV display
+	if (fovText) {
+		// Update display with current FOV from settings
+		const settingsFov = Math.round(world.settings.fov);
+		if (settingsFov !== currentFov) {
+			currentFov = settingsFov;
+			updateFovDisplay();
 		}
 	}
-} 
+});
+
+// Clean up when app is destroyed
+app.on('destroy', () => {
+	if (control) {
+		control.release();
+	}
+}); 

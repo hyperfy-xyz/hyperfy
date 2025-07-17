@@ -124,6 +124,11 @@ function MenuMainGraphics({ world, pop, push }) {
   const [shadows, setShadows] = useState(world.prefs.shadows)
   const [postprocessing, setPostprocessing] = useState(world.prefs.postprocessing)
   const [bloom, setBloom] = useState(world.prefs.bloom)
+  const [fov, setFov] = useState(() => {
+    // Try to get FOV from settings first, then camera, then default to 70
+    const fovValue = world.settings?.fov || world.camera?.fov || 70
+    return fovValue
+  })
   const dprOptions = useMemo(() => {
     const width = world.graphics.width
     const height = world.graphics.height
@@ -149,9 +154,14 @@ function MenuMainGraphics({ world, pop, push }) {
       if (changes.postprocessing) setPostprocessing(changes.postprocessing.value)
       if (changes.bloom) setBloom(changes.bloom.value)
     }
+    const onSettingsChange = changes => {
+      if (changes.fov) setFov(changes.fov.value)
+    }
     world.prefs.on('change', onChange)
+    world.settings.on('change', onSettingsChange)
     return () => {
       world.prefs.off('change', onChange)
+      world.settings.off('change', onSettingsChange)
     }
   }, [])
   return (
@@ -186,6 +196,23 @@ function MenuMainGraphics({ world, pop, push }) {
         falseLabel='Off'
         value={bloom}
         onChange={bloom => world.prefs.setBloom(bloom)}
+      />
+      <MenuItemRange
+        label='Field of View'
+        hint='Adjust the camera field of view (30-120 degrees)'
+        min={30}
+        max={120}
+        step={1}
+        value={fov}
+        onChange={fov => {
+          // Update settings which will update the camera
+          world.settings.set('fov', fov, true)
+          // Also directly update camera for immediate feedback
+          if (world.camera) {
+            world.camera.fov = fov
+            world.camera.updateProjectionMatrix()
+          }
+        }}
       />
     </Menu>
   )

@@ -235,6 +235,13 @@ export class ClientGraphics extends System {
       this.aoPass.enabled = changes.ao.value && this.world.prefs.ao
       console.log(this.aoPass.enabled)
     }
+    if (changes.fov) {
+      // Update camera FOV and recalculate world to screen factor
+      this.world.camera.fov = changes.fov.value
+      this.world.camera.updateProjectionMatrix()
+      // Recalculate world to screen factor on next preTick
+      this.preTick()
+    }
   }
 
   updatePostProcessingEffects() {
