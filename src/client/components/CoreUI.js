@@ -129,12 +129,14 @@ export function CoreUI({ world }) {
       {ready && isTouch && <TouchBtns world={world} />}
       {ready && isTouch && <TouchStick world={world} />}
       {confirm && <Confirm options={confirm} />}
+      {/* Temporarily hidden for PR - ContextMenu
       <ContextMenu
         world={world}
         visible={contextMenu.visible}
         position={contextMenu.position}
-        onClose={() => setContextMenu({ visible: false, position: { x: 0, y: 0 } })}
+        onClose={() => setContextMenu({ visible: false, position:[object Object] x: 0, y:0})}
       />
+      */}
       <div id='core-ui-portal' />
     </div>
   )

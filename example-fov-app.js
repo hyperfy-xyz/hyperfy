@@ -1,5 +1,5 @@
 // FOV Demo App
-// Demonstrates camera FOV manipulation through the app.control() API
+// Demonstrates camera FOV manipulation through direct camera access
 
 // Configuration for the app
 app.configure([
@@ -32,9 +32,12 @@ let control, ui, fovText, currentFov;
 
 // Initialize the app
 if (world.isClient) {
-	// Set initial FOV through settings (doesn't take control from player)
+	// Set initial FOV directly on camera
 	currentFov = props.initialFov || 70;
-	world.settings.set('fov', currentFov, true);
+	if (world.camera) {
+		world.camera.fov = currentFov;
+		world.camera.updateProjectionMatrix();
+	}
 
 	console.log('FOV Demo loaded! Current FOV:', currentFov);
 
@@ -42,21 +45,30 @@ if (world.isClient) {
 	control = app.control();
 	control.keyF.onPress = () => {
 		currentFov = Math.min(120, currentFov + 10);
-		world.settings.set('fov', currentFov, true);
+		if (world.camera) {
+			world.camera.fov = currentFov;
+			world.camera.updateProjectionMatrix();
+		}
 		console.log('FOV increased to:', currentFov);
 		updateFovDisplay();
 	};
 
 	control.keyG.onPress = () => {
 		currentFov = Math.max(30, currentFov - 10);
-		world.settings.set('fov', currentFov, true);
+		if (world.camera) {
+			world.camera.fov = currentFov;
+			world.camera.updateProjectionMatrix();
+		}
 		console.log('FOV decreased to:', currentFov);
 		updateFovDisplay();
 	};
 
 	control.keyR.onPress = () => {
 		currentFov = 70;
-		world.settings.set('fov', currentFov, true);
+		if (world.camera) {
+			world.camera.fov = currentFov;
+			world.camera.updateProjectionMatrix();
+		}
 		console.log('FOV reset to:', currentFov);
 		updateFovDisplay();
 	};
@@ -120,11 +132,11 @@ function updateFovDisplay() {
 // Update loop
 app.on('update', () => {
 	// Keep the app active and update FOV display
-	if (fovText) {
-		// Update display with current FOV from settings
-		const settingsFov = Math.round(world.settings.fov);
-		if (settingsFov !== currentFov) {
-			currentFov = settingsFov;
+	if (fovText && world.camera) {
+		// Update display with current FOV from camera
+		const cameraFov = Math.round(world.camera.fov);
+		if (cameraFov !== currentFov) {
+			currentFov = cameraFov;
 			updateFovDisplay();
 		}
 	}
