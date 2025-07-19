@@ -128,9 +128,31 @@ function GeneralSettings({ world, player }) {
   const [shadows, setShadows] = useState(world.prefs.shadows)
   const [postprocessing, setPostprocessing] = useState(world.prefs.postprocessing)
   const [bloom, setBloom] = useState(world.prefs.bloom)
+  const [ao, setAO] = useState(() => {
+    // Try to get AO from settings first, then default to true
+    const aoValue = world.settings?.ao !== undefined ? world.settings.ao : true
+    return aoValue
+  })
+  const [fov, setFov] = useState(() => {
+    // Try to get FOV from settings first, then camera, then default to 70
+    const fovValue = world.settings?.fov || world.camera?.fov || 70
+    return fovValue
+  })
   const [music, setMusic] = useState(world.prefs.music)
   const [sfx, setSFX] = useState(world.prefs.sfx)
   const [voice, setVoice] = useState(world.prefs.voice)
+
+  // Update FOV when settings become available
+  useEffect(() => {
+    if (world.settings?.fov !== undefined) {
+      setFov(world.settings.fov)
+    } else {
+      // If no FOV setting, try to get it from camera
+      if (world.camera) {
+        setFov(world.camera.fov)
+      }
+    }
+  }, [world.settings?.fov, world.camera?.fov])
   const dprOptions = useMemo(() => {
     const width = world.graphics.width
     const height = world.graphics.height
@@ -149,6 +171,10 @@ function GeneralSettings({ world, player }) {
     return options
   }, [])
   useEffect(() => {
+    // Ensure FOV is properly synchronized
+    if (world.settings) {
+      world.settings.ensureFOVSync()
+    }
     const onChange = changes => {
       // TODO: rename .dpr
       if (changes.dpr) setDPR(changes.dpr.value)
@@ -159,9 +185,15 @@ function GeneralSettings({ world, player }) {
       if (changes.sfx) setSFX(changes.sfx.value)
       if (changes.voice) setVoice(changes.voice.value)
     }
+    const onSettingsChange = changes => {
+      if (changes.fov) setFov(changes.fov.value)
+      if (changes.ao) setAO(changes.ao.value)
+    }
     world.prefs.on('change', onChange)
+    world.settings.on('change', onSettingsChange)
     return () => {
       world.prefs.off('change', onChange)
+      world.settings.off('change', onSettingsChange)
     }
   }, [])
   return (
@@ -250,13 +282,42 @@ function GeneralSettings({ world, player }) {
         </div>
       </div>
       {postprocessing && (
-        <div className='general-field'>
-          <div className='general-field-label'>Bloom</div>
-          <div className='general-field-input'>
-            <InputSwitch options={onOffOptions} value={bloom} onChange={bloom => world.prefs.setBloom(bloom)} />
+        <>
+          <div className='general-field'>
+            <div className='general-field-label'>Bloom</div>
+            <div className='general-field-input'>
+              <InputSwitch options={onOffOptions} value={bloom} onChange={bloom => world.prefs.setBloom(bloom)} />
+            </div>
           </div>
-        </div>
+          <div className='general-field'>
+            <div className='general-field-label'>Ambient Occlusion</div>
+            <div className='general-field-input'>
+              <InputSwitch options={onOffOptions} value={ao} onChange={ao => world.settings.set('ao', ao, true)} />
+            </div>
+          </div>
+        </>
       )}
+      <div className='general-field'>
+        <div className='general-field-label'>Field of View</div>
+        <div className='general-field-input'>
+          <InputRange
+            value={fov}
+            onChange={fov => {
+              // Update settings which will update the camera
+              world.settings.set('fov', fov, true)
+              // Also directly update camera for immediate feedback
+              if (world.camera) {
+                world.camera.fov = fov
+                world.camera.updateProjectionMatrix()
+              }
+            }}
+            min={30}
+            max={120}
+            step={1}
+            instant
+          />
+        </div>
+      </div>
       <div className='general-section'>
         <Volume2Icon size={16} />
         <span>Audio</span>

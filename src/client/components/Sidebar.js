@@ -425,6 +425,11 @@ function Prefs({ world, hidden }) {
   const [postprocessing, setPostprocessing] = useState(world.prefs.postprocessing)
   const [bloom, setBloom] = useState(world.prefs.bloom)
   const [ao, setAO] = useState(world.prefs.ao)
+  const [fov, setFov] = useState(() => {
+    // Try to get FOV from settings first, then camera, then default to 70
+    const fovValue = world.settings?.fov || world.camera?.fov || 70
+    return fovValue
+  })
   const [music, setMusic] = useState(world.prefs.music)
   const [sfx, setSFX] = useState(world.prefs.sfx)
   const [voice, setVoice] = useState(world.prefs.voice)
@@ -468,9 +473,14 @@ function Prefs({ world, hidden }) {
       if (changes.actions) setActions(changes.actions.value)
       if (changes.stats) setStats(changes.stats.value)
     }
+    const onSettingsChange = changes => {
+      if (changes.fov) setFov(changes.fov.value)
+    }
     world.prefs.on('change', onPrefsChange)
+    world.settings.on('change', onSettingsChange)
     return () => {
       world.prefs.off('change', onPrefsChange)
+      world.settings.off('change', onSettingsChange)
     }
   }, [])
   return (
@@ -561,16 +571,22 @@ function Prefs({ world, hidden }) {
           value={bloom}
           onChange={bloom => world.prefs.setBloom(bloom)}
         />
-        {world.settings.ao && (
-          <FieldToggle
-            label='Ambient Occlusion'
-            hint='Enable or disable the ambient occlusion effect'
-            trueLabel='On'
-            falseLabel='Off'
-            value={ao}
-            onChange={ao => world.prefs.setAO(ao)}
-          />
-        )}
+        <FieldNumber
+          label='Field of View'
+          hint='Adjust the camera field of view (30-120 degrees)'
+          min={30}
+          max={120}
+          value={fov}
+          onChange={fov => {
+            // Update settings which will update the camera
+            world.settings.set('fov', fov, true)
+            // Also directly update camera for immediate feedback
+            if (world.camera) {
+              world.camera.fov = fov
+              world.camera.updateProjectionMatrix()
+            }
+          }}
+        />
         <Group label='Audio' />
         <FieldRange
           label='Music'
