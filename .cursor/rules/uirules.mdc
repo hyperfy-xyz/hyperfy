@@ -1,0 +1,81 @@
+---
+description:
+globs:
+alwaysApply: false
+---
+Reminders when using UI Nodes, UIView Nodes, UIText nodes, UIImage nodes
+#### 1. Responsive Layouts with Auto or Percentage Width/Height
+
+- Explanation: Width and height cannot be set to auto or as percentages. They must be explicitly defined as pixel values.
+- Example: Trying to set width: 'auto' or width: '50%' will not work.
+#### 2. Relative Positioning
+
+- Explanation: The .position and .offset properties are fixed values (ratios or pixels) and do not support dynamic relative positioning based on other UI elements.
+- Example: You cannot position a UI element relative to another UI element using position: relative.
+#### 4. Image Styling
+
+- Explanation: The UIImage component does not support:
+	- Setting multiple background images.
+	- Using gradients or patterns as backgrounds.
+	- Applying complex image effects like shadows or filters directly on the image.
+- Example: You cannot create a UIImage with a gradient background using background: linear-gradient(...).
+#### 5. Polygon or Complex Shapes for UI Elements
+
+- Explanation: There is no way to create complex shapes (e.g., polygons, stars, or custom clip paths) for UI elements. Only basic shapes (e.g., rectangles with rounded corners) are supported.
+- Example: You cannot create a UI element that is shaped like a pentagon.
+#### 6. 3D Transformations
+
+- Explanation: The UI components do not support advanced 3D transformations (e.g., 3D rotations, 3D scaling).
+- Example: You cannot apply transform: rotateX(45deg) to a UI element.
+#### 7. Advanced CSS Animations
+
+- Explanation: The UI components do not support CSS animations, transitions, or keyframes.
+- Example: You cannot animate the position or size of a UI element using CSS-like animations.
+#### 8. Layered Backgrounds
+
+- Explanation: You cannot have multiple layered backgrounds (e.g., a background image with a semi-transparent overlay) for UI elements.
+- Example: You cannot set backgroundImage and backgroundColor together for a single UI element.
+#### 9. Mix Blend Modes
+
+- Explanation: The UI components do not support CSS mix-blend-mode properties, which would allow blending of UI elements with the scene or other UI elements.
+- Example: You cannot set mixBlendMode: 'multiply' for a UI element.
+#### 10. Z-Index Control
+
+- Explanation: The z-index property is not supported for UI elements, making it difficult to manage overlapping UI elements in complex layouts.
+- Example: You cannot ensure that one UI element always appears above another by setting z-index: 100.
+#### 11. Pointer Event Configuration
+
+- Explanation: While .pointerEvents is a boolean (true/false), specific pointer events like OnPointerDown, OnPointerEnter, OnPointerLeave, and OnPointerUp can be used to respond to cursor and click events.
+- Clarification: You can handle specific pointer events for UIView and UIText elements.
+- Example: You can use OnPointerDown to respond to click events on a UIView.
+#### 12. Nested UI Components with Limitations
+
+- Explanation: While you can nest UIView components within each other, some properties (e.g., flexWrap, alignContent) may not work as expected in deeply nested layouts.
+- Example: Complex nested flex layouts with wrap behavior may not behave as expected.
+#### 13. Touch Events
+
+- Explanation: Advanced touch events (e.g., multi-touch gestures, swipe detection) are not supported or well-documented.
+- Example: You cannot detect swipe gestures on a UI element.
+#### 14. Performance Considerations
+
+- Explanation: Performance considerations are more relevant for world space UI elements. Screen space UI, being more lightweight, is less likely to face performance issues even with complex layouts.
+- Clarification: Performance impacts vary based on the UI space (world or screen).
+- Example: World space UI with many nested elements may negatively impact performance.
+#### Workaround for Responsive UI with Fixed Sizes
+If you want to create a responsive UI, calculate pixel values dynamically using app.control() for screen dimensions, as app.window is not accessible.
+```// Workaround: Calculate width and height dynamically
+const control = app.control();
+const screenWidth = control.screenWidth();
+const screenHeight = control.screenHeight();
+
+const ui = app.create('ui', {
+  space: 'screen',
+  position: [0, 1, 0],
+  width: screenWidth * 0.3, // 30% of screen width (calculated in pixels)
+  height: screenHeight * 0.2, // 20% of screen height (calculated in pixels)
+  backgroundColor: 'rgba(0, 0, 0, 0.7)',
+  pivot: 'top-left'
+});
+```
+
+
