@@ -2,7 +2,6 @@ import 'dotenv-flow/config'
 import fs from 'fs-extra'
 import path from 'path'
 import Knex from 'knex'
-import moment from 'moment'
 import { fileURLToPath } from 'url'
 import { DeleteObjectCommand, S3Client, ListObjectsV2Command } from '@aws-sdk/client-s3'
 
