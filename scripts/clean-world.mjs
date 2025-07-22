@@ -58,80 +58,47 @@ function parseS3Uri(uri) {
  * @returns {object} Storage configuration
  */
 function getStorageConfig() {
-  // Determine storage type
-  let storageType = process.env.STORAGE_TYPE || 'local'
+  // Check if STORAGE_URL is provided for S3
+  if (process.env.STORAGE_URL && process.env.STORAGE_URL.startsWith('s3://')) {
+    const config = parseS3Uri(process.env.STORAGE_URL)
 
-  // Auto-detect S3 from STORAGE_URL if no explicit STORAGE_TYPE
-  if (!process.env.STORAGE_TYPE && process.env.STORAGE_URL?.startsWith('s3://')) {
-    storageType = 's3'
-  }
-
-  if (storageType === 's3') {
-    // Check if STORAGE_URL is provided (new URI approach)
-    if (process.env.STORAGE_URL && process.env.STORAGE_URL.startsWith('s3://')) {
-      const config = parseS3Uri(process.env.STORAGE_URL)
-
-      // Add credentials
-      if (process.env.AWS_ACCESS_KEY_ID && process.env.AWS_SECRET_ACCESS_KEY) {
-        config.credentials = {
-          accessKeyId: process.env.AWS_ACCESS_KEY_ID,
-          secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
-        }
-      } else if (process.env.S3_ACCESS_KEY_ID && process.env.S3_SECRET_ACCESS_KEY) {
-        config.credentials = {
-          accessKeyId: process.env.S3_ACCESS_KEY_ID,
-          secretAccessKey: process.env.S3_SECRET_ACCESS_KEY,
-        }
-      }
-
-      return { type: 's3', ...config }
-    }
-
-    // Fallback to individual environment variables (legacy approach)
-    if (!process.env.S3_BUCKET_NAME) {
-      console.error('Error: Either STORAGE_URL (s3://) or S3_BUCKET_NAME is required when STORAGE_TYPE=s3')
-      process.exit(1)
-    }
-
-    const config = {
-      type: 's3',
-      bucketName: process.env.S3_BUCKET_NAME,
-      region: process.env.S3_REGION || 'us-east-1',
-      assetsPrefix: process.env.S3_ASSETS_PREFIX || 'assets/',
-    }
-
-    if (process.env.S3_ACCESS_KEY_ID && process.env.S3_SECRET_ACCESS_KEY) {
+    // Add credentials if provided
+    if (process.env.AWS_ACCESS_KEY_ID && process.env.AWS_SECRET_ACCESS_KEY) {
       config.credentials = {
-        accessKeyId: process.env.S3_ACCESS_KEY_ID,
-        secretAccessKey: process.env.S3_SECRET_ACCESS_KEY,
+        accessKeyId: process.env.AWS_ACCESS_KEY_ID,
+        secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
       }
     }
 
-    return config
+    return { type: 's3', ...config }
   }
 
+  // Default to local storage
   return { type: 'local' }
 }
 
 // Database configuration
-const { DB_TYPE = '', DB_URL = '' } = process.env
+const { DB_URL = '' } = process.env
 let dbConfig
 
-if (!DB_TYPE && !DB_URL) {
-  // Default: sqlite in world folder
+// Auto-detect database type from DB_URL
+if (DB_URL) {
+  if (DB_URL.startsWith('postgres://') || DB_URL.startsWith('postgresql://')) {
+    dbConfig = {
+      client: 'pg',
+      connection: DB_URL,
+      pool: { min: 2, max: 10 },
+    }
+  } else {
+    throw new Error(`Unsupported database URL: ${DB_URL}. Only PostgreSQL URLs (postgres://) are supported.`)
+  }
+} else {
+  // Default: SQLite in world folder
   dbConfig = {
     client: 'better-sqlite3',
     connection: { filename: `./${world}/db.sqlite` },
     useNullAsDefault: true,
   }
-} else if (DB_TYPE === 'pg' && DB_URL) {
-  dbConfig = {
-    client: 'pg',
-    connection: DB_URL,
-    pool: { min: 2, max: 10 },
-  }
-} else {
-  throw new Error('Unsupported or incomplete DB configuration. Only sqlite (default) and postgres (pg) via DB_TYPE/DB_URL are supported.')
 }
 
 const db = Knex(dbConfig)

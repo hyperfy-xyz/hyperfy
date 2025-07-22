@@ -8,27 +8,27 @@ import { importApp } from '../core/extras/appTools'
 let db
 
 function getDBConfig(worldDir) {
-  const { DB_TYPE = '', DB_URL = '' } = process.env;
+  const { DB_URL = '' } = process.env;
 
-  if (!DB_TYPE && !DB_URL) {
-    // Default: sqlite in world folder
-    const filename = path.join(worldDir, '/db.sqlite')
-    return {
-      client: 'better-sqlite3',
-      connection: { filename },
-      useNullAsDefault: true,
-    };
+  // Auto-detect database type from DB_URL
+  if (DB_URL) {
+    if (DB_URL.startsWith('postgres://') || DB_URL.startsWith('postgresql://')) {
+      return {
+        client: 'pg',
+        connection: DB_URL,
+        pool: { min: 2, max: 10 },
+      };
+    }
+    throw new Error(`Unsupported database URL: ${DB_URL}. Only PostgreSQL URLs (postgres://) are supported.`);
   }
 
-  if (DB_TYPE === 'pg' && DB_URL) {
-    return {
-      client: 'pg',
-      connection: DB_URL,
-      pool: { min: 2, max: 10 },
-    };
-  }
-
-  throw new Error('Unsupported or incomplete DB configuration. Only sqlite (default) and postgres (pg) via DB_TYPE/DB_URL are supported.');
+  // Default: SQLite in world folder
+  const filename = path.join(worldDir, '/db.sqlite')
+  return {
+    client: 'better-sqlite3',
+    connection: { filename },
+    useNullAsDefault: true,
+  };
 }
 
 export async function getDB(worldDir) {

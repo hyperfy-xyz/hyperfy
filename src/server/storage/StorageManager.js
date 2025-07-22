@@ -71,49 +71,22 @@ export class StorageManager {
   }
 
   /**
-   * Get S3 configuration from environment (URI or individual variables)
+   * Get S3 configuration from environment (URI only)
    * @returns {object} S3 configuration object
    */
   static getS3Config() {
-    // Check if STORAGE_URL is provided (new URI approach)
-    if (process.env.STORAGE_URL && process.env.STORAGE_URL.startsWith('s3://')) {
-      const config = StorageManager.parseS3Uri(process.env.STORAGE_URL)
-
-      // Add credentials if provided via standard AWS env vars
-      if (process.env.AWS_ACCESS_KEY_ID && process.env.AWS_SECRET_ACCESS_KEY) {
-        config.credentials = {
-          accessKeyId: process.env.AWS_ACCESS_KEY_ID,
-          secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
-        }
-      } else if (process.env.S3_ACCESS_KEY_ID && process.env.S3_SECRET_ACCESS_KEY) {
-        // Fallback to S3_* prefixed credentials for backward compatibility
-        config.credentials = {
-          accessKeyId: process.env.S3_ACCESS_KEY_ID,
-          secretAccessKey: process.env.S3_SECRET_ACCESS_KEY,
-        }
-      }
-
-      return config
+    // Require STORAGE_URL for S3 configuration
+    if (!process.env.STORAGE_URL || !process.env.STORAGE_URL.startsWith('s3://')) {
+      throw new Error('STORAGE_URL with s3:// protocol is required when using S3 storage')
     }
 
-    // Fallback to individual environment variables (legacy approach)
-    if (!process.env.S3_BUCKET_NAME) {
-      throw new Error('Either STORAGE_URL (s3://) or S3_BUCKET_NAME is required when STORAGE_TYPE=s3')
-    }
+    const config = StorageManager.parseS3Uri(process.env.STORAGE_URL)
 
-    const config = {
-      bucketName: process.env.S3_BUCKET_NAME,
-      region: process.env.S3_REGION || 'us-east-1',
-      assetsPrefix: process.env.S3_ASSETS_PREFIX || 'assets/',
-      collectionsPrefix: process.env.S3_COLLECTIONS_PREFIX || 'collections/',
-      storagePrefix: process.env.S3_STORAGE_PREFIX || 'storage/',
-      cloudfrontUrl: process.env.CLOUDFRONT_URL,
-    }
-
-    if (process.env.S3_ACCESS_KEY_ID && process.env.S3_SECRET_ACCESS_KEY) {
+    // Add credentials if provided via standard AWS env vars
+    if (process.env.AWS_ACCESS_KEY_ID && process.env.AWS_SECRET_ACCESS_KEY) {
       config.credentials = {
-        accessKeyId: process.env.S3_ACCESS_KEY_ID,
-        secretAccessKey: process.env.S3_SECRET_ACCESS_KEY,
+        accessKeyId: process.env.AWS_ACCESS_KEY_ID,
+        secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
       }
     }
 
@@ -124,16 +97,11 @@ export class StorageManager {
    * Initialize storage based on environment configuration
    */
   async initialize() {
-    // Determine storage type
-    let storageType = process.env.STORAGE_TYPE || StorageManager.STORAGE_TYPE.LOCAL
+    // Determine storage type from STORAGE_URL
+    const isS3 = process.env.STORAGE_URL && process.env.STORAGE_URL.startsWith('s3://')
 
-    // Auto-detect S3 from STORAGE_URL if no explicit STORAGE_TYPE
-    if (!process.env.STORAGE_TYPE && process.env.STORAGE_URL?.startsWith('s3://')) {
-      storageType = StorageManager.STORAGE_TYPE.S3
-    }
-
-    if (storageType === StorageManager.STORAGE_TYPE.S3) {
-      // Get S3 configuration (URI or legacy env vars)
+    if (isS3) {
+      // Get S3 configuration from URI
       const s3Config = StorageManager.getS3Config()
 
       // Initialize S3 storage
