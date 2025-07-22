@@ -168,9 +168,12 @@ export class UI extends Node {
         const canvas = this.canvas
         const world = this.ctx.world
         const onPointerEnter = e => {
+          const rect = canvas.getBoundingClientRect()
+          const x = (e.clientX - rect.left) * this._res
+          const y = (e.clientY - rect.top) * this._res
           hit = {
             node: this,
-            coords: new THREE.Vector3(0, 0, 0),
+            coords: new THREE.Vector3(x, y, 0),
           }
           world.pointer.setScreenHit(hit)
         }
@@ -318,7 +321,7 @@ export class UI extends Node {
       const camPosition = v1.setFromMatrixPosition(camera.matrixWorld)
       const uiPosition = v2.setFromMatrixPosition(this.matrixWorld)
       const distance = camPosition.distanceTo(uiPosition)
-      this.mesh.renderOrder = -distance // Same ordering as particles
+      // this.mesh.renderOrder = -distance // Same ordering as particles
 
       const pos = v3
       const qua = q1
@@ -468,8 +471,7 @@ export class UI extends Node {
       : new THREE.MeshBasicMaterial({})
     material.color.set('white')
     material.transparent = transparent
-    // material.depthTest = true
-    // material.depthWrite = false
+    material.depthWrite = false
     material.map = texture
     material.side = doubleside ? THREE.DoubleSide : THREE.FrontSide
     this.ctx.world.setupMaterial(material)

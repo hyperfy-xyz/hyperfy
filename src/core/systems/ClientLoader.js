@@ -80,16 +80,22 @@ export class ClientLoader extends System {
     this.files.set(url, file)
   }
 
+  hasFile(url) {
+    url = this.world.resolveURL(url)
+    return this.files.has(url)
+  }
+
   getFile(url, name) {
     url = this.world.resolveURL(url)
+    const file = this.files.get(url)
+    if (!file) return null
     if (name) {
-      const file = this.files.get(url)
       return new File([file], name, {
         type: file.type, // Preserve the MIME type
         lastModified: file.lastModified, // Preserve the last modified timestamp
       })
     }
-    return this.files.get(url)
+    return file
   }
 
   loadFile = async url => {

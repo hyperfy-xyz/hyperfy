@@ -94,13 +94,6 @@ export class UIImage extends Node {
     }
     // measure function
     this.yogaNode.setMeasureFunc((width, widthMode, height, heightMode) => {
-      // no image? zero size
-      if (!this.img) {
-        return { width: 0, height: 0 }
-      }
-      const imgAspectRatio = this.img.width / this.img.height
-      let finalWidth
-      let finalHeight
       // handle explicitly set dimensions first
       if (this._width !== null && this._height !== null) {
         return {
@@ -108,6 +101,13 @@ export class UIImage extends Node {
           height: this._height * this.ui._res,
         }
       }
+      // no image? zero size
+      if (!this.img) {
+        return { width: 0, height: 0 }
+      }
+      const imgAspectRatio = this.img.width / this.img.height
+      let finalWidth
+      let finalHeight
       // handle cases where one dimension is specified
       if (this._width !== null) {
         finalWidth = this._width * this.ui._res

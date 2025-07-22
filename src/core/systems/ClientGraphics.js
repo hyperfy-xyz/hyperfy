@@ -1,4 +1,5 @@
 import * as THREE from '../extras/three'
+import { N8AOPostPass } from 'n8ao'
 import {
   EffectComposer,
   EffectPass,
@@ -10,6 +11,11 @@ import {
   SelectiveBloomEffect,
   BlendFunction,
   Selection,
+  BloomEffect,
+  KernelSize,
+  DepthPass,
+  Pass,
+  DepthEffect,
 } from 'postprocessing'
 
 import { System } from './System'
@@ -66,11 +72,31 @@ export class ClientGraphics extends System {
     const maxMultisampling = context.getParameter(context.MAX_SAMPLES)
     this.composer = new EffectComposer(this.renderer, {
       frameBufferType: THREE.HalfFloatType,
-      multisampling: Math.min(8, maxMultisampling),
+      // multisampling: Math.min(8, maxMultisampling),
     })
     this.renderPass = new RenderPass(this.world.stage.scene, this.world.camera)
     this.composer.addPass(this.renderPass)
-    this.bloom = new SelectiveBloomEffect(this.world.stage.scene, this.world.camera, {
+    this.aoPass = new N8AOPostPass(this.world.stage.scene, this.world.camera, this.width, this.height)
+    this.aoPass.enabled = this.world.settings.ao && this.world.prefs.ao
+    // we can't use this as it traverses the scene, but half our objects are in the octree
+    this.aoPass.autoDetectTransparency = false
+    // full res is pretty expensive
+    this.aoPass.configuration.halfRes = true
+    // look 1:
+    // this.aoPass.configuration.aoRadius = 0.2
+    // this.aoPass.configuration.distanceFalloff = 1
+    // this.aoPass.configuration.intensity = 2
+    // look 2:
+    // this.aoPass.configuration.aoRadius = 0.5
+    // this.aoPass.configuration.distanceFalloff = 1
+    // this.aoPass.configuration.intensity = 2
+    // look 3:
+    this.aoPass.configuration.screenSpaceRadius = true
+    this.aoPass.configuration.aoRadius = 32
+    this.aoPass.configuration.distanceFalloff = 1
+    this.aoPass.configuration.intensity = 2
+    this.composer.addPass(this.aoPass)
+    this.bloom = new BloomEffect({
       blendFunction: BlendFunction.ADD,
       mipmapBlur: true,
       luminanceThreshold: 1,
@@ -78,20 +104,15 @@ export class ClientGraphics extends System {
       intensity: 0.5,
       radius: 0.8,
     })
-    this.bloom.inverted = true
-    this.bloom.selection.layer = 14 // NO_BLOOM layer
-    this.bloomPass = new EffectPass(this.world.camera, this.bloom)
-    this.bloomPass.enabled = this.world.prefs.bloom
-    this.composer.addPass(this.bloomPass)
-    this.effectPass = new EffectPass(
-      this.world.camera,
-      new SMAAEffect({
-        preset: SMAAPreset.ULTRA,
-      }),
-      new ToneMappingEffect({
-        mode: ToneMappingMode.ACES_FILMIC,
-      })
-    )
+    this.bloomEnabled = this.world.prefs.bloom
+    this.smaa = new SMAAEffect({
+      preset: SMAAPreset.ULTRA,
+    })
+    this.tonemapping = new ToneMappingEffect({
+      mode: ToneMappingMode.ACES_FILMIC,
+    })
+    this.effectPass = new EffectPass(this.world.camera)
+    this.updatePostProcessingEffects()
     this.composer.addPass(this.effectPass)
     this.world.prefs.on('change', this.onPrefsChange)
     this.resizer = new ResizeObserver(() => {
@@ -107,6 +128,7 @@ export class ClientGraphics extends System {
 
   start() {
     this.world.on('xrSession', this.onXRSession)
+    this.world.settings.on('change', this.onSettingsChange)
   }
 
   resize(width, height) {
@@ -156,7 +178,12 @@ export class ClientGraphics extends System {
     }
     // bloom
     if (changes.bloom) {
-      this.bloomPass.enabled = changes.bloom.value
+      this.bloomEnabled = changes.bloom.value
+      this.updatePostProcessingEffects()
+    }
+    // ao
+    if (changes.ao) {
+      this.aoPass.enabled = changes.ao.value && this.world.settings.ao
     }
   }
 
@@ -201,6 +228,24 @@ export class ClientGraphics extends System {
         }
       }
     }
+  }
+
+  onSettingsChange = changes => {
+    if (changes.ao) {
+      this.aoPass.enabled = changes.ao.value && this.world.prefs.ao
+      console.log(this.aoPass.enabled)
+    }
+  }
+
+  updatePostProcessingEffects() {
+    const effects = []
+    if (this.bloomEnabled) {
+      effects.push(this.bloom)
+    }
+    effects.push(this.smaa)
+    effects.push(this.tonemapping)
+    this.effectPass.setEffects(effects)
+    this.effectPass.recompile()
   }
 
   destroy() {

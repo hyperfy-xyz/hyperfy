@@ -1,3 +1,4 @@
+import { isTouch } from '../../client/utils'
 import { bindRotations } from '../extras/bindRotations'
 import { buttons, codeToProp } from '../extras/buttons'
 import * as THREE from '../extras/three'
@@ -225,6 +226,7 @@ export class ClientControls extends System {
   async init({ viewport }) {
     if (!isBrowser) return
     this.viewport = viewport
+    this.viewport.style.touchAction = 'none' // we use a unified 'pointer' event system
     this.screen.width = this.viewport.offsetWidth
     this.screen.height = this.viewport.offsetHeight
     window.addEventListener('keydown', this.onKeyDown)
@@ -232,11 +234,8 @@ export class ClientControls extends System {
     document.addEventListener('pointerlockchange', this.onPointerLockChange)
     this.viewport.addEventListener('pointerdown', this.onPointerDown)
     window.addEventListener('pointermove', this.onPointerMove)
-    this.viewport.addEventListener('touchstart', this.onTouchStart)
-    this.viewport.addEventListener('touchmove', this.onTouchMove)
-    this.viewport.addEventListener('touchend', this.onTouchEnd)
-    this.viewport.addEventListener('touchcancel', this.onTouchEnd)
     this.viewport.addEventListener('pointerup', this.onPointerUp)
+    this.viewport.addEventListener('pointercancel', this.onPointerUp)
     this.viewport.addEventListener('wheel', this.onScroll, { passive: false })
     document.body.addEventListener('contextmenu', this.onContextMenu)
     window.addEventListener('resize', this.onResize)
@@ -455,11 +454,37 @@ export class ClientControls extends System {
 
   onPointerDown = e => {
     if (e.isCoreUI) return
+    if (e.pointerType === 'touch') {
+      e.preventDefault()
+      const info = {
+        id: e.pointerId,
+        position: new THREE.Vector3(e.clientX, e.clientY, 0),
+        prevPosition: new THREE.Vector3(e.clientX, e.clientY, 0),
+        delta: new THREE.Vector3(),
+        pointerType: e.pointerType,
+      }
+      this.touches.set(e.pointerId, info)
+      for (const control of this.controls) {
+        const consume = control.options.onTouch?.(info)
+        if (consume) break
+      }
+    }
     this.checkPointerChanges(e)
   }
 
   onPointerMove = e => {
     if (e.isCoreUI) return
+    if (e.pointerType === 'touch') {
+      const info = this.touches.get(e.pointerId)
+      if (info) {
+        info.delta.x += e.clientX - info.prevPosition.x
+        info.delta.y += e.clientY - info.prevPosition.y
+        info.position.x = e.clientX
+        info.position.y = e.clientY
+        info.prevPosition.x = e.clientX
+        info.prevPosition.y = e.clientY
+      }
+    }
     // this.checkPointerChanges(e)
     const rect = this.viewport.getBoundingClientRect()
     const offsetX = e.pageX - rect.left
@@ -474,6 +499,16 @@ export class ClientControls extends System {
 
   onPointerUp = e => {
     if (e.isCoreUI) return
+    if (e.pointerType === 'touch') {
+      const info = this.touches.get(e.pointerId)
+      if (info) {
+        for (const control of this.controls) {
+          const consume = control.options.onTouchEnd?.(info)
+          if (consume) break
+        }
+        this.touches.delete(e.pointerId)
+      }
+    }
     this.checkPointerChanges(e)
   }
 
@@ -537,6 +572,7 @@ export class ClientControls extends System {
   }
 
   async lockPointer() {
+    if (isTouch) return
     this.pointer.shouldLock = true
     try {
       await this.viewport.requestPointerLock()
@@ -589,55 +625,6 @@ export class ClientControls extends System {
     e.preventDefault()
   }
 
-  onTouchStart = e => {
-    if (e.isCoreUI) return
-    e.preventDefault()
-    for (let i = 0; i < e.changedTouches.length; i++) {
-      const touch = e.changedTouches[i]
-      const info = {
-        id: touch.identifier,
-        position: new THREE.Vector3(touch.clientX, touch.clientY, 0),
-        prevPosition: new THREE.Vector3(touch.clientX, touch.clientY, 0),
-        delta: new THREE.Vector3(),
-      }
-      this.touches.set(info.id, info)
-      for (const control of this.controls) {
-        const consume = control.options.onTouch?.(info)
-        if (consume) break
-      }
-    }
-  }
-
-  onTouchMove = e => {
-    if (e.isCoreUI) return
-    for (let i = 0; i < e.changedTouches.length; i++) {
-      const touch = e.changedTouches[i]
-      const info = this.touches.get(touch.identifier)
-      if (!info) continue
-      const currentX = touch.clientX
-      const currentY = touch.clientY
-      info.delta.x += currentX - info.prevPosition.x
-      info.delta.y += currentY - info.prevPosition.y
-      info.position.x = currentX
-      info.position.y = currentY
-      info.prevPosition.x = currentX
-      info.prevPosition.y = currentY
-    }
-  }
-
-  onTouchEnd = e => {
-    if (e.isCoreUI) return
-    for (let i = 0; i < e.changedTouches.length; i++) {
-      const touch = e.changedTouches[i]
-      const info = this.touches.get(touch.identifier)
-      for (const control of this.controls) {
-        const consume = control.options.onTouchEnd?.(info)
-        if (consume) break
-      }
-      this.touches.delete(touch.identifier)
-    }
-  }
-
   onResize = () => {
     this.screen.width = this.viewport.offsetWidth
     this.screen.height = this.viewport.offsetHeight
@@ -666,11 +653,8 @@ export class ClientControls extends System {
     document.removeEventListener('pointerlockchange', this.onPointerLockChange)
     this.viewport.removeEventListener('pointerdown', this.onPointerDown)
     window.removeEventListener('pointermove', this.onPointerMove)
-    this.viewport.removeEventListener('touchstart', this.onTouchStart)
-    this.viewport.removeEventListener('touchmove', this.onTouchMove)
-    this.viewport.removeEventListener('touchend', this.onTouchEnd)
-    this.viewport.removeEventListener('touchcancel', this.onTouchEnd)
     this.viewport.removeEventListener('pointerup', this.onPointerUp)
+    this.viewport.removeEventListener('pointercancel', this.onPointerUp)
     this.viewport.removeEventListener('wheel', this.onScroll, { passive: false })
     document.body.removeEventListener('contextmenu', this.onContextMenu)
     window.removeEventListener('resize', this.onResize)

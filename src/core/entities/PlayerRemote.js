@@ -81,6 +81,10 @@ export class PlayerRemote extends Entity {
     this.quaternion = new LerpQuaternion(this.base.quaternion, this.world.networkRate)
     this.teleport = 0
 
+    this.mode = 0
+    this.axis = new THREE.Vector3()
+    this.gaze = new THREE.Vector3()
+
     this.world.setHot(this, true)
   }
 
@@ -113,6 +117,7 @@ export class PlayerRemote extends Entity {
       this.quaternion.update(delta)
     }
     this.avatar?.setEmote(this.data.emote)
+    this.avatar?.instance?.setLocomotion(this.mode, this.axis, this.gaze)
   }
 
   lateUpdate(delta) {
@@ -162,6 +167,18 @@ export class PlayerRemote extends Entity {
     if (data.hasOwnProperty('q')) {
       this.data.quaternion = data.q
       this.quaternion.pushArray(data.q, this.teleport)
+    }
+    if (data.hasOwnProperty('m')) {
+      this.data.mode = data.m
+      this.mode = data.m
+    }
+    if (data.hasOwnProperty('a')) {
+      this.data.axis = data.a
+      this.axis.fromArray(data.a)
+    }
+    if (data.hasOwnProperty('g')) {
+      this.data.gaze = data.g
+      this.gaze.fromArray(data.g)
     }
     if (data.hasOwnProperty('e')) {
       this.data.emote = data.e

@@ -27,8 +27,8 @@ await storageManager.initialize()
 const collections = await initCollections({ storageManager })
 
 // init db
-const dbPath = storageManager.getDbPath()
-const db = await getDB(dbPath)
+const worldDir = storageManager.getWorldDir()
+const db = await getDB(worldDir)
 
 // create world
 const world = createServerWorld()
@@ -36,11 +36,11 @@ world.assetsUrl = storageManager.getAssetsUrl()
 world.collections.deserialize(collections)
 
 const paths = storageManager.getPaths()
-world.init({ 
-  db, 
+world.init({
+  db,
   storage: storageManager,
-  assetsDir: paths?.assetsDir || null, 
-  storageManager 
+  assetsDir: paths?.assetsDir || null,
+  storageManager
 })
 
 const fastify = Fastify({ logger: { level: 'error' } })
@@ -77,7 +77,7 @@ storageManager.configureStaticServing(fastify, statics)
 
 fastify.register(multipart, {
   limits: {
-    fileSize: 100 * 1024 * 1024, // 100MB
+    fileSize: 200 * 1024 * 1024, // 200MB
   },
 })
 fastify.register(ws)
@@ -122,24 +122,24 @@ fastify.post('/api/upload', async (req, reply) => {
     } else {
       console.log(`File already exists: ${filename}`)
     }
-    
-    return reply.code(200).send({ 
-      success: true, 
+
+    return reply.code(200).send({
+      success: true,
       filename,
       url: storageManager.getPublicUrl(filename)
     })
   } catch (error) {
     console.error('Upload error:', error)
-    return reply.code(500).send({ 
-      success: false, 
-      error: 'Failed to upload file' 
+    return reply.code(500).send({
+      success: false,
+      error: 'Failed to upload file'
     })
   }
 })
 
 fastify.get('/api/upload-check', async (req, reply) => {
   const filename = req.query.filename
-  
+
   try {
     const exists = await storageManager.fileExists(filename)
     return { exists, url: exists ? storageManager.getPublicUrl(filename) : null }

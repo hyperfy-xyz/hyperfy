@@ -496,11 +496,14 @@ export function FieldFile({ world, label, hint, kind: kindName, value, onChange 
     e.stopPropagation()
     onChange(null)
   }
-  const handleDownload = e => {
+  const handleDownload = async e => {
     if (e.shiftKey && value?.url) {
       e.preventDefault()
+      if (!world.loader.hasFile(value.url)) {
+        await world.loader.loadFile(value.url)
+      }
       const file = world.loader.getFile(value.url, value.name)
-      if (!file) return
+      if (!file) return console.error('could not load file')
       downloadFile(file)
     }
   }

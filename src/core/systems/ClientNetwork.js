@@ -99,17 +99,15 @@ export class ClientNetwork extends System {
     this.world.assetsUrl = data.assetsUrl
 
     // preload environment model and avatar
-    if (data.settings.model) {
-      this.world.loader.preload('model', data.settings.model.url)
-    } else if (this.world.environment.base) {
-      this.world.loader.preload('model', this.world.environment.base.model)
-    }
+    // if (this.world.environment.base) {
+    //   this.world.loader.preload('model', this.world.environment.base.model)
+    // }
     if (data.settings.avatar) {
       this.world.loader.preload('avatar', data.settings.avatar.url)
     }
     // preload some blueprints
     for (const item of data.blueprints) {
-      if (item.preload) {
+      if (item.preload && !item.disabled) {
         if (item.model) {
           const type = item.model.endsWith('.vrm') ? 'avatar' : 'model'
           this.world.loader.preload(type, item.model)

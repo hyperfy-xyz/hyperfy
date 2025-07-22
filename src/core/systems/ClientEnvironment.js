@@ -43,12 +43,23 @@ const csmLevels = {
 // fix fog distance calc
 // see: https://github.com/mrdoob/three.js/issues/14601
 // future: https://www.youtube.com/watch?v=k1zGz55EqfU
-// THREE.ShaderChunk.fog_vertex = `
-// #ifdef USE_FOG
-// 	// vFogDepth = - mvPosition.z;
-//   vFogDepth = length(mvPosition);
-// #endif
-// `
+THREE.ShaderChunk.fog_vertex = `
+#ifdef USE_FOG
+
+  // original
+  // vFogDepth = - mvPosition.z;
+
+  // radial distance
+  vFogDepth = length( mvPosition );
+
+  // cylindrical (ignore altitude)
+  // vFogDepth = length( mvPosition.xz );
+
+  // height-based (eg ground fog)
+  // vFogDepth = abs( mvPosition.y );
+
+#endif
+`
 
 /**
  * Environment System
@@ -77,18 +88,8 @@ export class ClientEnvironment extends System {
     this.buildCSM()
     this.updateSky()
 
-    this.world.settings.on('change', this.onSettingsChange)
     this.world.prefs.on('change', this.onPrefsChange)
     this.world.graphics.on('resize', this.onViewportResize)
-  }
-
-  async updateModel() {
-    const url = this.world.settings.model?.url || this.base.model
-    let glb = this.world.loader.get('model', url)
-    if (!glb) glb = await this.world.loader.load('model', url)
-    if (this.model) this.model.deactivate()
-    this.model = glb.toNodes()
-    this.model.activate({ world: this.world, label: 'base' })
   }
 
   addSky(node) {
@@ -106,7 +107,9 @@ export class ClientEnvironment extends System {
     return handle
   }
 
-  getSky() {}
+  getSky() {
+    // ...
+  }
 
   async updateSky() {
     if (!this.sky) {
@@ -127,6 +130,7 @@ export class ClientEnvironment extends System {
     const node = this.skys[this.skys.length - 1]?.node
     const bgUrl = node?._bg || base.bg
     const hdrUrl = node?._hdr || base.hdr
+    const rotationY = isNumber(node?._rotationY) ? node._rotationY : base.rotationY
     const sunDirection = node?._sunDirection || base.sunDirection
     const sunIntensity = isNumber(node?._sunIntensity) ? node._sunIntensity : base.sunIntensity
     const sunColor = isString(node?._sunColor) ? node._sunColor : base.sunColor
@@ -161,6 +165,10 @@ export class ClientEnvironment extends System {
       this.world.stage.scene.environment = hdrTexture
     }
 
+    this.world.stage.scene.environmentRotation.y = rotationY
+    this.sky.rotation.y = rotationY
+    this.sky.matrixWorld.compose(this.sky.position, this.sky.quaternion, this.sky.scale)
+
     this.csm.lightDirection = sunDirection
 
     for (const light of this.csm.lights) {
@@ -178,6 +186,7 @@ export class ClientEnvironment extends System {
     this.skyInfo = {
       bgUrl,
       hdrUrl,
+      rotationY,
       sunDirection,
       sunIntensity,
       sunColor,
@@ -246,12 +255,6 @@ export class ClientEnvironment extends System {
           light.castShadow = false
         }
       }
-    }
-  }
-
-  onSettingsChange = changes => {
-    if (changes.model) {
-      this.updateModel()
     }
   }
 

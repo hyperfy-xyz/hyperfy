@@ -1,6 +1,6 @@
 import { css } from '@firebolt-dev/css'
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { LoaderIcon, MessageSquareTextIcon, RefreshCwIcon } from 'lucide-react'
+import { ChevronUpIcon, LoaderIcon, MessageSquareTextIcon, RefreshCwIcon, SendHorizonalIcon } from 'lucide-react'
 import moment from 'moment'
 
 // import { CodeEditor } from './CodeEditor'
@@ -25,6 +25,7 @@ export function CoreUI({ world }) {
   const [player, setPlayer] = useState(() => world.entities.player)
   const [ui, setUI] = useState(world.ui.state)
   const [menu, setMenu] = useState(null)
+  const [confirm, setConfirm] = useState(null)
   const [code, setCode] = useState(false)
   const [avatar, setAvatar] = useState(null)
   const [disconnected, setDisconnected] = useState(false)
@@ -35,6 +36,7 @@ export function CoreUI({ world }) {
     world.on('player', setPlayer)
     world.on('ui', setUI)
     world.on('menu', setMenu)
+    world.on('confirm', setConfirm)
     world.on('code', setCode)
     world.on('apps', setApps)
     world.on('avatar', setAvatar)
@@ -45,6 +47,7 @@ export function CoreUI({ world }) {
       world.off('player', setPlayer)
       world.off('ui', setUI)
       world.off('menu', setMenu)
+      world.off('confirm', setConfirm)
       world.off('code', setCode)
       world.off('apps', setApps)
       world.off('avatar', setAvatar)
@@ -104,6 +107,8 @@ export function CoreUI({ world }) {
       {!ready && <LoadingOverlay world={world} />}
       {kicked && <KickedOverlay code={kicked} />}
       {ready && isTouch && <TouchBtns world={world} />}
+      {ready && isTouch && <TouchStick world={world} />}
+      {confirm && <Confirm options={confirm} />}
       <div id='core-ui-portal' />
     </div>
   )
@@ -329,7 +334,7 @@ function Chat({ world }) {
   const [active, setActive] = useState(false)
   useEffect(() => {
     const onToggle = () => {
-      setActive(!active)
+      setActive(value => !value)
     }
     world.on('sidebar-chat-toggle', onToggle)
     return () => {
@@ -413,11 +418,10 @@ function Chat({ world }) {
         }
         .mainchat-entry {
           height: 2.875rem;
-          padding: 0 0.8rem;
-          background: rgba(11, 10, 21, 0.85);
-          border: 0.0625rem solid #2a2b39;
-          border-radius: 1rem;
-          backdrop-filter: blur(5px);
+          padding: 0 1rem;
+          background: rgba(11, 10, 21, 0.9);
+          border: 1px solid rgba(255, 255, 255, 0.05);
+          border-radius: 2rem;
           display: flex;
           align-items: center;
 
@@ -430,6 +434,14 @@ function Chat({ world }) {
             font-size: 0.9375rem;
             line-height: 1;
           }
+        }
+        .mainchat-send {
+          width: 2.875rem;
+          height: 2.875rem;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          margin-right: -0.6rem;
         }
         &.active {
           pointer-events: auto;
@@ -478,6 +490,11 @@ function Chat({ world }) {
             }
           }}
         />
+        {isTouch && (
+          <div className='mainchat-send' onClick={e => send(e)}>
+            <SendHorizonalIcon size='1.125rem' />
+          </div>
+        )}
       </label>
     </div>
   )
@@ -945,16 +962,17 @@ function ActionIcon({ icon: Icon }) {
 }
 
 function Reticle({ world }) {
-  const [visible, setVisible] = useState(world.controls.pointer.locked)
+  const [pointerLocked, setPointerLocked] = useState(world.controls.pointer.locked)
   const [buildMode, setBuildMode] = useState(world.builder.enabled)
   useEffect(() => {
-    world.on('pointer-lock', setVisible)
+    world.on('pointer-lock', setPointerLocked)
     world.on('build-mode', setBuildMode)
     return () => {
-      world.off('pointer-lock', setVisible)
+      world.off('pointer-lock', setPointerLocked)
       world.off('build-mode', setBuildMode)
     }
   }, [])
+  const visible = isTouch ? true : pointerLocked
   if (!visible) return null
   return (
     <div
@@ -967,11 +985,13 @@ function Reticle({ world }) {
         justify-content: center;
         font-size: 1rem;
         .reticle-item {
-          width: 1.25rem;
-          height: 1.25rem;
+          width: 0.25rem;
+          height: 0.25rem;
           border-radius: 0.625rem;
-          border: 0.125rem solid ${buildMode ? '#ff4d4d' : 'white'};
-          mix-blend-mode: ${buildMode ? 'normal' : 'difference'};
+          /* border: 0.125rem solid ${buildMode ? '#ff4d4d' : 'white'}; */
+          background: ${buildMode ? '#ff4d4d' : 'white'};
+          border: 0.5px solid rgba(0, 0, 0, 0.3);
+          /* mix-blend-mode: ${buildMode ? 'normal' : 'difference'}; */
         }
       `}
     >
@@ -1068,7 +1088,7 @@ function TouchBtns({ world }) {
         .touchbtns-btn {
           pointer-events: auto;
           position: absolute;
-          border: 1px solid rgba(255, 255, 255, 0.1);
+          /* border: 1px solid rgba(255, 255, 255, 0.1); */
           background: rgba(0, 0, 0, 0.3);
           border-radius: 10rem;
           display: flex;
@@ -1116,6 +1136,190 @@ function TouchBtns({ world }) {
         }}
       >
         <ChevronDoubleUpIcon size='1.5rem' />
+      </div>
+    </div>
+  )
+}
+
+function TouchStick({ world }) {
+  const outerRef = useRef()
+  const innerRef = useRef()
+  useEffect(() => {
+    const outer = outerRef.current
+    const inner = innerRef.current
+    function onStick(stick) {
+      if (stick) {
+        outer.style.left = `${stick.center.x}px`
+        outer.style.top = `${stick.center.y}px`
+        inner.style.left = `${stick.touch.position.x}px`
+        inner.style.top = `${stick.touch.position.y}px`
+      } else {
+        const radius = 50 // matches PlayerLocal.js STICK_OUTER_RADIUS
+        if (window.innerWidth < window.innerHeight) {
+          // portrait
+          outer.style.left = `calc(env(safe-area-inset-left) + ${radius}px + 50px)`
+          outer.style.top = `calc(100dvh - env(safe-area-inset-bottom) - ${radius}px - 50px)`
+          inner.style.left = `calc(env(safe-area-inset-left) + ${radius}px + 50px)`
+          inner.style.top = `calc(100dvh - env(safe-area-inset-bottom) - ${radius}px - 50px)`
+        } else {
+          // landscape
+          outer.style.left = `calc(env(safe-area-inset-left) + ${radius}px + 90px)`
+          outer.style.top = `calc(100dvh - env(safe-area-inset-bottom) - ${radius}px - 50px)`
+          inner.style.left = `calc(env(safe-area-inset-left) + ${radius}px + 90px)`
+          inner.style.top = `calc(100dvh - env(safe-area-inset-bottom) - ${radius}px - 50px)`
+        }
+      }
+    }
+    onStick(null)
+    world.on('stick', onStick)
+    return () => {
+      world.off('stick', onStick)
+    }
+  }, [])
+  return (
+    <div
+      className='stick'
+      css={css`
+        .stick-outer {
+          position: absolute;
+          width: 100px;
+          height: 100px;
+          border-radius: 100px;
+          background: rgba(0, 0, 0, 0.3);
+          transform: translate(-50%, -50%);
+        }
+        .stick-caret {
+          position: absolute;
+          width: 20px;
+          height: 20px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          &.n {
+            top: 0;
+            left: 50%;
+            transform: translate(-50%, 0);
+          }
+          &.e {
+            top: 50%;
+            right: 0;
+            transform: translate(0, -50%) rotate(90deg);
+          }
+          &.s {
+            left: 50%;
+            bottom: 0;
+            transform: translate(-50%, 0) rotate(180deg);
+          }
+          &.w {
+            top: 50%;
+            left: 0;
+            transform: translate(0, -50%) rotate(-90deg);
+          }
+        }
+        .stick-inner {
+          position: absolute;
+          width: 50px;
+          height: 50px;
+          border-radius: 50px;
+          background: white;
+          transform: translate(-50%, -50%);
+        }
+      `}
+    >
+      <div className='stick-outer' ref={outerRef}>
+        {/* <div className='stick-caret n'>
+          <ChevronUpIcon size={16} />
+        </div>
+        <div className='stick-caret e'>
+          <ChevronUpIcon size={16} />
+        </div>
+        <div className='stick-caret s'>
+          <ChevronUpIcon size={16} />
+        </div>
+        <div className='stick-caret w'>
+          <ChevronUpIcon size={16} />
+        </div> */}
+      </div>
+      <div className='stick-inner' ref={innerRef} />
+    </div>
+  )
+}
+
+function Confirm({ options }) {
+  return (
+    <div
+      className='confirm'
+      css={css`
+        position: absolute;
+        inset: 0;
+        padding: 1rem;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        z-index: 999;
+        .confirm-dialog {
+          pointer-events: auto;
+          background: rgba(11, 10, 21, 0.85);
+          border: 0.0625rem solid #2a2b39;
+          backdrop-filter: blur(5px);
+          border-radius: 1rem;
+          width: 18rem;
+        }
+        .confirm-content {
+          padding: 1.4rem;
+        }
+        .confirm-title {
+          text-align: center;
+          font-size: 1.1rem;
+          font-weight: 500;
+          margin: 0 0 0.7rem;
+        }
+        .confirm-message {
+          text-align: center;
+          color: rgba(255, 255, 255, 0.6);
+          font-size: 0.9375rem;
+          line-height: 1.4;
+        }
+        .confirm-actions {
+          border-top: 1px solid rgba(255, 255, 255, 0.05);
+          display: flex;
+          align-items: stretch;
+        }
+        .confirm-action {
+          flex: 1;
+          min-height: 2.7rem;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          &.left {
+            border-right: 1px solid rgba(255, 255, 255, 0.05);
+          }
+          > span {
+            font-size: 0.9375rem;
+            color: rgba(255, 255, 255, 0.8);
+          }
+          &:hover {
+            cursor: pointer;
+            > span {
+              color: white;
+            }
+          }
+        }
+      `}
+    >
+      <div className='confirm-dialog'>
+        <div className='confirm-content'>
+          <div className='confirm-title'>{options.title}</div>
+          <div className='confirm-message'>{options.message}</div>
+        </div>
+        <div className='confirm-actions'>
+          <div className='confirm-action left' onClick={options.confirm}>
+            <span>{options.confirmText || 'Okay'}</span>
+          </div>
+          <div className='confirm-action' onClick={options.cancel}>
+            <span>{options.cancelText || 'Cancel'}</span>
+          </div>
+        </div>
       </div>
     </div>
   )

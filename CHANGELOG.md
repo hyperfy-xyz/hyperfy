@@ -13,6 +13,29 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+## [v0.14.0]
+
+### Added
+- core: ambient occlusion
+- core: new scene app format
+- core: touch device joystick UI
+- core: new camera-facing character controls
+- core: first-person support
+- apps: ability to read/write browser url params
+- apps: ability to make avatar nodes invisible (.visible)
+
+### Changed
+- core: apps list updates when others add/remove apps
+- core: reduced reticle size
+- core: fog is now radial distance based
+- core: don't preload apps that are disabled
+- core: sleeker sidebar UI
+
+### Fixed
+- core: shift clicking file fields to download
+- core: fix weird transparency ordering issues
+- core: improve touch device chat UX
+
 ## [v0.13.0]
 
 ### Added
@@ -413,7 +436,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Basic project structure
 - Core functionality from original project
 
-[Unreleased]: https://github.com/hyperfy-xyz/hyperfy/compare/v0.13.0...HEAD
+[Unreleased]: https://github.com/hyperfy-xyz/hyperfy/compare/v0.14.0...HEAD
+[0.14.0]: https://github.com/hyperfy-xyz/hyperfy/compare/v0.13.0...v0.14.0
 [0.13.0]: https://github.com/hyperfy-xyz/hyperfy/compare/v0.12.0...v0.13.0
 [0.12.0]: https://github.com/hyperfy-xyz/hyperfy/compare/v0.11.0...v0.12.0
 [0.11.0]: https://github.com/hyperfy-xyz/hyperfy/compare/v0.10.0...v0.11.0

@@ -1,3 +1,4 @@
+import { isBoolean } from 'lodash-es'
 import { System } from './System'
 
 export class Settings extends System {
@@ -7,10 +8,10 @@ export class Settings extends System {
     this.title = null
     this.desc = null
     this.image = null
-    this.model = null
     this.avatar = null
     this.public = null
     this.playerLimit = null
+    this.ao = null
 
     this.changes = null
   }
@@ -19,18 +20,18 @@ export class Settings extends System {
     this.title = data.title
     this.desc = data.desc
     this.image = data.image
-    this.model = data.model
     this.avatar = data.avatar
     this.public = data.public
     this.playerLimit = data.playerLimit
+    this.ao = isBoolean(data.ao) ? data.ao : true // default true
     this.emit('change', {
       title: { value: this.title },
       desc: { value: this.desc },
       image: { value: this.image },
-      model: { value: this.model },
       avatar: { value: this.avatar },
       public: { value: this.public },
       playerLimit: { value: this.playerLimit },
+      ao: { value: this.ao },
     })
   }
 
@@ -39,10 +40,10 @@ export class Settings extends System {
       desc: this.desc,
       title: this.title,
       image: this.image,
-      model: this.model,
       avatar: this.avatar,
       public: this.public,
       playerLimit: this.playerLimit,
+      ao: this.ao,
     }
   }
 

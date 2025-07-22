@@ -19,6 +19,10 @@ An asset url (eg from props) or an absolute URL to a `.vrm` file.
 
 An emote url (eg from props) or an absolute URL to a `.glb` file with an emote animation.
 
+### `.visible`: Boolean
+
+Whether the avatar is visible or not. 
+
 ## Methods
 
 ### `.getHeight()`: Number

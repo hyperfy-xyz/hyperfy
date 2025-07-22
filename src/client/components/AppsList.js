@@ -76,6 +76,17 @@ export function AppsList({ world, query, perf, refresh, setRefresh }) {
     newItems = orderBy(newItems, sort, asc ? 'asc' : 'desc')
     return newItems
   }, [items, sort, asc, query])
+  useEffect(() => {
+    function onChange() {
+      setRefresh(n => n + 1)
+    }
+    world.entities.on('added', onChange)
+    world.entities.on('removed', onChange)
+    return () => {
+      world.entities.off('added', onChange)
+      world.entities.off('removed', onChange)
+    }
+  }, [])
   const reorder = key => {
     if (sort === key) {
       setAsc(!asc)
@@ -326,12 +337,22 @@ export function AppsList({ world, query, perf, refresh, setRefresh }) {
               <span>{item.fileSize}</span>
             </div>
             <div className={'appslist-rowitem actions'}>
-              <div className={cls('appslist-action', { active: item.blueprint.disabled })} onClick={() => toggle(item)}>
-                <OctagonXIcon size='1rem' />
-              </div>
-              <div className={cls('appslist-action', { active: target === item })} onClick={() => toggleTarget(item)}>
-                <CrosshairIcon size='1rem' />
-              </div>
+              {!item.blueprint.scene && (
+                <>
+                  <div
+                    className={cls('appslist-action', { active: item.blueprint.disabled })}
+                    onClick={() => toggle(item)}
+                  >
+                    <OctagonXIcon size='1rem' />
+                  </div>
+                  <div
+                    className={cls('appslist-action', { active: target === item })}
+                    onClick={() => toggleTarget(item)}
+                  >
+                    <CrosshairIcon size='1rem' />
+                  </div>
+                </>
+              )}
             </div>
           </div>
         ))}

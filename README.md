@@ -21,6 +21,8 @@ Hyperfy is an open-source framework for building interactive 3D virtual worlds. 
 - **WebXR support** - Experience worlds in VR
 - **Extensible architecture** - Highly customizable for various use cases
 
+[![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/hyperfy-xyz/hyperfy)
+
 ## 🚀 Quick Start
 
 ### Prerequisites
@@ -59,7 +61,7 @@ For containerized deployment, check [DOCKER.md](DOCKER.md) for detailed instruct
 
 ## 📚 Documentation & Resources
 
-- **[Community Documentation](https://hyperfy.how)** - Comprehensive guides and reference
+- **[Community Documentation](https://docs.hyperfy.xyz)** - Comprehensive guides and reference
 - **[Website](https://hyperfy.io/)** - Official Hyperfy website
 - **[Sandbox](https://play.hyperfy.xyz/)** - Try Hyperfy in your browser
 - **[Twitter/X](https://x.com/hyperfy_io)** - Latest updates and announcements

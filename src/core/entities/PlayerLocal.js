@@ -18,9 +18,10 @@ const SCALE_IDENTITY = new THREE.Vector3(1, 1, 1)
 const POINTER_LOOK_SPEED = 0.1
 const PAN_LOOK_SPEED = 0.4
 const ZOOM_SPEED = 2
-const MIN_ZOOM = 1
+const MIN_ZOOM = 0
 const MAX_ZOOM = 8
-const STICK_MAX_DISTANCE = 50
+const STICK_OUTER_RADIUS = 50
+const STICK_INNER_RADIUS = 25
 const DEFAULT_CAM_HEIGHT = 1.2
 
 const v1 = new THREE.Vector3()
@@ -37,6 +38,20 @@ const q4 = new THREE.Quaternion()
 const m1 = new THREE.Matrix4()
 const m2 = new THREE.Matrix4()
 const m3 = new THREE.Matrix4()
+
+const gazeTiltAngle = 10 * DEG2RAD
+const gazeTiltAxis = new THREE.Vector3(1, 0, 0) // X-axis for pitch
+
+// TODO: de-dup createVRMFactory.js has a copy
+const Modes = {
+  IDLE: 0,
+  WALK: 1,
+  RUN: 2,
+  JUMP: 3,
+  FALL: 4,
+  FLY: 5,
+  TALK: 6,
+}
 
 export class PlayerLocal extends Entity {
   constructor(world, data, local) {
@@ -75,6 +90,8 @@ export class PlayerLocal extends Entity {
     this.moveDir = new THREE.Vector3()
     this.moving = false
 
+    this.firstPerson = false
+
     this.lastJumpAt = 0
     this.flying = false
     this.flyForce = 100
@@ -85,6 +102,10 @@ export class PlayerLocal extends Entity {
       actor: null,
       prevTransform: new THREE.Matrix4(),
     }
+
+    this.mode = Modes.IDLE
+    this.axis = new THREE.Vector3()
+    this.gaze = new THREE.Vector3()
 
     this.speaking = false
 
@@ -262,6 +283,7 @@ export class PlayerLocal extends Entity {
         if (!this.stick && touch.position.x < this.control.screen.width / 2) {
           this.stick = {
             center: touch.position.clone(),
+            active: false,
             touch,
           }
         } else if (!this.pan) {
@@ -271,6 +293,7 @@ export class PlayerLocal extends Entity {
       onTouchEnd: touch => {
         if (this.stick?.touch === touch) {
           this.stick = null
+          this.world.emit('stick', null)
         }
         if (this.pan === touch) {
           this.pan = null
@@ -578,7 +601,7 @@ export class PlayerLocal extends Entity {
 
       // apply move force, projected onto ground normal
       if (this.moving) {
-        let moveSpeed = (this.running ? 8 : 4) * this.mass // run
+        let moveSpeed = (this.running ? 6 : 3) * this.mass // run
         moveSpeed *= 1 - snare
         const slopeRotation = q1.setFromUnitVectors(UP, this.groundNormal)
         const moveForce = v1.copy(this.moveDir).multiplyScalar(moveSpeed * 10).applyQuaternion(slopeRotation) // prettier-ignore
@@ -593,7 +616,8 @@ export class PlayerLocal extends Entity {
       // ground/air jump
       const shouldJump =
         this.grounded && !this.jumping && this.jumpDown && !this.data.effect?.snare && !this.data.effect?.freeze
-      const shouldAirJump = !this.grounded && !this.airJumped && this.jumpPressed && !this.world.builder?.enabled
+      const shouldAirJump =
+        false && !this.grounded && !this.airJumped && this.jumpPressed && !this.world.builder?.enabled // temp: disabled
       if (shouldJump || shouldAirJump) {
         // calc velocity needed to reach jump height
         let jumpVelocity = Math.sqrt(2 * this.effectiveGravity * this.jumpHeight)
@@ -705,6 +729,31 @@ export class PlayerLocal extends Entity {
       this.cam.zoom = clamp(this.cam.zoom, MIN_ZOOM, MAX_ZOOM)
     }
 
+    // force zoom in xr to trigger first person (below)
+    if (isXR && !this.xrActive) {
+      this.cam.zoom = 0
+      this.xrActive = true
+    } else if (!isXR && this.xrActive) {
+      this.cam.zoom = 1
+      this.xrActive = false
+    }
+
+    // transition in and out of first person
+    if (this.cam.zoom < 1 && !this.firstPerson) {
+      this.cam.zoom = 0
+      this.firstPerson = true
+      this.avatar.visible = false
+    } else if (this.cam.zoom > 0 && this.firstPerson) {
+      this.cam.zoom = 1
+      this.firstPerson = false
+      this.avatar.visible = true
+    }
+
+    // stick movement threshold
+    if (this.stick && !this.stick.active) {
+      this.stick.active = this.stick.center.distanceTo(this.stick.touch.position) > 3
+    }
+
     // watch jump presses to either fly or air-jump
     this.jumpDown = isXR ? this.control.xrRightBtn1.down : this.control.space.down || this.control.touchA.down
     if (isXR ? this.control.xrRightBtn1.pressed : this.control.space.pressed || this.control.touchA.pressed) {
@@ -717,7 +766,7 @@ export class PlayerLocal extends Entity {
       // in xr use controller input
       this.moveDir.x = this.control.xrLeftStick.value.x
       this.moveDir.z = this.control.xrLeftStick.value.z
-    } else if (this.stick) {
+    } else if (this.stick?.active) {
       // if we have a touch joystick use that
       const touchX = this.stick.touch.position.x
       const touchY = this.stick.touch.position.y
@@ -726,14 +775,16 @@ export class PlayerLocal extends Entity {
       const dx = centerX - touchX
       const dy = centerY - touchY
       const distance = Math.sqrt(dx * dx + dy * dy)
-      if (distance > STICK_MAX_DISTANCE) {
-        this.stick.center.x = touchX + (STICK_MAX_DISTANCE * dx) / distance
-        this.stick.center.y = touchY + (STICK_MAX_DISTANCE * dy) / distance
+      const moveRadius = STICK_OUTER_RADIUS - STICK_INNER_RADIUS
+      if (distance > moveRadius) {
+        this.stick.center.x = touchX + (moveRadius * dx) / distance
+        this.stick.center.y = touchY + (moveRadius * dy) / distance
       }
-      const stickX = (touchX - this.stick.center.x) / STICK_MAX_DISTANCE
-      const stickY = (touchY - this.stick.center.y) / STICK_MAX_DISTANCE
+      const stickX = (touchX - this.stick.center.x) / moveRadius
+      const stickY = (touchY - this.stick.center.y) / moveRadius
       this.moveDir.x = stickX
       this.moveDir.z = stickY
+      this.world.emit('stick', this.stick)
     } else {
       // otherwise use keyboard
       if (this.control.keyW.down || this.control.arrowUp.down) this.moveDir.z -= 1
@@ -757,7 +808,7 @@ export class PlayerLocal extends Entity {
     }
 
     // determine if we're "running"
-    if (this.stick || isXR) {
+    if (this.stick?.active || isXR) {
       // touch/xr joysticks at full extent
       this.running = this.moving && this.moveDir.length() > 0.9
     } else {
@@ -777,6 +828,23 @@ export class PlayerLocal extends Entity {
       this.flyDir.applyQuaternion(this.cam.quaternion)
     }
 
+    // store un-rotated move direction (axis)
+    this.axis.copy(this.moveDir)
+
+    // get un-rotated move direction in degrees
+    // Octant ranges (8 directions)
+    // Forward:         337.5° to 22.5° (or -22.5° to 22.5°)
+    // Forward-Right:   22.5° to 67.5°
+    // Right:           67.5° to 112.5°
+    // Backward-Right:  112.5° to 157.5°
+    // Backward:        157.5° to 202.5°
+    // Backward-Left:   202.5° to 247.5°
+    // Left:            247.5° to 292.5°
+    // Forward-Left:    292.5° to 337.5°
+    const moveRad = Math.atan2(this.axis.x, -this.axis.z)
+    let moveDeg = moveRad * RAD2DEG
+    if (moveDeg < 0) moveDeg += 360
+
     // rotate direction to face camera Y direction
     if (isXR) {
       e1.copy(this.world.xr.camera.rotation).reorder('YXZ')
@@ -788,51 +856,73 @@ export class PlayerLocal extends Entity {
       this.moveDir.applyQuaternion(yQuaternion)
     }
 
-    // if our effect has turn enabled, face the camera direction
+    // get initial facing angle matching camera
+    let rotY = 0
+    let applyRotY
+    if (isXR) {
+      e1.copy(this.world.xr.camera.rotation).reorder('YXZ')
+      rotY = e1.y + this.cam.rotation.y
+    } else {
+      rotY = this.cam.rotation.y
+    }
     if (this.data.effect?.turn) {
-      let cameraY = 0
-      if (isXR) {
-        e1.copy(this.world.xr.camera.rotation).reorder('YXZ')
-        cameraY = e1.y
-      } else {
-        cameraY = this.cam.rotation.y
-      }
-      e1.set(0, cameraY, 0)
+      applyRotY = true
+    } else if (this.moving || this.firstPerson) {
+      applyRotY = true
+    }
+
+    // when moving, or in first person or effect.turn, continually slerp to face that angle
+    if (applyRotY) {
+      e1.set(0, rotY, 0)
       q1.setFromEuler(e1)
       const alpha = 1 - Math.pow(0.00000001, delta)
       this.base.quaternion.slerp(q1, alpha)
     }
-    // if we're moving continually rotate ourselves toward the direction we are moving
-    else if (this.moving) {
-      const alpha = 1 - Math.pow(0.00000001, delta)
-      q1.setFromUnitVectors(FORWARD, this.moveDir)
-      this.base.quaternion.slerp(q1, alpha)
-    }
 
-    // emote
+    // apply emote
     let emote
     if (this.data.effect?.emote) {
       emote = this.data.effect.emote
-    } else if (this.flying) {
-      emote = Emotes.FLOAT
-    } else if (this.airJumping) {
-      emote = Emotes.FLIP
-    } else if (this.jumping) {
-      emote = Emotes.FLOAT
-    } else if (this.falling) {
-      emote = this.fallDistance > 1.6 ? Emotes.FALL : Emotes.FLOAT
-    } else if (this.moving) {
-      emote = this.running ? Emotes.RUN : Emotes.WALK
-    } else if (this.speaking) {
-      emote = Emotes.TALK
     }
-    if (!emote) emote = Emotes.IDLE
-    let emoteChanged
     if (this.emote !== emote) {
       this.emote = emote
-      emoteChanged = true
     }
     this.avatar?.setEmote(this.emote)
+
+    // get locomotion mode
+    let mode
+    if (this.data.effect?.emote) {
+      // emote = this.data.effect.emote
+    } else if (this.flying) {
+      mode = Modes.FLY
+    } else if (this.airJumping) {
+      mode = Modes.FLIP
+    } else if (this.jumping) {
+      mode = Modes.JUMP
+    } else if (this.falling) {
+      mode = this.fallDistance > 1.6 ? Modes.FALL : Modes.JUMP
+    } else if (this.moving) {
+      mode = this.running ? Modes.RUN : Modes.WALK
+    } else if (this.speaking) {
+      mode = Modes.TALK
+    }
+    if (!mode) mode = Modes.IDLE
+    this.mode = mode
+
+    // set gaze direction
+    if (isXR) {
+      this.gaze.copy(FORWARD).applyQuaternion(this.world.xr.camera.quaternion)
+    } else {
+      this.gaze.copy(FORWARD).applyQuaternion(this.cam.quaternion)
+      if (!this.firstPerson) {
+        // tilt slightly up in third person as people look from above
+        v1.copy(gazeTiltAxis).applyQuaternion(this.cam.quaternion) // tilt in cam space
+        this.gaze.applyAxisAngle(v1, gazeTiltAngle) // positive for upward tilt
+      }
+    }
+
+    // apply locomotion
+    this.avatar?.instance?.setLocomotion(this.mode, this.axis, this.gaze)
 
     // send network updates
     this.lastSendAt += delta
@@ -842,6 +932,9 @@ export class PlayerLocal extends Entity {
           id: this.data.id,
           p: this.base.position.clone(),
           q: this.base.quaternion.clone(),
+          m: this.mode,
+          a: this.axis.clone(),
+          g: this.gaze.clone(),
           e: null,
         }
       }
@@ -857,6 +950,21 @@ export class PlayerLocal extends Entity {
       if (!this.lastState.q.equals(this.base.quaternion)) {
         data.q = this.base.quaternion.toArray()
         this.lastState.q.copy(this.base.quaternion)
+        hasChanges = true
+      }
+      if (this.lastState.m !== this.mode) {
+        data.m = this.mode
+        this.lastState.m = this.mode
+        hasChanges = true
+      }
+      if (!this.lastState.a.equals(this.axis)) {
+        data.a = this.axis.toArray()
+        this.lastState.a.copy(this.axis)
+        hasChanges = true
+      }
+      if (!this.lastState.g.equals(this.gaze)) {
+        data.g = this.gaze.toArray()
+        this.lastState.g.copy(this.gaze)
         hasChanges = true
       }
       if (this.lastState.e !== this.emote) {
@@ -897,10 +1005,12 @@ export class PlayerLocal extends Entity {
     } else {
       // and vertically at our vrm model height
       this.cam.position.y += this.camHeight
-      // and slightly to the right over the avatars shoulder, when not in XR
-      const forward = v1.copy(FORWARD).applyQuaternion(this.cam.quaternion)
-      const right = v2.crossVectors(forward, UP).normalize()
-      this.cam.position.add(right.multiplyScalar(0.3))
+      // and slightly to the right over the avatars shoulder, when not first person / xr
+      if (!this.firstPerson) {
+        const forward = v1.copy(FORWARD).applyQuaternion(this.cam.quaternion)
+        const right = v2.crossVectors(forward, UP).normalize()
+        this.cam.position.add(right.multiplyScalar(0.3))
+      }
     }
     if (this.world.xr?.session) {
       // in vr snap camera

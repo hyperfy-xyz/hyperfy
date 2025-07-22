@@ -41,7 +41,6 @@ export class XR extends System {
       console.error(err)
       console.error('xr session.updateTargetFrameRate(72) failed')
     }
-    this.world.entities.player.avatar.unmount()
     this.world.graphics.renderer.xr.setSession(session)
     session.addEventListener('end', this.onSessionEnd)
     this.session = session
@@ -58,7 +57,6 @@ export class XR extends System {
   }
 
   onSessionEnd = () => {
-    this.world.entities.player.avatar.mount()
     this.world.camera.position.set(0, 0, 0)
     this.world.camera.rotation.set(0, 0, 0)
     this.world.rig.remove(this.controller1Model)

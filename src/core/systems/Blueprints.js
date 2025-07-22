@@ -18,6 +18,10 @@ export class Blueprints extends System {
     return this.items.get(id)
   }
 
+  getScene() {
+    return this.items.get('$scene')
+  }
+
   add(data, local) {
     this.items.set(data.id, data)
     if (local) {

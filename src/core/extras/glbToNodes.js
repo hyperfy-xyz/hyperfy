@@ -104,7 +104,7 @@ export function glbToNodes(glb, world) {
           type: 'geometry',
           geometry: object3d.geometry,
           material: object3d.material,
-          linked: !hasMorphTargets,
+          linked: !hasMorphTargets && !object3d.material.transparent,
           castShadow: props.castShadow,
           receiveShadow: props.receiveShadow,
           visible: props.visible, // DEPRECATED: use Node.active

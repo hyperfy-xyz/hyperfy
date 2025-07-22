@@ -54,3 +54,11 @@ Returns a player. If no `playerId` is provided it returns the local player.
 
 Returns an array of all players.
 
+### `.getQueryParam(key)`
+
+Gets a query parameter value from the browsers url
+
+### `.setQueryParam(key, value)`
+
+Sets a query parameter in the browsers url
+
