@@ -21,38 +21,126 @@ export class StorageManager {
   }
 
   /**
-   * Initialize storage based on environment configuration
+   * Parse S3 URI to extract configuration
+   * Examples:
+   * - s3://bucket-name/assets/
+   * - s3://bucket-name/assets/?region=us-east-1
+   * - s3://bucket-name/assets/?region=eu-west-1&collections_prefix=collections/&storage_prefix=storage/
+   * @param {string} uri - The S3 URI
+   * @returns {object} Parsed S3 configuration
    */
-  async initialize() {
-    const storageType = process.env.STORAGE_TYPE || StorageManager.STORAGE_TYPE.LOCAL;
+  static parseS3Uri(uri) {
+    try {
+      const url = new URL(uri)
 
-    if (storageType === StorageManager.STORAGE_TYPE.S3) {
-      // Validate required S3 configuration
-      if (!process.env.S3_BUCKET_NAME) {
-        throw new Error('S3_BUCKET_NAME is required when STORAGE_TYPE=s3')
+      if (url.protocol !== 's3:') {
+        throw new Error('URI must start with s3://')
       }
 
-      // Initialize S3 storage
-      this.isS3 = true
-      const s3Config = {
-        bucketName: process.env.S3_BUCKET_NAME,
-        region: process.env.S3_REGION || 'us-east-1',
-        assetsPrefix: process.env.S3_ASSETS_PREFIX || 'assets/',
-        collectionsPrefix: process.env.S3_COLLECTIONS_PREFIX || 'collections/',
-        storagePrefix: process.env.S3_STORAGE_PREFIX || 'storage/',
-        cloudfrontUrl: process.env.CLOUDFRONT_URL,
+      const bucketName = url.hostname
+      if (!bucketName) {
+        throw new Error('Bucket name is required in S3 URI')
       }
 
-      if (process.env.S3_ACCESS_KEY_ID && process.env.S3_SECRET_ACCESS_KEY) {
-        s3Config.credentials = {
+      // Extract prefix from pathname, removing leading slash
+      let assetsPrefix = url.pathname.slice(1)
+      if (assetsPrefix && !assetsPrefix.endsWith('/')) {
+        assetsPrefix += '/'
+      }
+      if (!assetsPrefix) {
+        assetsPrefix = 'assets/'
+      }
+
+      // Parse query parameters
+      const region = url.searchParams.get('region') || 'us-east-1'
+      const collectionsPrefix = url.searchParams.get('collections_prefix') || 'collections/'
+      const storagePrefix = url.searchParams.get('storage_prefix') || 'storage/'
+      const cloudfrontUrl = url.searchParams.get('cloudfront_url') || undefined
+
+      return {
+        bucketName,
+        region,
+        assetsPrefix,
+        collectionsPrefix,
+        storagePrefix,
+        cloudfrontUrl,
+      }
+    } catch (error) {
+      throw new Error(`Invalid S3 URI: ${error.message}`)
+    }
+  }
+
+  /**
+   * Get S3 configuration from environment (URI or individual variables)
+   * @returns {object} S3 configuration object
+   */
+  static getS3Config() {
+    // Check if STORAGE_URL is provided (new URI approach)
+    if (process.env.STORAGE_URL && process.env.STORAGE_URL.startsWith('s3://')) {
+      const config = StorageManager.parseS3Uri(process.env.STORAGE_URL)
+
+      // Add credentials if provided via standard AWS env vars
+      if (process.env.AWS_ACCESS_KEY_ID && process.env.AWS_SECRET_ACCESS_KEY) {
+        config.credentials = {
+          accessKeyId: process.env.AWS_ACCESS_KEY_ID,
+          secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
+        }
+      } else if (process.env.S3_ACCESS_KEY_ID && process.env.S3_SECRET_ACCESS_KEY) {
+        // Fallback to S3_* prefixed credentials for backward compatibility
+        config.credentials = {
           accessKeyId: process.env.S3_ACCESS_KEY_ID,
           secretAccessKey: process.env.S3_SECRET_ACCESS_KEY,
         }
       }
 
+      return config
+    }
+
+    // Fallback to individual environment variables (legacy approach)
+    if (!process.env.S3_BUCKET_NAME) {
+      throw new Error('Either STORAGE_URL (s3://) or S3_BUCKET_NAME is required when STORAGE_TYPE=s3')
+    }
+
+    const config = {
+      bucketName: process.env.S3_BUCKET_NAME,
+      region: process.env.S3_REGION || 'us-east-1',
+      assetsPrefix: process.env.S3_ASSETS_PREFIX || 'assets/',
+      collectionsPrefix: process.env.S3_COLLECTIONS_PREFIX || 'collections/',
+      storagePrefix: process.env.S3_STORAGE_PREFIX || 'storage/',
+      cloudfrontUrl: process.env.CLOUDFRONT_URL,
+    }
+
+    if (process.env.S3_ACCESS_KEY_ID && process.env.S3_SECRET_ACCESS_KEY) {
+      config.credentials = {
+        accessKeyId: process.env.S3_ACCESS_KEY_ID,
+        secretAccessKey: process.env.S3_SECRET_ACCESS_KEY,
+      }
+    }
+
+    return config
+  }
+
+  /**
+   * Initialize storage based on environment configuration
+   */
+  async initialize() {
+    // Determine storage type
+    let storageType = process.env.STORAGE_TYPE || StorageManager.STORAGE_TYPE.LOCAL
+
+    // Auto-detect S3 from STORAGE_URL if no explicit STORAGE_TYPE
+    if (!process.env.STORAGE_TYPE && process.env.STORAGE_URL?.startsWith('s3://')) {
+      storageType = StorageManager.STORAGE_TYPE.S3
+    }
+
+    if (storageType === StorageManager.STORAGE_TYPE.S3) {
+      // Get S3 configuration (URI or legacy env vars)
+      const s3Config = StorageManager.getS3Config()
+
+      // Initialize S3 storage
+      this.isS3 = true
       this.storage = new S3Storage(s3Config)
 
-      console.log('Initializing S3 storage...')
+      console.log(`Initializing S3 storage... (bucket: ${s3Config.bucketName}, region: ${s3Config.region})`)
       await this.storage.initialize()
 
     } else {
@@ -190,17 +278,8 @@ export class StorageManager {
    */
   getAssetsUrl() {
     if (this.isS3) {
-      // If CloudFront URL is configured, use it with assets prefix
-      if (process.env.CLOUDFRONT_URL) {
-        const baseUrl = process.env.CLOUDFRONT_URL.endsWith('/')
-          ? process.env.CLOUDFRONT_URL.slice(0, -1)  // Remove trailing slash
-          : process.env.CLOUDFRONT_URL
-        const assetsPrefix = (process.env.S3_ASSETS_PREFIX || 'assets/').replace(/\/$/, '') // Remove trailing slash
-        return `${baseUrl}/${assetsPrefix}`
-      }
-      // Otherwise use S3 direct URL
-      const assetsPrefix = (process.env.S3_ASSETS_PREFIX || 'assets/').replace(/\/$/, '') // Remove trailing slash
-      return `https://${process.env.S3_BUCKET_NAME}.s3.${process.env.S3_REGION || 'us-east-1'}.amazonaws.com/${assetsPrefix}`
+      // Get base URL from storage instance (which has the actual config)
+      return this.storage.getAssetsBaseUrl() + '/' + this.storage.assetsPrefix.replace(/\/$/, '')
     } else {
       return process.env.PUBLIC_ASSETS_URL || '/assets'  // No trailing slash for local
     }

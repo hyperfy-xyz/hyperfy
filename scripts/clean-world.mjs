@@ -6,13 +6,112 @@ import { fileURLToPath } from 'url'
 import { DeleteObjectCommand, S3Client, ListObjectsV2Command } from '@aws-sdk/client-s3'
 
 const DRY_RUN = false
-const storageType = process.env.STORAGE_TYPE || 'local'
 const world = process.env.WORLD || 'world'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const rootDir = path.join(__dirname, '../')
 const worldDir = path.join(rootDir, world)
 const assetsDir = path.join(worldDir, '/assets')
+
+/**
+ * Parse S3 URI to extract configuration
+ * @param {string} uri - The S3 URI
+ * @returns {object} Parsed S3 configuration
+ */
+function parseS3Uri(uri) {
+  try {
+    const url = new URL(uri)
+
+    if (url.protocol !== 's3:') {
+      throw new Error('URI must start with s3://')
+    }
+
+    const bucketName = url.hostname
+    if (!bucketName) {
+      throw new Error('Bucket name is required in S3 URI')
+    }
+
+    // Extract prefix from pathname, removing leading slash
+    let assetsPrefix = url.pathname.slice(1)
+    if (assetsPrefix && !assetsPrefix.endsWith('/')) {
+      assetsPrefix += '/'
+    }
+    if (!assetsPrefix) {
+      assetsPrefix = 'assets/'
+    }
+
+    // Parse query parameters
+    const region = url.searchParams.get('region') || 'us-east-1'
+
+    return {
+      bucketName,
+      region,
+      assetsPrefix,
+    }
+  } catch (error) {
+    throw new Error(`Invalid S3 URI: ${error.message}`)
+  }
+}
+
+/**
+ * Get storage configuration from environment
+ * @returns {object} Storage configuration
+ */
+function getStorageConfig() {
+  // Determine storage type
+  let storageType = process.env.STORAGE_TYPE || 'local'
+
+  // Auto-detect S3 from STORAGE_URL if no explicit STORAGE_TYPE
+  if (!process.env.STORAGE_TYPE && process.env.STORAGE_URL?.startsWith('s3://')) {
+    storageType = 's3'
+  }
+
+  if (storageType === 's3') {
+    // Check if STORAGE_URL is provided (new URI approach)
+    if (process.env.STORAGE_URL && process.env.STORAGE_URL.startsWith('s3://')) {
+      const config = parseS3Uri(process.env.STORAGE_URL)
+
+      // Add credentials
+      if (process.env.AWS_ACCESS_KEY_ID && process.env.AWS_SECRET_ACCESS_KEY) {
+        config.credentials = {
+          accessKeyId: process.env.AWS_ACCESS_KEY_ID,
+          secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
+        }
+      } else if (process.env.S3_ACCESS_KEY_ID && process.env.S3_SECRET_ACCESS_KEY) {
+        config.credentials = {
+          accessKeyId: process.env.S3_ACCESS_KEY_ID,
+          secretAccessKey: process.env.S3_SECRET_ACCESS_KEY,
+        }
+      }
+
+      return { type: 's3', ...config }
+    }
+
+    // Fallback to individual environment variables (legacy approach)
+    if (!process.env.S3_BUCKET_NAME) {
+      console.error('Error: Either STORAGE_URL (s3://) or S3_BUCKET_NAME is required when STORAGE_TYPE=s3')
+      process.exit(1)
+    }
+
+    const config = {
+      type: 's3',
+      bucketName: process.env.S3_BUCKET_NAME,
+      region: process.env.S3_REGION || 'us-east-1',
+      assetsPrefix: process.env.S3_ASSETS_PREFIX || 'assets/',
+    }
+
+    if (process.env.S3_ACCESS_KEY_ID && process.env.S3_SECRET_ACCESS_KEY) {
+      config.credentials = {
+        accessKeyId: process.env.S3_ACCESS_KEY_ID,
+        secretAccessKey: process.env.S3_SECRET_ACCESS_KEY,
+      }
+    }
+
+    return config
+  }
+
+  return { type: 'local' }
+}
 
 // Database configuration
 const { DB_TYPE = '', DB_URL = '' } = process.env
@@ -37,23 +136,24 @@ if (!DB_TYPE && !DB_URL) {
 
 const db = Knex(dbConfig)
 
+// Storage configuration
+const storageConfig = getStorageConfig()
+const storageType = storageConfig.type
+
 // S3 configuration if needed
 let s3Client, bucketName, assetsPrefix
 if (storageType === 's3') {
-  if (!process.env.S3_BUCKET_NAME) {
-    console.error('Error: S3_BUCKET_NAME is required when STORAGE_TYPE=s3')
-    process.exit(1)
+  const clientConfig = {
+    region: storageConfig.region,
   }
 
-  s3Client = new S3Client({
-    region: process.env.S3_REGION || 'us-east-1',
-    credentials: {
-      accessKeyId: process.env.S3_ACCESS_KEY_ID,
-      secretAccessKey: process.env.S3_SECRET_ACCESS_KEY,
-    },
-  })
-  bucketName = process.env.S3_BUCKET_NAME
-  assetsPrefix = process.env.S3_ASSETS_PREFIX || 'assets/'
+  if (storageConfig.credentials) {
+    clientConfig.credentials = storageConfig.credentials
+  }
+
+  s3Client = new S3Client(clientConfig)
+  bucketName = storageConfig.bucketName
+  assetsPrefix = storageConfig.assetsPrefix
 }
 
 console.log(`Using ${storageType.toUpperCase()} storage`)
