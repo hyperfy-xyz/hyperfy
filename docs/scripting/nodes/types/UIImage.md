@@ -87,6 +87,11 @@ The color of the border.
 Can be hex (e.g., #000000) or rgba (e.g., rgba(0, 0, 0, 0.5)).
 Defaults to null.
 
+### `.{...Node}`
+
+Inherits all [Node](/docs/scripting/nodes/Node.md) properties
+
+
 ---
 
 ## Methods
@@ -97,63 +102,4 @@ Loads an image from the specified URL. Returns a promise that resolves when the 
 
 ```jsx
 image.src = 'https://example.com/new-image.png';
-```
-
-## Example Usage
-
-Here’s an example of creating a responsive UI with an image that covers its container:
-
-```jsx
-// Create a UI node
-const ui = app.create('ui', {
-  space: 'screen',
-  position: [0, 1, 0],
-  width: 300,
-  height: 200,
-  backgroundColor: 'rgba(0, 0, 0, 0.7)',
-  pivot: 'top-left'
-});
-
-// Create an image element
-const image = app.create('uiimage', {
-  src: 'https://example.com/image.png',
-  width: 300,
-  height: 200,
-  objectFit: 'cover',
-  backgroundColor: 'rgba(255, 255, 255, 0.2)',
-  borderRadius: 10
-});
-
-// Add the image to the UI node
-ui.add(image);
-```
-
-In this example:
-
-- The image is positioned at the top-left of the screen.
-- The image covers its container while maintaining its aspect ratio.
-- The container has a semi-transparent white background with rounded corners.
-
-You can also make the image configurable using app.configure to allow users to change properties like the source URL or dimensions.
-
-```jsx
-// Configure the app with a file input for images
-app.configure([
-  {
-    type: 'file',
-    key: 'selectedImage',
-    label: 'Upload Image',
-    kind: 'texture' // Specify the kind as 'image' to restrict file types
-  }
-]);
-
-// Create the image element using the selected file
-const image = app.create('uiimage', {
-  src: props.selectedImage?.url, // Use the URL of the selected image
-  width: 300,
-  height: 200,
-  objectFit: 'cover',
-  backgroundColor: 'rgba(255, 255, 255, 0.2)',
-  borderRadius: 10
-});
 ```

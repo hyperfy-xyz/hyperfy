@@ -64,7 +64,7 @@ Gets and sets the current playback time, in seconds.
 
 ### `.{...Node}`
 
-Inherits all [Node](/docs/ref/Node.md) properties
+Inherits all [Node](/docs/scripting/nodes/Node.md) properties
 
 ## Methods
 

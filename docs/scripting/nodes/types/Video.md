@@ -126,7 +126,7 @@ The current time of the video. Can be used to read and update the current time o
 
 ### `.{...Node}`
 
-Inherits all [Node](/docs/ref/Node.md) properties
+Inherits all [Node](/docs/scripting/nodes/Node.md) properties
 
 ## Methods
 

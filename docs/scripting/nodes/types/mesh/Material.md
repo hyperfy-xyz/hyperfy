@@ -1,6 +1,6 @@
 # Material
 
-A material on a [Mesh](/docs/ref/Mesh.md) node.
+A material on a [Mesh](/docs/scripting/Mesh.md) node.
 
 ## Properties
 

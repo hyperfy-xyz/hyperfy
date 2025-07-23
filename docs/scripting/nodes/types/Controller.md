@@ -34,7 +34,7 @@ A read-only property describing whether the controller is standing on something.
 
 ### `.{...Node}`
 
-Inherits all [Node](/docs/ref/Node.md) properties
+Inherits all [Node](/docs/scripting/nodes/Node.md) properties
 
 ## Methods
 

@@ -93,5 +93,5 @@ Defaults to `0`.
 
 ### `.{...Node}`
 
-Inherits all [Node](/docs/ref/Node.md) properties
+Inherits all [Node](/docs/scripting/nodes/Node.md) properties
 

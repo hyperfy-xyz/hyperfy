@@ -49,5 +49,5 @@ hips, spine, chest, neck, head, leftShoulder, leftUpperArm, leftLowerArm, leftHa
 
 ### `.{...Node}`
 
-Inherits all [Node](/docs/ref/Node.md) properties
+Inherits all [Node](/docs/scripting/nodes/Node.md) properties
 

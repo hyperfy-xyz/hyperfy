@@ -34,5 +34,5 @@ NOTE: Triggers are forced to act like convex shapes. This is a limitation in the
 
 ### `.{...Node}`
 
-Inherits all [Node](/docs/ref/Node.md) properties
+Inherits all [Node](/docs/scripting/nodes/Node.md) properties
 
