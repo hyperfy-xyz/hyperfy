@@ -82,6 +82,11 @@ export class StorageManager {
 
     const config = StorageManager.parseS3Uri(process.env.STORAGE_URL)
 
+    // Add CloudFront URL from environment variable if not already set in URI
+    if (!config.cloudfrontUrl && process.env.CLOUDFRONT_URL) {
+      config.cloudfrontUrl = process.env.CLOUDFRONT_URL
+    }
+
     // Add credentials if provided via standard AWS env vars
     if (process.env.AWS_ACCESS_KEY_ID && process.env.AWS_SECRET_ACCESS_KEY) {
       config.credentials = {
@@ -262,6 +267,15 @@ export class StorageManager {
       return this.storage.getPaths()
     }
     return null
+  }
+
+  /**
+   * Get the world directory path
+   * @returns {string} The world directory path
+   */
+  getWorldDir() {
+    const paths = this.getPaths()
+    return paths ? paths.worldDir : `./${process.env.WORLD || 'world'}`
   }
 
   /**

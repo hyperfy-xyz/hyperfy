@@ -23,6 +23,9 @@ const port = process.env.PORT
 const storageManager = new StorageManager()
 await storageManager.initialize()
 
+// Make storage manager available globally for migrations
+globalThis.storageManager = storageManager
+
 // init collections
 const collections = await initCollections({ storageManager })
 

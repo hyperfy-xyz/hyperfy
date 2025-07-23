@@ -78,7 +78,7 @@ function getStorageConfig() {
 }
 
 // Database configuration
-const { DB_URL = '' } = process.env
+const { DB_URL = '', DB_SCHEMA = '' } = process.env
 let dbConfig
 
 // Auto-detect database type from DB_URL
@@ -102,6 +102,11 @@ if (DB_URL) {
 }
 
 const db = Knex(dbConfig)
+
+// Set schema for PostgreSQL connections
+if (dbConfig.client === 'pg' && DB_SCHEMA) {
+  await db.raw(`SET search_path TO "${DB_SCHEMA}", public`)
+}
 
 // Storage configuration
 const storageConfig = getStorageConfig()
