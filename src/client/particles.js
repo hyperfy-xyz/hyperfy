@@ -92,6 +92,9 @@ function createEmitter(config) {
       startAlpha: 1,
       emissive: 1,
       startEmissive: 1,
+
+      emissionPosition: new Vector3(),
+      emissionRotation: new Quaternion(),
     })
   }
 
@@ -161,6 +164,14 @@ function createEmitter(config) {
         q1.setFromRotationMatrix(matrixWorld)
         particle.direction.applyQuaternion(q1)
         particle.velocity.applyQuaternion(q1)
+
+        // store the emission position and rotation for world space particles
+        particle.emissionPosition.setFromMatrixPosition(matrixWorld)
+        particle.emissionRotation.setFromRotationMatrix(matrixWorld)
+      } else {
+        // for local space, emission position is always origin
+        particle.emissionPosition.set(0, 0, 0)
+        particle.emissionRotation.identity()
       }
     }
   }
@@ -291,8 +302,13 @@ function createEmitter(config) {
       }
       // orbital velocity
       if (velocityOrbital) {
-        // Calculate vector from emitter center to particle
-        v3.copy(particle.position).sub(currWorldPos)
+        // determine the center point for orbital motion
+        // calculate vector from orbital center to particle
+        v3.copy(particle.position)
+        if (config.space === 'world') {
+          v3.sub(particle.emissionPosition)
+        }
+        // const orbitalCenter = config.space === 'world' ? particle.emissionPosition : currWorldPos
         // For each axis (X, Y, Z), rotate around that axis
         if (velocityOrbital.x !== 0) {
           // Rotate around X axis
@@ -309,8 +325,14 @@ function createEmitter(config) {
           q2.setFromAxisAngle(zAxis, velocityOrbital.z * delta)
           v3.applyQuaternion(q2)
         }
-        // Set particle position to emitter center + rotated offset
-        particle.position.copy(currWorldPos).add(v3)
+
+        // Set particle position to orbital center + rotated offset
+        if (config.space === 'world') {
+          particle.position.copy(particle.emissionPosition).add(v3)
+        } else {
+          particle.position.copy(v3) // Just use the rotated vector directly
+        }
+
         // Update velocity to match orbital motion
         // This ensures it continues to move in the tangent direction
         if (v3.length() > 0.001) {
@@ -333,8 +355,12 @@ function createEmitter(config) {
       }
       // radial velocity (away from emitter center)
       if (velocityRadial) {
-        // Get direction from emitter center to particle
-        v3.copy(particle.position).sub(currWorldPos)
+        // Determine the center point for radial motion
+        // In world space, particles move radially from their emission position
+        // In local space, particles move radially from current emitter position
+        const radialCenter = config.space === 'world' ? particle.emissionPosition : currWorldPos
+        // Get direction from radial center to particle
+        v3.copy(particle.position).sub(radialCenter)
         if (v3.length() > 0.001) {
           // Normalize to get direction
           v3.normalize()

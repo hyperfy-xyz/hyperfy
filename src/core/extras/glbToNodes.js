@@ -81,6 +81,7 @@ export function glbToNodes(glb, world) {
           geometry: object3d.geometry,
           convex: props.convex,
           trigger: props.trigger,
+          layer: props.layer,
           position: object3d.position.toArray(),
           quaternion: object3d.quaternion.toArray(),
           scale: object3d.scale.toArray(),

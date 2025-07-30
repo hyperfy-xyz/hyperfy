@@ -253,6 +253,17 @@ const normalizedBoneNames = {
   RightLeg: 'rightLowerLeg',
   RightFoot: 'rightFoot',
   RightToeBase: 'rightToes',
+  // additional variations to above, eg unity fbx
+  Chest: 'chest',
+  UpperChest: 'upperChest',
+  LeftUpperLeg: 'leftUpperLeg',
+  LeftLowerLeg: 'leftLowerLeg',
+  LeftUpperArm: 'leftUpperArm',
+  LeftLowerArm: 'leftLowerArm',
+  RightUpperLeg: 'rightUpperLeg',
+  RightLowerLeg: 'rightLowerLeg',
+  RightUpperArm: 'rightUpperArm',
+  RightLowerArm: 'rightLowerArm',
   // these must be old mixamo names, prefixed with "mixamo"
   mixamorigHips: 'hips',
   mixamorigSpine: 'spine',

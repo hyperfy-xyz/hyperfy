@@ -331,9 +331,11 @@ export class Apps extends System {
         if (!isArray(entity.fields)) {
           entity.fields = []
         }
-        // apply any initial values
         const props = entity.blueprint.props
         for (const field of entity.fields) {
+          // apply file shortcuts
+          fileRemaps[field.type]?.(field)
+          // apply any initial values
           if (field.initial !== undefined && props[field.key] === undefined) {
             props[field.key] = field.initial
           }
@@ -377,4 +379,39 @@ export class Apps extends System {
       }
     }
   }
+}
+
+export const fileRemaps = {
+  avatar: field => {
+    field.type = 'file'
+    field.kind = 'avatar'
+  },
+  emote: field => {
+    field.type = 'file'
+    field.kind = 'emote'
+  },
+  model: field => {
+    field.type = 'file'
+    field.kind = 'model'
+  },
+  texture: field => {
+    field.type = 'file'
+    field.kind = 'texture'
+  },
+  image: field => {
+    field.type = 'file'
+    field.kind = 'image'
+  },
+  video: field => {
+    field.type = 'file'
+    field.kind = 'video'
+  },
+  hdr: field => {
+    field.type = 'file'
+    field.kind = 'hdr'
+  },
+  audio: field => {
+    field.type = 'file'
+    field.kind = 'audio'
+  },
 }

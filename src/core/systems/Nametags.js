@@ -283,6 +283,12 @@ export class Nametags extends System {
     const y = row * NAMETAG_HEIGHT
     // clear any previously drawn stuff
     this.ctx.clearRect(x, y, NAMETAG_WIDTH, NAMETAG_HEIGHT)
+
+    // debug border
+    // this.ctx.strokeStyle = 'red'
+    // this.ctx.lineWidth = 2
+    // this.ctx.strokeRect(x + 2, y + 2, NAMETAG_WIDTH - 2, NAMETAG_HEIGHT - 2)
+
     // draw background
     // this.ctx.fillStyle = 'rgba(0, 0, 0, 0.5)'
     // fillRoundRect(this.ctx, x, y, NAMETAG_WIDTH, NAMETAG_HEIGHT, NAMETAG_BORDER_RADIUS)
@@ -297,9 +303,9 @@ export class Nametags extends System {
     this.ctx.save()
     this.ctx.globalCompositeOperation = 'xor'
     this.ctx.globalAlpha = 1 // Adjust as needed
-    this.ctx.strokeText(text, x + NAMETAG_WIDTH / 2, y + 2)
+    this.ctx.strokeText(text, x + NAMETAG_WIDTH / 2, y + 2 + 2) // extra 2 on y to prevent bleeding into nametag above it
     this.ctx.restore()
-    this.ctx.fillText(text, x + NAMETAG_WIDTH / 2, y + 2)
+    this.ctx.fillText(text, x + NAMETAG_WIDTH / 2, y + 2 + 2)
     // draw health
     if (nametag.health < HEALTH_MAX) {
       // bar

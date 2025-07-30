@@ -3,6 +3,9 @@ import { Entity } from './Entity'
 import { createNode } from '../extras/createNode'
 import { LerpQuaternion } from '../extras/LerpQuaternion'
 import { LerpVector3 } from '../extras/LerpVector3'
+import { hasRank, Ranks } from '../extras/ranks'
+import { BufferedLerpVector3 } from '../extras/BufferedLerpVector3'
+import { BufferedLerpQuaternion } from '../extras/BufferedLerpQuaternion'
 
 let capsuleGeometry
 {
@@ -17,6 +20,7 @@ export class PlayerRemote extends Entity {
   constructor(world, data, local) {
     super(world, data, local)
     this.isPlayer = true
+    this.isRemote = true
     this.init()
   }
 
@@ -77,9 +81,13 @@ export class PlayerRemote extends Entity {
 
     this.applyAvatar()
 
-    this.position = new LerpVector3(this.base.position, this.world.networkRate)
-    this.quaternion = new LerpQuaternion(this.base.quaternion, this.world.networkRate)
+    this.position = new BufferedLerpVector3(this.base.position, this.world.networkRate * 1.5)
+    this.quaternion = new BufferedLerpQuaternion(this.base.quaternion, this.world.networkRate * 1.5)
     this.teleport = 0
+
+    this.mode = 0
+    this.axis = new THREE.Vector3()
+    this.gaze = new THREE.Vector3()
 
     this.world.setHot(this, true)
   }
@@ -106,6 +114,26 @@ export class PlayerRemote extends Entity {
     }
   }
 
+  outranks(otherPlayer) {
+    const rank = Math.max(this.data.rank, this.world.settings.effectiveRank)
+    const otherRank = Math.max(otherPlayer.data.rank, this.world.settings.effectiveRank)
+    return rank > otherRank
+  }
+
+  isAdmin() {
+    const rank = Math.max(this.data.rank, this.world.settings.effectiveRank)
+    return hasRank(rank, Ranks.ADMIN)
+  }
+
+  isBuilder() {
+    const rank = Math.max(this.data.rank, this.world.settings.effectiveRank)
+    return hasRank(rank, Ranks.BUILDER)
+  }
+
+  isMuted() {
+    return this.world.livekit.isMuted(this.data.id)
+  }
+
   update(delta) {
     const anchor = this.getAnchorMatrix()
     if (!anchor) {
@@ -113,6 +141,7 @@ export class PlayerRemote extends Entity {
       this.quaternion.update(delta)
     }
     this.avatar?.setEmote(this.data.emote)
+    this.avatar?.instance?.setLocomotion(this.mode, this.axis, this.gaze)
   }
 
   lateUpdate(delta) {
@@ -145,6 +174,7 @@ export class PlayerRemote extends Entity {
 
   setSpeaking(speaking) {
     if (this.speaking === speaking) return
+    if (speaking && this.isMuted()) return
     this.speaking = speaking
     const name = this.data.name
     this.nametag.label = speaking ? `» ${name} «` : name
@@ -157,11 +187,23 @@ export class PlayerRemote extends Entity {
     }
     if (data.hasOwnProperty('p')) {
       this.data.position = data.p
-      this.position.pushArray(data.p, this.teleport)
+      this.position.push(data.p, this.teleport)
     }
     if (data.hasOwnProperty('q')) {
       this.data.quaternion = data.q
-      this.quaternion.pushArray(data.q, this.teleport)
+      this.quaternion.push(data.q, this.teleport)
+    }
+    if (data.hasOwnProperty('m')) {
+      this.data.mode = data.m
+      this.mode = data.m
+    }
+    if (data.hasOwnProperty('a')) {
+      this.data.axis = data.a
+      this.axis.fromArray(data.a)
+    }
+    if (data.hasOwnProperty('g')) {
+      this.data.gaze = data.g
+      this.gaze.fromArray(data.g)
     }
     if (data.hasOwnProperty('e')) {
       this.data.emote = data.e
@@ -172,6 +214,7 @@ export class PlayerRemote extends Entity {
     if (data.hasOwnProperty('name')) {
       this.data.name = data.name
       this.nametag.label = data.name
+      this.world.emit('name', { playerId: this.data.id, name: this.data.name })
     }
     if (data.hasOwnProperty('health')) {
       this.data.health = data.health
@@ -186,8 +229,9 @@ export class PlayerRemote extends Entity {
       this.data.sessionAvatar = data.sessionAvatar
       avatarChanged = true
     }
-    if (data.hasOwnProperty('roles')) {
-      this.data.roles = data.roles
+    if (data.hasOwnProperty('rank')) {
+      this.data.rank = data.rank
+      this.world.emit('rank', { playerId: this.data.id, rank: this.data.rank })
     }
     if (avatarChanged) {
       this.applyAvatar()

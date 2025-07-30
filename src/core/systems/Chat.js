@@ -21,6 +21,8 @@ export class Chat extends System {
   }
 
   add(msg, broadcast) {
+    if (!msg.id) msg.id = uuid()
+    if (!msg.createdAt) moment().toISOString()
     // add to chat messages
     this.msgs = [...this.msgs, msg]
     if (this.msgs.length > CHAT_MAX_MESSAGES) {

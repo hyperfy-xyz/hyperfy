@@ -90,7 +90,7 @@ export class BufferedLerpVector3 {
   /**
    * Instantly jump your localTime to latest+buffer
    */
-  snapToLatest() {
+  snap() {
     // find the sample with max time
     let latest = this.samples[0]
     for (let samp of this.samples) {

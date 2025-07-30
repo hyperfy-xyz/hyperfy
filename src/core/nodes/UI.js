@@ -168,9 +168,12 @@ export class UI extends Node {
         const canvas = this.canvas
         const world = this.ctx.world
         const onPointerEnter = e => {
+          const rect = canvas.getBoundingClientRect()
+          const x = (e.clientX - rect.left) * this._res
+          const y = (e.clientY - rect.top) * this._res
           hit = {
             node: this,
-            coords: new THREE.Vector3(0, 0, 0),
+            coords: new THREE.Vector3(x, y, 0),
           }
           world.pointer.setScreenHit(hit)
         }

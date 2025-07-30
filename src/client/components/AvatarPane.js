@@ -28,11 +28,10 @@ export function AvatarPane({ world, info }) {
         left: 50%;
         transform: translate(-50%, -50%);
         width: 16rem;
-        height: 24rem;
-        background: rgba(11, 10, 21, 0.85);
-        border: 0.0625rem solid #2a2b39;
+        background: rgba(11, 10, 21, 0.9);
+        border: 1px solid rgba(255, 255, 255, 0.05);
+        border-radius: 1.375rem;
         backdrop-filter: blur(5px);
-        border-radius: 1rem;
         pointer-events: auto;
         display: flex;
         flex-direction: column;
@@ -67,30 +66,28 @@ export function AvatarPane({ world, info }) {
           position: relative;
         }
         .vpane-viewport {
+          height: 17rem;
+          position: relative;
+        }
+        .vpane-viewport-inner {
           position: absolute;
           inset: 0;
         }
         .vpane-actions {
-          position: absolute;
-          bottom: 0;
-          left: 0;
-          right: 0;
           display: flex;
           align-items: center;
-          gap: 0.625rem;
-          padding: 1rem;
+          border-top: 1px solid rgba(255, 255, 255, 0.1);
         }
         .vpane-action {
-          flex-basis: 50%;
-          height: 2.5rem;
-          background: rgba(11, 10, 21, 0.85);
-          border: 0.0625rem solid #2a2b39;
-          border-radius: 0.5rem;
-          backdrop-filter: blur(5px);
+          flex: 1;
+          height: 2.7rem;
           display: flex;
           align-items: center;
           justify-content: center;
           font-size: 0.9375rem;
+          &.bl {
+            border-left: 1px solid rgba(255, 255, 255, 0.1);
+          }
           &:hover {
             cursor: pointer;
           }
@@ -104,15 +101,18 @@ export function AvatarPane({ world, info }) {
         </div>
       </div>
       <div className='vpane-content'>
-        <div className='vpane-viewport' ref={viewportRef}>
-          <div className='vpane-actions'>
-            <div className='vpane-action' onClick={info.onEquip}>
-              <span>Equip</span>
-            </div>
-            <div className='vpane-action' onClick={info.onPlace}>
+        <div className='vpane-viewport'>
+          <div className='vpane-viewport-inner' ref={viewportRef}></div>
+        </div>
+        <div className='vpane-actions'>
+          <div className='vpane-action' onClick={info.onEquip}>
+            <span>Equip</span>
+          </div>
+          {info.canPlace && (
+            <div className='vpane-action bl' onClick={info.onPlace}>
               <span>Place</span>
             </div>
-          </div>
+          )}
         </div>
       </div>
     </div>

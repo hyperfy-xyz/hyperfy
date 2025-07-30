@@ -167,7 +167,7 @@ export class App extends Entity {
     this.control = null
     // cancel any effects
     this.playerProxies.forEach(player => {
-      player.cancelEffect()
+      player.$cleanup()
     })
     // deactivate local node
     this.root?.deactivate()

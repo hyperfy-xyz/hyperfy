@@ -268,6 +268,7 @@ class LooseOctreeNode {
           const intersect = _intersects[i]
           intersect.getEntity = item.getEntity
           intersect.node = item.node
+          intersect.direction = raycaster.ray.direction
           intersects.push(intersect)
         }
         _intersects.length = 0

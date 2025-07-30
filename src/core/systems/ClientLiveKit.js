@@ -18,16 +18,43 @@ export class ClientLiveKit extends System {
       connected: false,
       mic: false,
       screenshare: null,
+      level: null,
     }
+    this.defaultLevel = null
+    this.levels = {}
+    this.muted = new Set()
     this.voices = new Map() // playerId -> PlayerVoice
     this.screens = []
     this.screenNodes = new Set() // Video
   }
 
+  start() {
+    this.defaultLevel = this.world.settings.voice
+    this.status.level = this.defaultLevel
+    this.world.settings.on('change', this.onSettingsChange)
+  }
+
+  onSettingsChange = changes => {
+    if (changes.voice) {
+      this.defaultLevel = changes.voice.value
+      const myLevel = this.levels[this.world.network.id] || this.defaultLevel
+      if (this.status.level !== myLevel) {
+        this.status.level = myLevel
+        this.emit('status', this.status)
+      }
+      this.voices.forEach(voice => {
+        const level = this.levels[voice.player.data.id] || this.defaultLevel
+        voice.setLevel(level)
+      })
+    }
+  }
+
   async deserialize(opts) {
     if (!opts) return
     this.status.available = true
-    // console.log(opts)
+    this.status.muted = opts.muted.has(this.world.network.id)
+    this.levels = opts.levels
+    this.muted = opts.muted
     this.room = new Room({
       webAudioMix: {
         audioContext: this.world.audio.ctx,
@@ -44,13 +71,50 @@ export class ClientLiveKit extends System {
     this.room.on(RoomEvent.TrackSubscribed, this.onTrackSubscribed)
     this.room.on(RoomEvent.TrackUnsubscribed, this.onTrackUnsubscribed)
     this.room.localParticipant.on(ParticipantEvent.IsSpeakingChanged, speaking => {
-      this.world.entities.player.setSpeaking(speaking)
+      const player = this.world.entities.player
+      this.world.livekit.emit('speaking', { playerId: player.data.id, speaking })
+      player.setSpeaking(speaking)
     })
     this.world.audio.ready(async () => {
       await this.room.connect(opts.wsUrl, opts.token)
       this.status.connected = true
       this.emit('status', this.status)
     })
+  }
+
+  setMuted(playerId, muted) {
+    if (muted && this.muted.has(playerId)) return
+    if (!muted && !this.muted.has(playerId)) return
+    if (muted) {
+      this.muted.add(playerId)
+    } else {
+      this.muted.delete(playerId)
+    }
+    const voice = this.voices.get(playerId)
+    voice?.setMuted(muted)
+    this.emit('muted', { playerId, muted })
+    if (playerId === this.world.network.id) {
+      this.status.muted = muted
+      this.emit('status', this.status)
+    }
+  }
+
+  isMuted(playerId) {
+    return this.muted.has(playerId)
+  }
+
+  setLevel(playerId, level) {
+    this.levels[playerId] = level
+    level = level || this.defaultLevel
+    if (playerId === this.world.network.id) {
+      if (this.status.level !== level) {
+        this.status.level = level
+        this.emit('status', this.status)
+      }
+      return
+    }
+    const voice = this.voices.get(playerId)
+    voice?.setLevel(level) // disabled, spatial, global
   }
 
   lateUpdate(delta) {
@@ -136,7 +200,9 @@ export class ClientLiveKit extends System {
     if (!player) return console.error('onTrackSubscribed failed: no player')
     const world = this.world
     if (track.source === 'microphone') {
-      const voice = new PlayerVoice(world, player, track, participant)
+      const level = this.levels[playerId] || this.defaultLevel
+      const muted = this.muted.has(playerId)
+      const voice = new PlayerVoice(world, player, level, muted, track, participant)
       this.voices.set(playerId, voice)
     }
     if (track.source === 'screen_share') {
@@ -223,13 +289,15 @@ export class ClientLiveKit extends System {
 }
 
 class PlayerVoice {
-  constructor(world, player, track, participant) {
+  constructor(world, player, level, muted, track, participant) {
     this.world = world
     this.player = player
+    this.level = level
+    this.muted = muted
     this.track = track
     this.participant = participant
     this.track.setAudioContext(world.audio.ctx)
-    this.spatial = true // todo: switch to global
+    this.root = world.audio.ctx.createGain()
     this.panner = world.audio.ctx.createPanner()
     this.panner.panningModel = 'HRTF'
     this.panner.panningModel = 'HRTF'
@@ -241,15 +309,48 @@ class PlayerVoice {
     this.panner.coneOuterAngle = 360
     this.panner.coneOuterGain = 0
     this.gain = world.audio.groupGains.voice
+    this.root.connect(this.gain)
+    this.root.connect(this.panner)
     this.panner.connect(this.gain)
     this.track.attach()
-    this.track.setWebAudioPlugins([this.spatial ? this.panner : this.gain])
+    this.apply()
     this.participant.on(ParticipantEvent.IsSpeakingChanged, speaking => {
+      this.world.livekit.emit('speaking', { playerId: this.player.data.id, speaking })
       this.player.setSpeaking(speaking)
     })
   }
 
+  setMuted(muted) {
+    if (this.muted === muted) return
+    this.muted = muted
+    this.apply()
+  }
+
+  setLevel(level) {
+    if (this.level === level) return
+    this.level = level
+    this.apply()
+  }
+
+  apply() {
+    if (this.muted) {
+      this.root.gain.value = 0
+      this.track.setWebAudioPlugins([this.root])
+    } else if (this.level === 'disabled') {
+      this.root.gain.value = 0
+      this.track.setWebAudioPlugins([this.root])
+    } else if (this.level === 'spatial') {
+      this.root.gain.value = 1
+      this.track.setWebAudioPlugins([this.panner])
+    } else if (this.level === 'global') {
+      this.root.gain.value = 1
+      this.track.setWebAudioPlugins([this.root])
+    }
+  }
+
   lateUpdate(delta) {
+    if (this.muted) return
+    if (this.level !== 'spatial') return
     const audio = this.world.audio
     const matrix = this.player.base.matrixWorld
     const pos = v1.setFromMatrixPosition(matrix)
@@ -270,6 +371,7 @@ class PlayerVoice {
   }
 
   destroy() {
+    this.world.livekit.emit('speaking', { playerId: this.player.data.id, speaking: false })
     this.player.setSpeaking(false)
     this.track.detach()
   }

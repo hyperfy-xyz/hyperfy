@@ -1,5 +1,5 @@
 import { getRef } from '../nodes/Node'
-import { clamp, hasRole, uuid } from '../utils'
+import { clamp, uuid } from '../utils'
 import * as THREE from './three'
 
 const HEALTH_MAX = 100
@@ -10,6 +10,7 @@ export function createPlayerProxy(entity, player) {
   const rotation = new THREE.Euler()
   const quaternion = new THREE.Quaternion()
   let activeEffectConfig = null
+  let voiceMod
   return {
     get networkId() {
       return player.data.owner
@@ -24,11 +25,13 @@ export function createPlayerProxy(entity, player) {
       return player.data.id === world.network.id
     },
     get admin() {
-      return hasRole(player.data.roles, 'admin')
+      return player.isAdmin()
+    },
+    get builder() {
+      return player.isBuilder()
     },
     get isAdmin() {
-      // deprecated, use .admin
-      return hasRole(player.data.roles, 'admin')
+      return player.isAdmin() // deprecated, use .admin
     },
     get name() {
       return player.data.name
@@ -163,6 +166,32 @@ export function createPlayerProxy(entity, player) {
         return console.error('screenshare can only be called on local player')
       }
       world.livekit.setScreenShareTarget(targetId)
+    },
+    setVoiceLevel(level) {
+      if (!world.network.isServer) {
+        return console.error(`[setVoiceLevel] must be applied on the server`)
+      }
+      if (!level && !voiceMod) {
+        return // no modifiers to remove, this is a noop
+      }
+      if (!level && voiceMod) {
+        voiceMod = world.livekit.removeModifier(voiceMod)
+        return
+      }
+      if (level && !voiceMod) {
+        voiceMod = world.livekit.addModifier(player.data.id, level)
+        return
+      }
+      if (level && voiceMod) {
+        voiceMod = world.livekit.updateModifier(voiceMod, level)
+        return
+      }
+    },
+    $cleanup() {
+      activeEffectConfig?.onEnd()
+      if (voiceMod) {
+        voiceMod = world.livekit.removeModifier(voiceMod)
+      }
     },
   }
 }

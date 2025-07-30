@@ -13,6 +13,34 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+## [v0.15.0]
+
+### Added
+- core: improved chat UX on mobile
+- core: new smooth movement animations and locomotion
+- core: introduce gaze based head tracking
+- core: add voice chat options to world menu (disabled, spatial, or global)
+- core: player list menu + builder toggle, teleport, mute/unmute and kick moderation tools
+- core: add option to allow visitors to equip custom avatars (vrm)
+- core: new backup script for automated world backups
+- apps: file field shortcuts (eg `type:image` instead of `type:file kind:image`)
+
+### Changed
+- core: touch and ui pointer handling improvements
+- core: avatar distance based rate now amortized and faster
+- core: script window now scales with UI scale setting
+- core: show app name in script window for brevity
+- core: buffered interpolation of networked players to reduce jitter
+- apps: calling world.chat(msg) automatically assigns `id` and `createdAt` values if not provided
+- docs: restructure and improvements
+
+### Fixed
+- core: nametag transparency ordering issues
+- core: dont show free-build toggle 
+- apps: UIImage explicit width and height
+- apps: touch device pointer coordinates incorrect
+- apps: fix particles orbital velocity in local space
+
 ## [v0.14.0]
 
 ### Added
@@ -436,7 +464,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Basic project structure
 - Core functionality from original project
 
-[Unreleased]: https://github.com/hyperfy-xyz/hyperfy/compare/v0.14.0...HEAD
+[Unreleased]: https://github.com/hyperfy-xyz/hyperfy/compare/v0.15.0...HEAD
+[0.15.0]: https://github.com/hyperfy-xyz/hyperfy/compare/v0.14.0...v0.15.0
 [0.14.0]: https://github.com/hyperfy-xyz/hyperfy/compare/v0.13.0...v0.14.0
 [0.13.0]: https://github.com/hyperfy-xyz/hyperfy/compare/v0.12.0...v0.13.0
 [0.12.0]: https://github.com/hyperfy-xyz/hyperfy/compare/v0.11.0...v0.12.0

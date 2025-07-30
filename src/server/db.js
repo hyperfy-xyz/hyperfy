@@ -4,6 +4,8 @@ import fs from 'fs-extra'
 import path from 'path'
 import { uuid } from '../core/utils'
 import { importApp } from '../core/extras/appTools'
+import { defaults } from 'lodash-es'
+import { Ranks } from '../core/extras/ranks'
 
 let db
 
@@ -352,5 +354,57 @@ const migrations = [
       }
       await db('entities').insert(entity)
     }
+  },
+  // ensure settings exists with defaults AND default new voice setting to spatial
+  async db => {
+    const row = await db('config').where('key', 'settings').first()
+    const settings = row ? JSON.parse(row.value) : {}
+    defaults(settings, {
+      title: null,
+      desc: null,
+      image: null,
+      avatar: null,
+      voice: 'spatial',
+      public: false,
+      playerLimit: 0,
+      ao: true,
+    })
+    const value = JSON.stringify(settings)
+    if (row) {
+      await db('config').where('key', 'settings').update({ value })
+    } else {
+      await db('config').insert({ key: 'settings', value })
+    }
+  },
+  // migrate roles to rank
+  async db => {
+    // default rank setting
+    const row = await db('config').where('key', 'settings').first()
+    const settings = JSON.parse(row.value)
+    settings.rank = settings.public ? Ranks.BUILDER : Ranks.VISITOR
+    delete settings.public
+    const value = JSON.stringify(settings)
+    await db('config').where('key', 'settings').update({ value })
+    // player ranks
+    await db.schema.alterTable('users', table => {
+      table.integer('rank').notNullable().defaultTo(0)
+    })
+    const users = await db('users')
+    for (const user of users) {
+      const roles = user.roles.split(',')
+      const rank = roles.includes('admin') ? Ranks.ADMIN : roles.includes('builder') ? Ranks.BUILDER : Ranks.VISITOR
+      await db('users').where('id', user.id).update({ rank })
+    }
+    await db.schema.alterTable('users', table => {
+      table.dropColumn('roles')
+    })
+  },
+  // add new settings.customAvatars (defaults to false)
+  async db => {
+    const row = await db('config').where('key', 'settings').first()
+    const settings = JSON.parse(row.value)
+    settings.customAvatars = false
+    const value = JSON.stringify(settings)
+    await db('config').where('key', 'settings').update({ value })
   },
 ]

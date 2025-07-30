@@ -1,6 +1,6 @@
 {
   "name": "hyperfy",
-  "version": "0.14.0",
+  "version": "0.15.0",
   "type": "module",
   "main": "index.js",
   "homepage": "https://github.com/hyperfy-xyz/hyperfy#readme",
@@ -22,6 +22,7 @@
     "build": "node scripts/build.mjs",
     "start": "node build/index.js",
     "world:clean": "node scripts/clean-world.mjs",
+    "world:backup": "node scripts/backup-world.mjs",
     "viewer:dev": "node scripts/build-viewer.mjs --dev",
     "viewer:build": "node scripts/build-viewer.mjs",
     "client:dev": "node scripts/build-client.mjs --dev",

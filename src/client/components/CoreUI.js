@@ -1153,7 +1153,9 @@ function TouchStick({ world }) {
         outer.style.top = `${stick.center.y}px`
         inner.style.left = `${stick.touch.position.x}px`
         inner.style.top = `${stick.touch.position.y}px`
+        inner.style.opacity = 1
       } else {
+        inner.style.opacity = 0.1
         const radius = 50 // matches PlayerLocal.js STICK_OUTER_RADIUS
         if (window.innerWidth < window.innerHeight) {
           // portrait
@@ -1259,10 +1261,10 @@ function Confirm({ options }) {
         z-index: 999;
         .confirm-dialog {
           pointer-events: auto;
-          background: rgba(11, 10, 21, 0.85);
-          border: 0.0625rem solid #2a2b39;
+          background: rgba(11, 10, 21, 0.9);
+          border: 1px solid rgba(255, 255, 255, 0.05);
+          border-radius: 1.375rem;
           backdrop-filter: blur(5px);
-          border-radius: 1rem;
           width: 18rem;
         }
         .confirm-content {

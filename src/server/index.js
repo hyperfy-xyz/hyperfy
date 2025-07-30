@@ -167,7 +167,7 @@ fastify.get('/status', async (request, reply) => {
     for (const socket of world.network.sockets.values()) {
       status.connectedUsers.push({
         id: socket.player.data.userId,
-        position: socket.player.position.current.toArray(),
+        position: socket.player.position.value.toArray(),
         name: socket.player.data.name,
       })
     }

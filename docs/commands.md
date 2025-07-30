@@ -6,21 +6,20 @@ There are a few commands that can be used by entering them in the chat.
 
 If your world has an admin code set, the only way to become an admin is to use this command with your code (see your .env file).
 
-If you're .env doesn't have an ADMIN_CODE set, then all players are given the admin role temporarily.
+If your .env doesn't have an ADMIN_CODE set, then all players are treated as an admin.
 
 ### `/spawn set`
 
-Sets the spawn point for all future players entering the world, to the current position and direction you are facing. Requires admin role.
+Sets the spawn point for all future players entering the world, to the current position and direction you are facing. Requires builder rank.
 
 ### `/spawn clear`
 
-Resets the spawn point back to origin. Requires admin role.
+Resets the spawn point back to origin. Requires builder rank.
 
 ### `/name <name>`
 
-Sets your name.
-This is currently the only way to change your name, until the UI for it is built.
+Sets your player name.
 
 ### `/chat clear`
 
-Clears all chat messages. Requires admin privledges to use. 
+Clears all chat messages. Requires builder rank. 

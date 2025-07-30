@@ -20,32 +20,6 @@ export function clamp(n, low, high) {
   return Math.max(Math.min(n, high), low)
 }
 
-export function hasRole(arr, ...roles) {
-  if (!arr) return false
-  // also includes temporary roles (prefixed with `~`)
-  return some(roles, role => arr.includes(role) || arr.includes(`~${role}`))
-}
-
-export function addRole(arr, role) {
-  if (!hasRole(arr, role)) {
-    arr.push(role)
-  }
-}
-
-export function removeRole(arr, role) {
-  const idx = arr.indexOf(role)
-  if (idx !== -1) {
-    arr.splice(idx, 1)
-  }
-}
-
-export function serializeRoles(roles) {
-  // remove temporary (~) roles
-  roles = roles.filter(role => !role.startsWith('~'))
-  // convert to string
-  return roles.join(',')
-}
-
 export function num(min, max, dp = 0) {
   const value = Math.random() * (max - min) + min
   return parseFloat(value.toFixed(dp))
