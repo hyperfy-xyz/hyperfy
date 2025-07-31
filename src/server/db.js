@@ -9,16 +9,41 @@ import { Ranks } from '../core/extras/ranks'
 
 let db
 
-export async function getDB(worldDir) {
+function getDBConfig(worldDir) {
+  const { DB_URL = '', DB_SCHEMA = '' } = process.env;
+
+  // Auto-detect database type from DB_URL
+  if (DB_URL) {
+    if (DB_URL.startsWith('postgres://') || DB_URL.startsWith('postgresql://')) {
+      const config = {
+        client: 'pg',
+        connection: DB_URL,
+        pool: { min: 2, max: 10 },
+      };
+      
+      // Add schema configuration if provided
+      if (DB_SCHEMA) {
+        config.searchPath = [DB_SCHEMA, 'public'];
+      }
+      
+      return config;
+    }
+    throw new Error(`Unsupported database URL: ${DB_URL}. Only PostgreSQL URLs (postgres://) are supported.`);
+  }
+
+  // Default: SQLite in world folder
   const filename = path.join(worldDir, '/db.sqlite')
+  return {
+    client: 'better-sqlite3',
+    connection: { filename },
+    useNullAsDefault: true,
+  };
+}
+
+export async function getDB(worldDir) {
   if (!db) {
-    db = Knex({
-      client: 'better-sqlite3',
-      connection: {
-        filename,
-      },
-      useNullAsDefault: true,
-    })
+    const config = getDBConfig(worldDir)
+    db = Knex(config)
     await migrate(db, worldDir)
   }
   return db
@@ -317,12 +342,22 @@ const migrations = [
         type: 'application/octet-stream',
       })
       const app = await importApp(file)
-      // write the assets to the worlds assets folder
+      // write the assets to storage (local or S3)
       for (const asset of app.assets) {
         const filename = asset.url.split('asset://').pop()
         const buffer = Buffer.from(await asset.file.arrayBuffer())
-        const dest = path.join(worldDir, '/assets', filename)
-        await fs.writeFile(dest, buffer)
+        
+        // Get storage manager from global context if available
+        const storageManager = globalThis.storageManager
+        if (storageManager) {
+          // Use storage manager to upload file
+          const contentType = asset.file.type || 'application/octet-stream'
+          await storageManager.uploadFile(filename, buffer, contentType)
+        } else {
+          // Fallback to local file system
+          const dest = path.join(worldDir, '/assets', filename)
+          await fs.writeFile(dest, buffer)
+        }
       }
       // create blueprint and entity
       app.blueprint.id = '$scene' // singleton
