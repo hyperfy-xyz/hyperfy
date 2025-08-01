@@ -34,6 +34,13 @@ export class PrimitiveRenderer {
     const instancePhaseAttribute = new THREE.InstancedBufferAttribute(phases, 1)
     this.model.iMesh.geometry.setAttribute('instancePhase', instancePhaseAttribute)
     
+    // Setup emissive flags (0 or 1 for each instance)
+    const emissiveFlags = new Float32Array(initialSize)
+    emissiveFlags.fill(1) // Default to emissive
+    this.instanceEmissiveFlags = emissiveFlags
+    const instanceEmissiveFlagAttribute = new THREE.InstancedBufferAttribute(emissiveFlags, 1)
+    this.model.iMesh.geometry.setAttribute('instanceEmissiveFlag', instanceEmissiveFlagAttribute)
+    
     // Modify material to support instance colors with GPU animation
     this.setupShader()
   }
@@ -52,6 +59,8 @@ export class PrimitiveRenderer {
       shader.uniforms.uWaveSpeed = { value: 0.3 }
       shader.uniforms.uHueShift = { value: 0.1 } // 0.1 = 36 degrees
       shader.uniforms.uEnableAnimation = { value: this.animationEnabled ? 1.0 : 0.0 }
+      shader.uniforms.uEmissiveIntensity = { value: 0.5 }
+      shader.uniforms.uEmissivePulse = { value: 0.3 }
       
       // Call original onBeforeCompile if it exists
       if (originalOnBeforeCompile) {
@@ -64,12 +73,17 @@ export class PrimitiveRenderer {
         `#include <common>
         attribute vec3 instanceColor;
         attribute float instancePhase;
+        attribute float instanceEmissiveFlag;
         varying vec3 vInstanceColor;
+        varying vec3 vEmissiveColor;
+        varying float vEmissiveFlag;
         uniform float uTime;
         uniform float uColorSpeed;
         uniform float uWaveSpeed;
         uniform float uHueShift;
         uniform float uEnableAnimation;
+        uniform float uEmissiveIntensity;
+        uniform float uEmissivePulse;
         
         // HSL to RGB conversion
         vec3 hsl2rgb(vec3 hsl) {
@@ -149,20 +163,35 @@ export class PrimitiveRenderer {
           animatedColor = hsl2rgb(hsl);
         }
         
-        vInstanceColor = animatedColor;`
+        vInstanceColor = animatedColor;
+        vEmissiveFlag = instanceEmissiveFlag;
+        
+        // Calculate emissive color only if this instance is emissive
+        // Brighter objects emit more light
+        float brightness = dot(animatedColor, vec3(0.299, 0.587, 0.114));
+        float emissivePulse = sin(uTime * uColorSpeed * 2.0 + instancePhase * 2.0) * uEmissivePulse + uEmissivePulse;
+        vEmissiveColor = animatedColor * brightness * uEmissiveIntensity * (1.0 + emissivePulse) * instanceEmissiveFlag;`
       )
       
       // Apply instance color in fragment shader
       shader.fragmentShader = shader.fragmentShader.replace(
         '#include <common>',
         `#include <common>
-        varying vec3 vInstanceColor;`
+        varying vec3 vInstanceColor;
+        varying vec3 vEmissiveColor;`
       )
       
       shader.fragmentShader = shader.fragmentShader.replace(
         '#include <color_fragment>',
         `#include <color_fragment>
         diffuseColor.rgb *= vInstanceColor;`
+      )
+      
+      // Add emissive color
+      shader.fragmentShader = shader.fragmentShader.replace(
+        '#include <emissivemap_fragment>',
+        `#include <emissivemap_fragment>
+        totalEmissiveRadiance += vEmissiveColor;`
       )
     }
   }
@@ -175,6 +204,11 @@ export class PrimitiveRenderer {
     this.instanceColors[idx3 + 1] = color.g
     this.instanceColors[idx3 + 2] = color.b
     this.model.iMesh.geometry.attributes.instanceColor.needsUpdate = true
+  }
+  
+  setInstanceEmissive(index, isEmissive) {
+    this.instanceEmissiveFlags[index] = isEmissive ? 1.0 : 0.0
+    this.model.iMesh.geometry.attributes.instanceEmissiveFlag.needsUpdate = true
   }
   
   onResize(newSize) {
@@ -196,6 +230,14 @@ export class PrimitiveRenderer {
     this.instancePhases = newPhases
     const instancePhaseAttribute = new THREE.InstancedBufferAttribute(newPhases, 1)
     this.model.iMesh.geometry.setAttribute('instancePhase', instancePhaseAttribute)
+    
+    // Resize emissive flags buffer
+    const newEmissiveFlags = new Float32Array(newSize)
+    newEmissiveFlags.set(this.instanceEmissiveFlags)
+    newEmissiveFlags.fill(1, this.instanceEmissiveFlags.length) // Default new ones to emissive
+    this.instanceEmissiveFlags = newEmissiveFlags
+    const instanceEmissiveFlagAttribute = new THREE.InstancedBufferAttribute(newEmissiveFlags, 1)
+    this.model.iMesh.geometry.setAttribute('instanceEmissiveFlag', instanceEmissiveFlagAttribute)
   }
   
   updateAnimationUniforms(time) {

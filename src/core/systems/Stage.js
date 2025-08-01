@@ -81,7 +81,7 @@ export class Stage extends System {
     }
   }
 
-  insertLinked({ geometry, material, castShadow, receiveShadow, node, matrix, color }) {
+  insertLinked({ geometry, material, castShadow, receiveShadow, node, matrix, color, emissive }) {
     const isPrimitive = color !== undefined
     const id = `${geometry.uuid}/${material ? material.uuid : 'default'}/${castShadow}/${receiveShadow}/${isPrimitive}`
     if (!this.models.has(id)) {
@@ -89,7 +89,7 @@ export class Stage extends System {
       this.models.set(id, model)
     }
     const colorObj = color ? new THREE.Color(color) : null
-    return this.models.get(id).create(node, matrix, colorObj)
+    return this.models.get(id).create(node, matrix, colorObj, emissive)
   }
 
   insertSingle({ geometry, material, castShadow, receiveShadow, node, matrix }) {
@@ -138,6 +138,8 @@ export class Stage extends System {
         color: options.color || 'white',
         metalness: isNumber(options.metalness) ? options.metalness : 0,
         roughness: isNumber(options.roughness) ? options.roughness : 1,
+        emissive: options.emissive || 0x000000,
+        emissiveIntensity: isNumber(options.emissiveIntensity) ? options.emissiveIntensity : 0,
       })
     }
     raw.shadowSide = THREE.BackSide // fix csm shadow banding
@@ -302,20 +304,22 @@ class Model {
   }
   
 
-  create(node, matrix, color = null) {
+  create(node, matrix, color = null, emissive = true) {
     const item = {
       idx: this.items.length,
       node,
       matrix,
       color,
+      emissive,
       // octree
     }
     this.items.push(item)
     this.iMesh.setMatrixAt(item.idx, item.matrix) // silently fails if too small, gets increased in clean()
     
-    // Set instance color if supported
+    // Set instance color and emissive flag if supported
     if (this.primitiveRenderer) {
       this.primitiveRenderer.setInstanceColor(item.idx, color)
+      this.primitiveRenderer.setInstanceEmissive(item.idx, emissive)
     }
     
     this.dirty = true
@@ -337,6 +341,12 @@ class Model {
         if (this.primitiveRenderer && color) {
           item.color = color
           this.primitiveRenderer.setInstanceColor(item.idx, color)
+        }
+      },
+      setEmissive: emissive => {
+        if (this.primitiveRenderer) {
+          item.emissive = emissive
+          this.primitiveRenderer.setInstanceEmissive(item.idx, emissive)
         }
       },
       destroy: () => {

@@ -4,13 +4,15 @@ import { isBoolean, isNumber, isString, isArray } from 'lodash-es'
 import { Node, secureRef } from './Node'
 import { getTrianglesFromGeometry } from '../extras/getTrianglesFromGeometry'
 import { getTextureBytesFromMaterial } from '../extras/getTextureBytesFromMaterial'
+import { toVibrantHSL } from '../utils/colorUtils'
 
 const defaults = {
   kind: 'box',
   size: [1, 1, 1],
-  color: '#ffffff',
+  color: 'white',
   castShadow: true,
   receiveShadow: true,
+  emissive: true,
 }
 
 const kinds = ['box', 'sphere', 'cylinder', 'cone', 'torus', 'plane']
@@ -73,9 +75,12 @@ export class Prim extends Node {
     
     this.kind = data.kind
     this.size = data.size
-    this.color = data.color !== undefined ? data.color : defaults.color
+    // Convert color to vibrant HSL for better GPU animation
+    const rawColor = data.color !== undefined ? data.color : defaults.color
+    this.color = toVibrantHSL(rawColor)
     this.castShadow = data.castShadow
     this.receiveShadow = data.receiveShadow
+    this.emissive = data.emissive !== undefined ? data.emissive : defaults.emissive
   }
   
   mount() {
@@ -95,7 +100,8 @@ export class Prim extends Node {
       geometry,
       material,
       linked: true,
-      color: this._color,
+      color: new THREE.Color(this._color),
+      emissive: this._emissive,
       castShadow: this._castShadow,
       receiveShadow: this._receiveShadow,
       matrix: this.matrixWorld,
@@ -147,6 +153,7 @@ export class Prim extends Node {
     this._kind = source._kind
     this._size = [...source._size]
     this._color = source._color
+    this._emissive = source._emissive
     this._castShadow = source._castShadow
     this._receiveShadow = source._receiveShadow
     return this
@@ -213,12 +220,14 @@ export class Prim extends Node {
     if (!isString(value)) {
       throw new Error('[prim] color must be string')
     }
-    if (this._color === value) return
-    this._color = value
+    // Convert to vibrant HSL
+    const vibrantColor = toVibrantHSL(value)
+    if (this._color === vibrantColor) return
+    this._color = vibrantColor
     if (this.handle) {
       // Update color directly via instance attributes
       if (this.handle.setColor) {
-        this.handle.setColor(new THREE.Color(value))
+        this.handle.setColor(new THREE.Color(vibrantColor))
       }
     }
   }
@@ -255,6 +264,24 @@ export class Prim extends Node {
     }
   }
   
+  get emissive() {
+    return this._emissive
+  }
+  
+  set emissive(value = defaults.emissive) {
+    if (!isBoolean(value)) {
+      throw new Error('[prim] emissive not a boolean')
+    }
+    if (this._emissive === value) return
+    this._emissive = value
+    if (this.handle) {
+      // Update emissive flag directly via instance attributes
+      if (this.handle.setEmissive) {
+        this.handle.setEmissive(value)
+      }
+    }
+  }
+  
   getProxy() {
     if (!this.proxy) {
       const self = this
@@ -288,6 +315,12 @@ export class Prim extends Node {
         },
         set receiveShadow(value) {
           self.receiveShadow = value
+        },
+        get emissive() {
+          return self.emissive
+        },
+        set emissive(value) {
+          self.emissive = value
         },
       }
       proxy = Object.defineProperties(proxy, Object.getOwnPropertyDescriptors(super.getProxy())) // inherit Node properties
