@@ -3,6 +3,7 @@ import { isNumber } from 'lodash-es'
 
 import { System } from './System'
 import { LooseOctree } from '../extras/LooseOctree'
+import { PrimitiveRenderer } from './PrimitiveRenderer'
 
 const vec2 = new THREE.Vector2()
 
@@ -32,6 +33,7 @@ export class Stage extends System {
     this.maskNone = new THREE.Layers()
     this.maskNone.enableAll()
     this.dirtyNodes = new Set()
+    this.time = 0
   }
 
   init({ viewport }) {
@@ -40,7 +42,13 @@ export class Stage extends System {
   }
 
   update(delta) {
-    this.models.forEach(model => model.clean())
+    this.time += delta
+    this.models.forEach(model => {
+      model.clean()
+      if (model.primitiveRenderer) {
+        model.primitiveRenderer.updateAnimationUniforms(this.time)
+      }
+    })
   }
 
   postUpdate() {
@@ -287,68 +295,12 @@ class Model {
     this.items = [] // { matrix, node }
     this.dirty = true
     
-    // Add instance color support for primitives
+    // Use PrimitiveRenderer for primitives
     if (this.isPrimitive) {
-      const colors = new Float32Array(10 * 3) // RGB for each instance
-      colors.fill(1) // Default to white
-      this.instanceColors = colors
-      const instanceColorAttribute = new THREE.InstancedBufferAttribute(colors, 3)
-      this.iMesh.geometry.setAttribute('instanceColor', instanceColorAttribute)
-      
-      // Modify material to support instance colors
-      this.setupInstanceColorShader()
+      this.primitiveRenderer = new PrimitiveRenderer(this)
     }
   }
   
-  setInstanceColor(index, color) {
-    if (!this.isPrimitive || !color) return
-    
-    const idx3 = index * 3
-    this.instanceColors[idx3] = color.r
-    this.instanceColors[idx3 + 1] = color.g
-    this.instanceColors[idx3 + 2] = color.b
-    this.iMesh.geometry.attributes.instanceColor.needsUpdate = true
-  }
-  
-  setupInstanceColorShader() {
-    const material = this.material.raw
-    const originalOnBeforeCompile = material.onBeforeCompile
-    
-    material.onBeforeCompile = (shader) => {
-      // Call original onBeforeCompile if it exists
-      if (originalOnBeforeCompile) {
-        originalOnBeforeCompile(shader)
-      }
-      
-      // Inject instance color attribute
-      shader.vertexShader = shader.vertexShader.replace(
-        '#include <common>',
-        `#include <common>
-        attribute vec3 instanceColor;
-        varying vec3 vInstanceColor;`
-      )
-      
-      // Pass instance color to fragment shader
-      shader.vertexShader = shader.vertexShader.replace(
-        '#include <begin_vertex>',
-        `#include <begin_vertex>
-        vInstanceColor = instanceColor;`
-      )
-      
-      // Apply instance color in fragment shader
-      shader.fragmentShader = shader.fragmentShader.replace(
-        '#include <common>',
-        `#include <common>
-        varying vec3 vInstanceColor;`
-      )
-      
-      shader.fragmentShader = shader.fragmentShader.replace(
-        '#include <color_fragment>',
-        `#include <color_fragment>
-        diffuseColor.rgb *= vInstanceColor;`
-      )
-    }
-  }
 
   create(node, matrix, color = null) {
     const item = {
@@ -362,7 +314,9 @@ class Model {
     this.iMesh.setMatrixAt(item.idx, item.matrix) // silently fails if too small, gets increased in clean()
     
     // Set instance color if supported
-    this.setInstanceColor(item.idx, color)
+    if (this.primitiveRenderer) {
+      this.primitiveRenderer.setInstanceColor(item.idx, color)
+    }
     
     this.dirty = true
     const sItem = {
@@ -380,9 +334,9 @@ class Model {
         this.stage.octree.move(sItem)
       },
       setColor: color => {
-        if (this.isPrimitive && color) {
+        if (this.primitiveRenderer && color) {
           item.color = color
-          this.setInstanceColor(item.idx, color)
+          this.primitiveRenderer.setInstanceColor(item.idx, color)
         }
       },
       destroy: () => {
@@ -414,8 +368,8 @@ class Model {
       this.iMesh.setMatrixAt(item.idx, last.matrix)
       
       // Swap colors if primitive
-      if (this.isPrimitive && last.color) {
-        this.setInstanceColor(item.idx, last.color)
+      if (this.primitiveRenderer && last.color) {
+        this.primitiveRenderer.setInstanceColor(item.idx, last.color)
       }
       
       last.idx = item.idx
@@ -434,28 +388,20 @@ class Model {
       // console.log('increase', this.mesh.name, 'from', size, 'to', newSize)
       this.iMesh.resize(newSize)
       
-      // Resize instance color buffer for primitives
-      if (this.isPrimitive) {
-        const newColors = new Float32Array(newSize * 3)
-        newColors.set(this.instanceColors)
-        newColors.fill(1, this.instanceColors.length) // Fill new slots with white
-        this.instanceColors = newColors
-        const instanceColorAttribute = new THREE.InstancedBufferAttribute(newColors, 3)
-        this.iMesh.geometry.setAttribute('instanceColor', instanceColorAttribute)
+      // Resize primitive renderer buffers
+      if (this.primitiveRenderer) {
+        this.primitiveRenderer.onResize(newSize)
       }
       
       for (let i = size; i < count; i++) {
         this.iMesh.setMatrixAt(i, this.items[i].matrix)
         
         // Set color for new instances
-        if (this.isPrimitive && this.items[i].color) {
-          this.setInstanceColor(i, this.items[i].color)
+        if (this.primitiveRenderer && this.items[i].color) {
+          this.primitiveRenderer.setInstanceColor(i, this.items[i].color)
         }
       }
       
-      if (this.isPrimitive) {
-        this.iMesh.geometry.attributes.instanceColor.needsUpdate = true
-      }
     }
     this.iMesh.count = count
     if (this.iMesh.parent && !count) {
