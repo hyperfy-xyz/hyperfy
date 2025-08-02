@@ -81,6 +81,17 @@ export class Stage extends System {
     }
     return this.models.get(id).create(node, matrix)
   }
+  
+  insertPrimitive({ geometry, material, castShadow, receiveShadow, node, matrix }) {
+    // Create a unique ID based on geometry and material for proper instancing
+    // Since materials are now cached in Prim.js, we can use the material's UUID directly
+    const id = `${geometry.uuid}/${material ? material.uuid : 'default'}/${castShadow}/${receiveShadow}/primitive`
+    if (!this.models.has(id)) {
+      const model = new Model(this, geometry, material, castShadow, receiveShadow)
+      this.models.set(id, model)
+    }
+    return this.models.get(id).create(node, matrix)
+  }
 
   insertSingle({ geometry, material, castShadow, receiveShadow, node, matrix }) {
     material = this.createMaterial({ raw: material })
