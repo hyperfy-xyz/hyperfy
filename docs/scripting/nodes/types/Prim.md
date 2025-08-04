@@ -59,6 +59,25 @@ Whether the primitive should receive shadows from other objects. Defaults to `tr
 
 Whether the primitive should be rendered from both sides. This is particularly useful for plane primitives that need to be visible from both front and back. Defaults to `false`.
 
+### `.scale`: Array (inherited from Node)
+
+Controls the size of the primitive using a 3-component array `[x, y, z]`. Since primitives use unit-sized geometry, the scale directly determines the final dimensions.
+
+**Scale behavior by primitive type:**
+- **Box**: `[width, height, depth]` - Direct mapping to box dimensions
+- **Sphere**: `[radius, radius, radius]` - Use uniform scale for proper spheres
+- **Cylinder**: `[radius, height, radius]` - X/Z control radius, Y controls height
+- **Cone**: `[radius, height, radius]` - X/Z control base radius, Y controls height  
+- **Torus**: `[radius, radius, radius]` - Use uniform scale for major radius (tube radius is 0.3× major)
+- **Plane**: `[width, height, 1]` - X/Y control dimensions, Z typically kept at 1
+
+Defaults to `[1, 1, 1]`.
+
+**Note**: Primitives are centered at their origin. To position a primitive with its bottom at y=0:
+- Box/Cylinder/Cone: `position.y = scale.y / 2`
+- Sphere: `position.y = scale.x` (assuming uniform scale)
+- Torus: `position.y = scale.x * 1.3` (major radius + tube radius)
+
 ### `.physics`: String | null
 
 The physics body type for the primitive. Can be:
@@ -240,10 +259,6 @@ app.add(triggerZone)
 
 ## Notes
 
-- Use the `scale` property (inherited from Node) to control the size of primitives
-- For spheres, use uniform scale (e.g., `scale: [0.5, 0.5, 0.5]` for a radius of 0.5)
-- For cylinders/cones, X and Z control radius, Y controls height
-- For torus, use uniform scale to control the major radius
 - Primitives with identical material properties are automatically instanced for optimal performance
 - Material properties (color, emissive, metalness, etc.) determine which primitives can be instanced together
 - Changing material properties requires rebuilding the primitive instance
@@ -255,7 +270,7 @@ app.add(triggerZone)
 - `box` and `sphere` primitives have exact physics collision shapes
 - `cylinder`, `cone`, and `torus` use box approximations for physics
 - `plane` uses a thin box for collision
-- Physics bodies are positioned with their bottom at y=0 to match the visual geometry
+- Physics bodies are centered to match the visual geometry
 - Dynamic bodies require the `mass` property to be set
 - Trigger volumes don't cause physical collisions but can detect overlaps
 - Physics callbacks (onContactStart, etc.) receive the other colliding object as a parameter
