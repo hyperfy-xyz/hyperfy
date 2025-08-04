@@ -12,19 +12,6 @@ Available options: `box`, `sphere`, `cylinder`, `cone`, `torus`, `plane`.
 
 Defaults to `box`.
 
-### `.size`: Array
-
-The dimensions of the primitive. The array length and meaning varies by shape:
-- `box`: `[width, height, depth]` - all three dimensions
-- `sphere`: `[radius]` - single radius value
-- `cylinder`: `[radius, height]` - radius and height
-- `cone`: `[radius, height]` - base radius and height
-- `torus`: `[radius, tube]` - major radius and tube radius
-- `plane`: `[width, height]` - width and height
-
-If fewer values are provided than required, missing values default to the first value or 1.
-
-Defaults to `[1, 1, 1]`.
 
 ### `.color`: String
 
@@ -68,42 +55,90 @@ Whether the primitive should cast shadows. Defaults to `true`.
 
 Whether the primitive should receive shadows from other objects. Defaults to `true`.
 
-### `.doubleSided`: Boolean
+### `.doubleside`: Boolean
 
 Whether the primitive should be rendered from both sides. This is particularly useful for plane primitives that need to be visible from both front and back. Defaults to `false`.
 
-### `.physics`: Boolean | Object | null
+### `.scale`: Array (inherited from Node)
 
-Enables physics for the primitive. Can be:
-- `true` - Enables static physics with default settings
-- `Object` - Detailed physics configuration (see below)
+Controls the size of the primitive using a 3-component array `[x, y, z]`. Since primitives use unit-sized geometry, the scale directly determines the final dimensions.
+
+**Scale behavior by primitive type:**
+- **Box**: `[width, height, depth]` - Direct mapping to box dimensions
+- **Sphere**: `[radius, radius, radius]` - Use uniform scale for proper spheres
+- **Cylinder**: `[radius, height, radius]` - X/Z control radius, Y controls height
+- **Cone**: `[radius, height, radius]` - X/Z control base radius, Y controls height  
+- **Torus**: `[radius, radius, radius]` - Use uniform scale for major radius (tube radius is 0.3× major)
+- **Plane**: `[width, height, 1]` - X/Y control dimensions, Z typically kept at 1
+
+Defaults to `[1, 1, 1]`.
+
+**Note**: Primitives are centered at their origin. To position a primitive with its bottom at y=0:
+- Box/Cylinder/Cone: `position.y = scale.y / 2`
+- Sphere: `position.y = scale.x` (assuming uniform scale)
+- Torus: `position.y = scale.x * 1.3` (major radius + tube radius)
+
+### `.physics`: String | null
+
+The physics body type for the primitive. Can be:
 - `null` - No physics (default)
+- `'static'` - Immovable objects (walls, floors, etc.)
+- `'kinematic'` - Movable by code but not physics (platforms, doors)
+- `'dynamic'` - Fully simulated physics objects
 
-When passing an object, the following properties are available:
+Defaults to `null`.
 
-```javascript
-{
-  type: 'static' | 'kinematic' | 'dynamic',  // Physics body type (default: 'static')
-  mass: Number,                               // Mass in kg for dynamic bodies (default: 1)
-  linearDamping: Number,                      // Linear velocity damping 0-1 (default: 0)
-  angularDamping: Number,                     // Angular velocity damping 0-1 (default: 0.05)
-  staticFriction: Number,                     // Static friction coefficient 0-1 (default: 0.6)
-  dynamicFriction: Number,                    // Dynamic friction coefficient 0-1 (default: 0.6)
-  restitution: Number,                        // Bounciness 0-1 (default: 0)
-  layer: String,                              // Collision layer (default: 'environment')
-  trigger: Boolean,                           // Is trigger volume? (default: false)
-  tag: String,                                // Custom tag for identification
-  onContactStart: Function,                   // Called when contact begins
-  onContactEnd: Function,                     // Called when contact ends
-  onTriggerEnter: Function,                   // Called when entering trigger (trigger only)
-  onTriggerLeave: Function,                   // Called when leaving trigger (trigger only)
-}
-```
+### `.physicsMass`: Number
 
-Physics types:
-- `static` - Immovable objects (walls, floors, etc.)
-- `kinematic` - Movable by code but not physics (platforms, doors)
-- `dynamic` - Fully simulated physics objects
+The mass in kg for dynamic bodies. Only applies when physics is set to `'dynamic'`. Defaults to `1`.
+
+### `.physicsLinearDamping`: Number
+
+Linear velocity damping factor from 0 to 1. Higher values make objects slow down faster. Defaults to `0`.
+
+### `.physicsAngularDamping`: Number
+
+Angular velocity damping factor from 0 to 1. Higher values reduce rotation speed faster. Defaults to `0.05`.
+
+### `.physicsStaticFriction`: Number
+
+Static friction coefficient from 0 to 1. Determines resistance to start moving when at rest. Defaults to `0.6`.
+
+### `.physicsDynamicFriction`: Number
+
+Dynamic friction coefficient from 0 to 1. Determines resistance while moving. Defaults to `0.6`.
+
+### `.physicsRestitution`: Number
+
+Bounciness factor from 0 to 1. 0 = no bounce, 1 = perfect bounce. Defaults to `0`.
+
+### `.physicsLayer`: String
+
+The collision layer for physics filtering. Defaults to `'environment'`.
+
+### `.physicsTrigger`: Boolean
+
+Whether this is a trigger volume (detects overlaps without causing collisions). Defaults to `false`.
+
+### `.physicsTag`: String | null
+
+Custom tag for identifying physics bodies. Defaults to `null`.
+
+### `.physicsOnContactStart`: Function | null
+
+Callback function called when contact with another physics body begins. Receives the other body as parameter. Defaults to `null`.
+
+### `.physicsOnContactEnd`: Function | null
+
+Callback function called when contact with another physics body ends. Receives the other body as parameter. Defaults to `null`.
+
+### `.physicsOnTriggerEnter`: Function | null
+
+Callback function called when another body enters this trigger volume. Only works when `physicsTrigger` is `true`. Defaults to `null`.
+
+### `.physicsOnTriggerLeave`: Function | null
+
+Callback function called when another body leaves this trigger volume. Only works when `physicsTrigger` is `true`. Defaults to `null`.
 
 ### `.{...Node}`
 
@@ -115,7 +150,7 @@ Inherits all [Node](/docs/scripting/nodes/Node.md) properties
 // Create various primitives with different materials
 const box = app.create('prim', {
   kind: 'box',
-  size: [2, 1, 3],
+  scale: [2, 1, 3],
   position: [0, 1, 0],
   color: '#ff0000',
   metalness: 0.8,
@@ -124,7 +159,7 @@ const box = app.create('prim', {
 
 const sphere = app.create('prim', {
   kind: 'sphere',
-  size: [0.5],
+  scale: [0.5, 0.5, 0.5],
   position: [3, 1, 0],
   color: '#0000ff',
   emissive: '#00ff00', // Green glow
@@ -134,7 +169,7 @@ const sphere = app.create('prim', {
 // Transparent glass-like cylinder
 const cylinder = app.create('prim', {
   kind: 'cylinder',
-  size: [0.3, 2],
+  scale: [0.3, 2, 0.3],
   position: [-3, 1, 0],
   color: '#ffffff',
   transparent: true,
@@ -146,7 +181,7 @@ const cylinder = app.create('prim', {
 // Animated torus
 const torus = app.create('prim', {
   kind: 'torus',
-  size: [1, 0.3],
+  scale: [1, 1, 1],
   position: [0, 3, 0],
   color: '#ffff00'
 })
@@ -154,11 +189,11 @@ const torus = app.create('prim', {
 // Textured plane (double-sided)
 const texturedPlane = app.create('prim', {
   kind: 'plane',
-  size: [2, 2],
+  scale: [2, 2, 1],
   position: [0, 1, -3],
   rotation: [-Math.PI/2, 0, 0],
   texture: 'https://example.com/texture.jpg',
-  doubleSided: true // Visible from both sides
+  doubleside: true // Visible from both sides
 })
 
 app.add(box)
@@ -177,45 +212,45 @@ app.on('update', (dt) => {
 // Static floor
 const floor = app.create('prim', {
   kind: 'box',
-  size: [10, 0.1, 10],
+  scale: [10, 0.1, 10],
   position: [0, 0, 0],
   color: '#333333',
-  physics: true // Static by default
+  physics: 'static'
 })
 
 // Dynamic bouncing ball
 const ball = app.create('prim', {
   kind: 'sphere',
-  size: [0.5],
+  scale: [0.5, 0.5, 0.5],
   position: [0, 5, 0],
   color: '#ff0000',
-  physics: {
-    type: 'dynamic',
-    mass: 1,
-    restitution: 0.8, // Bouncy!
-    linearDamping: 0.1
-  }
+  physics: 'dynamic',
+  physicsMass: 1,
+  physicsRestitution: 0.8, // Bouncy!
+  physicsLinearDamping: 0.1
 })
 
 // Trigger zone
 const triggerZone = app.create('prim', {
   kind: 'box',
-  size: [2, 2, 2],
+  scale: [2, 2, 2],
   position: [5, 1, 0],
   color: '#00ff00',
   transparent: true,
   opacity: 0.3,
-  physics: {
-    type: 'static',
-    trigger: true,
-    onTriggerEnter: (other) => {
-      console.log('Something entered the zone!', other)
-    },
-    onTriggerLeave: (other) => {
-      console.log('Something left the zone!', other)
-    }
+  physics: 'static',
+  physicsTrigger: true,
+  physicsOnTriggerEnter: (other) => {
+    console.log('Something entered the zone!', other)
+  },
+  physicsOnTriggerLeave: (other) => {
+    console.log('Something left the zone!', other)
   }
 })
+
+// Reactive physics properties
+ball.physicsTag = 'player_ball' // Can be changed at runtime
+ball.physicsRestitution = 0.5   // Updates bounciness
 
 app.add(floor)
 app.add(ball)
@@ -235,7 +270,7 @@ app.add(triggerZone)
 - `box` and `sphere` primitives have exact physics collision shapes
 - `cylinder`, `cone`, and `torus` use box approximations for physics
 - `plane` uses a thin box for collision
-- Physics bodies are positioned with their bottom at y=0 to match the visual geometry
+- Physics bodies are centered to match the visual geometry
 - Dynamic bodies require the `mass` property to be set
 - Trigger volumes don't cause physical collisions but can detect overlaps
 - Physics callbacks (onContactStart, etc.) receive the other colliding object as a parameter

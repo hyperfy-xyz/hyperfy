@@ -1,5 +1,5 @@
 import * as THREE from '../extras/three'
-import { isBoolean, isNumber, isString, isArray, isObject } from 'lodash-es'
+import { isBoolean, isNumber, isString, isArray, isObject, isFunction } from 'lodash-es'
 
 import { Node, secureRef } from './Node'
 import { getTrianglesFromGeometry } from '../extras/getTrianglesFromGeometry'
@@ -9,7 +9,6 @@ import { geometryToPxMesh } from '../extras/geometryToPxMesh'
 
 const defaults = {
   kind: 'box',
-  size: [1, 1, 1],
   color: '#ffffff',
   emissive: null,
   emissiveIntensity: 1,
@@ -20,21 +19,24 @@ const defaults = {
   texture: null,
   castShadow: true,
   receiveShadow: true,
-  physics: null,
-  doubleSided: false,
+  doubleside: false,
+  // Physics properties
+  physics: null, // null | 'static' | 'kinematic' | 'dynamic'
+  physicsMass: 1,
+  physicsLinearDamping: 0,
+  physicsAngularDamping: 0.05,
+  physicsStaticFriction: 0.6,
+  physicsDynamicFriction: 0.6,
+  physicsRestitution: 0,
+  physicsLayer: 'environment',
+  physicsTrigger: false,
+  physicsTag: null,
+  physicsOnContactStart: null,
+  physicsOnContactEnd: null,
+  physicsOnTriggerEnter: null,
+  physicsOnTriggerLeave: null,
 }
 
-const physicsDefaults = {
-  type: 'static',
-  mass: 1,
-  linearDamping: 0,
-  angularDamping: 0.05,
-  staticFriction: 0.6,
-  dynamicFriction: 0.6,
-  restitution: 0,
-  layer: 'environment',
-  trigger: false,
-}
 
 const _v1 = new THREE.Vector3()
 const _v2 = new THREE.Vector3()
@@ -102,7 +104,7 @@ const materialCache = new Map()
 // Create material with specific properties
 const createMaterial = async (props, loader) => {
   // Create a cache key from material properties
-  const cacheKey = `${props.color || '#ffffff'}_${props.emissive || 'null'}_${props.emissiveIntensity || 1}_${props.metalness !== undefined ? props.metalness : 0.2}_${props.roughness !== undefined ? props.roughness : 0.8}_${props.opacity !== undefined ? props.opacity : 1}_${props.transparent || false}_${props.texture || 'null'}_${props.doubleSided || false}`
+  const cacheKey = `${props.color || '#ffffff'}_${props.emissive || 'null'}_${props.emissiveIntensity || 1}_${props.metalness !== undefined ? props.metalness : 0.2}_${props.roughness !== undefined ? props.roughness : 0.8}_${props.opacity !== undefined ? props.opacity : 1}_${props.transparent || false}_${props.texture || 'null'}_${props.doubleside || false}`
   
   // Check cache first
   if (materialCache.has(cacheKey)) {
@@ -117,7 +119,7 @@ const createMaterial = async (props, loader) => {
     roughness: props.roughness !== undefined ? props.roughness : 0.8,
     opacity: props.opacity !== undefined ? props.opacity : 1,
     transparent: props.transparent || false,
-    side: props.doubleSided ? THREE.DoubleSide : THREE.FrontSide,
+    side: props.doubleside ? THREE.DoubleSide : THREE.FrontSide,
   })
   
   // Load texture if provided
@@ -150,7 +152,6 @@ export class Prim extends Node {
     this.name = 'prim'
     
     this.kind = data.kind
-    this.size = data.size
     this.color = data.color !== undefined ? data.color : defaults.color
     this.emissive = data.emissive !== undefined ? data.emissive : defaults.emissive
     this.emissiveIntensity = data.emissiveIntensity !== undefined ? data.emissiveIntensity : defaults.emissiveIntensity
@@ -161,8 +162,22 @@ export class Prim extends Node {
     this.texture = data.texture !== undefined ? data.texture : defaults.texture
     this.castShadow = data.castShadow
     this.receiveShadow = data.receiveShadow
+    this.doubleside = data.doubleside
+    // Physics properties
     this.physics = data.physics
-    this.doubleSided = data.doubleSided
+    this.physicsMass = data.physicsMass
+    this.physicsLinearDamping = data.physicsLinearDamping
+    this.physicsAngularDamping = data.physicsAngularDamping
+    this.physicsStaticFriction = data.physicsStaticFriction
+    this.physicsDynamicFriction = data.physicsDynamicFriction
+    this.physicsRestitution = data.physicsRestitution
+    this.physicsLayer = data.physicsLayer
+    this.physicsTrigger = data.physicsTrigger
+    this.physicsTag = data.physicsTag
+    this.physicsOnContactStart = data.physicsOnContactStart
+    this.physicsOnContactEnd = data.physicsOnContactEnd
+    this.physicsOnTriggerEnter = data.physicsOnTriggerEnter
+    this.physicsOnTriggerLeave = data.physicsOnTriggerLeave
     
     // Physics state
     this.shapes = new Set()
@@ -177,9 +192,6 @@ export class Prim extends Node {
     // Get unit-sized geometry for this kind
     const geometry = getGeometry(this._kind)
     
-    // Apply size via scale
-    this.updateScaleFromSize()
-    
     // Get loader if available (client-side only)
     const loader = this.ctx.world.loader || null
     
@@ -193,7 +205,7 @@ export class Prim extends Node {
       opacity: this._opacity,
       transparent: this._transparent,
       texture: this._texture,
-      doubleSided: this._doubleSided,
+      doubleside: this._doubleside,
     }, loader)
     
     // Create mesh
@@ -212,36 +224,15 @@ export class Prim extends Node {
     }
   }
   
-  updateScaleFromSize() {
-    // Apply size as scale transformation
-    if (this._kind === 'sphere') {
-      // Sphere uses uniform scale
-      const radius = this._size[0]
-      this.scale.set(radius, radius, radius)
-    } else if (this._kind === 'torus') {
-      // Torus: major radius as uniform scale, tube ratio handled in geometry
-      const radius = this._size[0]
-      this.scale.set(radius, radius, radius)
-    } else if (this._kind === 'cylinder' || this._kind === 'cone') {
-      // Cylinder/cone: radius for X/Z, height for Y
-      const radius = this._size[0]
-      const height = this._size[1]
-      this.scale.set(radius, height, radius)
-    } else {
-      // Box/plane: direct mapping
-      this.scale.set(this._size[0], this._size[1], this._size[2])
-    }
-  }
   
   mountPhysics() {
     if (!PHYSX) return
     
-    const config = this._physics === true ? {} : this._physics
-    const type = config.type || physicsDefaults.type
-    const mass = config.mass !== undefined ? config.mass : physicsDefaults.mass
-    const linearDamping = config.linearDamping !== undefined ? config.linearDamping : physicsDefaults.linearDamping
-    const angularDamping = config.angularDamping !== undefined ? config.angularDamping : physicsDefaults.angularDamping
-    const trigger = config.trigger !== undefined ? config.trigger : physicsDefaults.trigger
+    const type = this._physics // 'static' | 'kinematic' | 'dynamic'
+    const mass = this._physicsMass
+    const linearDamping = this._physicsLinearDamping
+    const angularDamping = this._physicsAngularDamping
+    const trigger = this._physicsTrigger
     
     // Create transform
     this.matrixWorld.decompose(_v1, _q1, _v2)
@@ -269,19 +260,16 @@ export class Prim extends Node {
     let meshHandle = null
     
     if (this._kind === 'box') {
-      pxGeometry = new PHYSX.PxBoxGeometry(this._size[0] / 2, this._size[1] / 2, this._size[2] / 2)
+      pxGeometry = new PHYSX.PxBoxGeometry(this.scale.x / 2, this.scale.y / 2, this.scale.z / 2)
     } else if (this._kind === 'sphere') {
-      pxGeometry = new PHYSX.PxSphereGeometry(this._size[0])
+      pxGeometry = new PHYSX.PxSphereGeometry(this.scale.x)
     } else {
       // Use convex mesh for cylinder, cone, torus, and plane
       const threeGeometry = getGeometry(this._kind)
       
       // Create a scaled version of the geometry for physics
       const scaledGeometry = threeGeometry.clone()
-      const scale = new THREE.Vector3()
-      this.updateScaleFromSize()
-      scale.copy(this.scale)
-      scaledGeometry.scale(scale.x, scale.y, scale.z)
+      scaledGeometry.scale(this.scale.x, this.scale.y, this.scale.z)
       
       // Create convex mesh
       meshHandle = geometryToPxMesh(this.ctx.world, scaledGeometry, true)
@@ -296,9 +284,9 @@ export class Prim extends Node {
     }
     
     // Get material
-    const staticFriction = config.staticFriction !== undefined ? config.staticFriction : physicsDefaults.staticFriction
-    const dynamicFriction = config.dynamicFriction !== undefined ? config.dynamicFriction : physicsDefaults.dynamicFriction
-    const restitution = config.restitution !== undefined ? config.restitution : physicsDefaults.restitution
+    const staticFriction = this._physicsStaticFriction
+    const dynamicFriction = this._physicsDynamicFriction
+    const restitution = this._physicsRestitution
     const material = this.ctx.world.physics.getMaterial(staticFriction, dynamicFriction, restitution)
     
     // Create shape flags
@@ -313,7 +301,7 @@ export class Prim extends Node {
     this.shape = this.ctx.world.physics.physics.createShape(pxGeometry, material, true, flags)
     
     // Set filter data
-    const layerName = config.layer || physicsDefaults.layer
+    const layerName = this._physicsLayer
     const layer = Layers[layerName]
     let pairFlags = PHYSX.PxPairFlagEnum.eNOTIFY_TOUCH_FOUND | PHYSX.PxPairFlagEnum.eNOTIFY_TOUCH_LOST
     if (!trigger) {
@@ -343,22 +331,22 @@ export class Prim extends Node {
       onInterpolate: type === 'kinematic' || type === 'dynamic' ? this.onInterpolate : null,
       node: this,
       get tag() {
-        return config.tag || null
+        return self._physicsTag
       },
       get playerId() {
         return playerId
       },
       get onContactStart() {
-        return config.onContactStart || null
+        return self._physicsOnContactStart
       },
       get onContactEnd() {
-        return config.onContactEnd || null
+        return self._physicsOnContactEnd
       },
       get onTriggerEnter() {
-        return config.onTriggerEnter || null
+        return self._physicsOnTriggerEnter
       },
       get onTriggerLeave() {
-        return config.onTriggerLeave || null
+        return self._physicsOnTriggerLeave
       },
     })
     
@@ -398,16 +386,16 @@ export class Prim extends Node {
     // Returns the offset needed for colliders to match the visual geometry
     switch (this._kind) {
       case 'box':
-        return [0, this._size[1] * 0.5, 0]
+        return [0, this.scale.y * 0.5, 0]
       case 'sphere':
-        return [0, this._size[0], 0]
+        return [0, this.scale.x, 0]
       case 'cylinder':
-        return [0, this._size[1] * 0.5, 0]
+        return [0, this.scale.y * 0.5, 0]
       case 'cone':
-        return [0, this._size[1] * 0.5, 0]
+        return [0, this.scale.y * 0.5, 0]
       case 'torus':
-        const majorRadius = this._size[0]
-        const tubeRadius = this._size[1] || this._size[0] * 0.3
+        const majorRadius = this.scale.x
+        const tubeRadius = this.scale.x * 0.3 // Standard tube ratio
         return [0, majorRadius + tubeRadius, 0]
       case 'plane':
         return [0, 0, 0]
@@ -420,14 +408,14 @@ export class Prim extends Node {
     // Returns appropriate collider dimensions
     switch (this._kind) {
       case 'cylinder':
-        return [this._size[0] * 2, this._size[1], this._size[0] * 2]
+        return [this.scale.x * 2, this.scale.y, this.scale.z * 2]
       case 'cone':
-        return [this._size[0] * 2, this._size[1], this._size[0] * 2]
+        return [this.scale.x * 2, this.scale.y, this.scale.z * 2]
       case 'torus':
-        const diameter = (this._size[0] + (this._size[1] || this._size[0] * 0.3)) * 2
-        return [diameter, (this._size[1] || this._size[0] * 0.3) * 2, diameter]
+        const diameter = (this.scale.x + this.scale.x * 0.3) * 2
+        return [diameter, this.scale.x * 0.3 * 2, diameter]
       default:
-        return [...this._size]
+        return [this.scale.x, this.scale.y, this.scale.z]
     }
   }
   
@@ -456,13 +444,26 @@ export class Prim extends Node {
   copy(source, recursive) {
     super.copy(source, recursive)
     this._kind = source._kind
-    this._size = [...source._size]
     this._color = source._color
     this._emissive = source._emissive
     this._castShadow = source._castShadow
     this._receiveShadow = source._receiveShadow
-    this._physics = source._physics ? { ...source._physics } : null
-    this._doubleSided = source._doubleSided
+    this._doubleside = source._doubleside
+    // Physics properties
+    this._physics = source._physics
+    this._physicsMass = source._physicsMass
+    this._physicsLinearDamping = source._physicsLinearDamping
+    this._physicsAngularDamping = source._physicsAngularDamping
+    this._physicsStaticFriction = source._physicsStaticFriction
+    this._physicsDynamicFriction = source._physicsDynamicFriction
+    this._physicsRestitution = source._physicsRestitution
+    this._physicsLayer = source._physicsLayer
+    this._physicsTrigger = source._physicsTrigger
+    this._physicsTag = source._physicsTag
+    this._physicsOnContactStart = source._physicsOnContactStart
+    this._physicsOnContactEnd = source._physicsOnContactEnd
+    this._physicsOnTriggerEnter = source._physicsOnTriggerEnter
+    this._physicsOnTriggerLeave = source._physicsOnTriggerLeave
     return this
   }
   
@@ -491,30 +492,6 @@ export class Prim extends Node {
     this._kind = value
     if (this.handle) {
       this.needsRebuild = true
-      this.setDirty()
-    }
-  }
-  
-  get size() {
-    return this._size
-  }
-  
-  set size(value = defaults.size) {
-    if (!isArray(value) || value.length < 1 || value.length > 3) {
-      throw new Error('[prim] size must be array of 1-3 numbers')
-    }
-    // Normalize size array
-    const normalized = [
-      value[0] || 1,
-      value[1] || value[0] || 1,
-      value[2] || value[0] || 1
-    ]
-    if (this._size && this._size[0] === normalized[0] && this._size[1] === normalized[1] && this._size[2] === normalized[2]) return
-    this._size = normalized
-    
-    // Update scale instead of rebuilding
-    if (this.handle) {
-      this.updateScaleFromSize()
       this.setDirty()
     }
   }
@@ -684,8 +661,8 @@ export class Prim extends Node {
   }
   
   set physics(value = defaults.physics) {
-    if (value !== null && value !== true && !isObject(value)) {
-      throw new Error('[prim] physics must be true, object, or null')
+    if (value !== null && value !== 'static' && value !== 'kinematic' && value !== 'dynamic') {
+      throw new Error('[prim] physics must be null, "static", "kinematic", or "dynamic"')
     }
     if (this._physics === value) return
     this._physics = value
@@ -695,16 +672,205 @@ export class Prim extends Node {
     }
   }
   
-  get doubleSided() {
-    return this._doubleSided
+  get physicsMass() {
+    return this._physicsMass
   }
   
-  set doubleSided(value = defaults.doubleSided) {
-    if (!isBoolean(value)) {
-      throw new Error('[prim] doubleSided must be boolean')
+  set physicsMass(value = defaults.physicsMass) {
+    if (!isNumber(value) || value <= 0) {
+      throw new Error('[prim] physicsMass must be positive number')
     }
-    if (this._doubleSided === value) return
-    this._doubleSided = value
+    if (this._physicsMass === value) return
+    this._physicsMass = value
+    if (this.handle && this._physics) {
+      this.needsRebuild = true
+      this.setDirty()
+    }
+  }
+  
+  get physicsLinearDamping() {
+    return this._physicsLinearDamping
+  }
+  
+  set physicsLinearDamping(value = defaults.physicsLinearDamping) {
+    if (!isNumber(value) || value < 0) {
+      throw new Error('[prim] physicsLinearDamping must be non-negative number')
+    }
+    if (this._physicsLinearDamping === value) return
+    this._physicsLinearDamping = value
+    if (this.handle && this._physics) {
+      this.needsRebuild = true
+      this.setDirty()
+    }
+  }
+  
+  get physicsAngularDamping() {
+    return this._physicsAngularDamping
+  }
+  
+  set physicsAngularDamping(value = defaults.physicsAngularDamping) {
+    if (!isNumber(value) || value < 0) {
+      throw new Error('[prim] physicsAngularDamping must be non-negative number')
+    }
+    if (this._physicsAngularDamping === value) return
+    this._physicsAngularDamping = value
+    if (this.handle && this._physics) {
+      this.needsRebuild = true
+      this.setDirty()
+    }
+  }
+  
+  get physicsStaticFriction() {
+    return this._physicsStaticFriction
+  }
+  
+  set physicsStaticFriction(value = defaults.physicsStaticFriction) {
+    if (!isNumber(value) || value < 0 || value > 1) {
+      throw new Error('[prim] physicsStaticFriction must be number between 0 and 1')
+    }
+    if (this._physicsStaticFriction === value) return
+    this._physicsStaticFriction = value
+    if (this.handle && this._physics) {
+      this.needsRebuild = true
+      this.setDirty()
+    }
+  }
+  
+  get physicsDynamicFriction() {
+    return this._physicsDynamicFriction
+  }
+  
+  set physicsDynamicFriction(value = defaults.physicsDynamicFriction) {
+    if (!isNumber(value) || value < 0 || value > 1) {
+      throw new Error('[prim] physicsDynamicFriction must be number between 0 and 1')
+    }
+    if (this._physicsDynamicFriction === value) return
+    this._physicsDynamicFriction = value
+    if (this.handle && this._physics) {
+      this.needsRebuild = true
+      this.setDirty()
+    }
+  }
+  
+  get physicsRestitution() {
+    return this._physicsRestitution
+  }
+  
+  set physicsRestitution(value = defaults.physicsRestitution) {
+    if (!isNumber(value) || value < 0 || value > 1) {
+      throw new Error('[prim] physicsRestitution must be number between 0 and 1')
+    }
+    if (this._physicsRestitution === value) return
+    this._physicsRestitution = value
+    if (this.handle && this._physics) {
+      this.needsRebuild = true
+      this.setDirty()
+    }
+  }
+  
+  get physicsLayer() {
+    return this._physicsLayer
+  }
+  
+  set physicsLayer(value = defaults.physicsLayer) {
+    if (!isString(value)) {
+      throw new Error('[prim] physicsLayer must be string')
+    }
+    if (this._physicsLayer === value) return
+    this._physicsLayer = value
+    if (this.handle && this._physics) {
+      this.needsRebuild = true
+      this.setDirty()
+    }
+  }
+  
+  get physicsTrigger() {
+    return this._physicsTrigger
+  }
+  
+  set physicsTrigger(value = defaults.physicsTrigger) {
+    if (!isBoolean(value)) {
+      throw new Error('[prim] physicsTrigger must be boolean')
+    }
+    if (this._physicsTrigger === value) return
+    this._physicsTrigger = value
+    if (this.handle && this._physics) {
+      this.needsRebuild = true
+      this.setDirty()
+    }
+  }
+  
+  get physicsTag() {
+    return this._physicsTag
+  }
+  
+  set physicsTag(value = defaults.physicsTag) {
+    if (value !== null && !isString(value)) {
+      throw new Error('[prim] physicsTag must be string or null')
+    }
+    if (this._physicsTag === value) return
+    this._physicsTag = value
+    // Tag can be updated without rebuild since it uses getter
+  }
+  
+  get physicsOnContactStart() {
+    return this._physicsOnContactStart
+  }
+  
+  set physicsOnContactStart(value = defaults.physicsOnContactStart) {
+    if (value !== null && typeof value !== 'function') {
+      throw new Error('[prim] physicsOnContactStart must be function or null')
+    }
+    this._physicsOnContactStart = value
+    // Callbacks can be updated without rebuild since they use getters
+  }
+  
+  get physicsOnContactEnd() {
+    return this._physicsOnContactEnd
+  }
+  
+  set physicsOnContactEnd(value = defaults.physicsOnContactEnd) {
+    if (value !== null && typeof value !== 'function') {
+      throw new Error('[prim] physicsOnContactEnd must be function or null')
+    }
+    this._physicsOnContactEnd = value
+    // Callbacks can be updated without rebuild since they use getters
+  }
+  
+  get physicsOnTriggerEnter() {
+    return this._physicsOnTriggerEnter
+  }
+  
+  set physicsOnTriggerEnter(value = defaults.physicsOnTriggerEnter) {
+    if (value !== null && typeof value !== 'function') {
+      throw new Error('[prim] physicsOnTriggerEnter must be function or null')
+    }
+    this._physicsOnTriggerEnter = value
+    // Callbacks can be updated without rebuild since they use getters
+  }
+  
+  get physicsOnTriggerLeave() {
+    return this._physicsOnTriggerLeave
+  }
+  
+  set physicsOnTriggerLeave(value = defaults.physicsOnTriggerLeave) {
+    if (value !== null && typeof value !== 'function') {
+      throw new Error('[prim] physicsOnTriggerLeave must be function or null')
+    }
+    this._physicsOnTriggerLeave = value
+    // Callbacks can be updated without rebuild since they use getters
+  }
+  
+  get doubleside() {
+    return this._doubleside
+  }
+  
+  set doubleside(value = defaults.doubleside) {
+    if (!isBoolean(value)) {
+      throw new Error('[prim] doubleside must be boolean')
+    }
+    if (this._doubleside === value) return
+    this._doubleside = value
     if (this.handle) {
       this.needsRebuild = true
       this.setDirty()
@@ -720,12 +886,6 @@ export class Prim extends Node {
         },
         set kind(value) {
           self.kind = value
-        },
-        get size() {
-          return [...self.size]
-        },
-        set size(value) {
-          self.size = value
         },
         get color() {
           return self.color
@@ -793,11 +953,89 @@ export class Prim extends Node {
         set physics(value) {
           self.physics = value
         },
-        get doubleSided() {
-          return self.doubleSided
+        get physicsMass() {
+          return self.physicsMass
         },
-        set doubleSided(value) {
-          self.doubleSided = value
+        set physicsMass(value) {
+          self.physicsMass = value
+        },
+        get physicsLinearDamping() {
+          return self.physicsLinearDamping
+        },
+        set physicsLinearDamping(value) {
+          self.physicsLinearDamping = value
+        },
+        get physicsAngularDamping() {
+          return self.physicsAngularDamping
+        },
+        set physicsAngularDamping(value) {
+          self.physicsAngularDamping = value
+        },
+        get physicsStaticFriction() {
+          return self.physicsStaticFriction
+        },
+        set physicsStaticFriction(value) {
+          self.physicsStaticFriction = value
+        },
+        get physicsDynamicFriction() {
+          return self.physicsDynamicFriction
+        },
+        set physicsDynamicFriction(value) {
+          self.physicsDynamicFriction = value
+        },
+        get physicsRestitution() {
+          return self.physicsRestitution
+        },
+        set physicsRestitution(value) {
+          self.physicsRestitution = value
+        },
+        get physicsLayer() {
+          return self.physicsLayer
+        },
+        set physicsLayer(value) {
+          self.physicsLayer = value
+        },
+        get physicsTrigger() {
+          return self.physicsTrigger
+        },
+        set physicsTrigger(value) {
+          self.physicsTrigger = value
+        },
+        get physicsTag() {
+          return self.physicsTag
+        },
+        set physicsTag(value) {
+          self.physicsTag = value
+        },
+        get physicsOnContactStart() {
+          return self.physicsOnContactStart
+        },
+        set physicsOnContactStart(value) {
+          self.physicsOnContactStart = value
+        },
+        get physicsOnContactEnd() {
+          return self.physicsOnContactEnd
+        },
+        set physicsOnContactEnd(value) {
+          self.physicsOnContactEnd = value
+        },
+        get physicsOnTriggerEnter() {
+          return self.physicsOnTriggerEnter
+        },
+        set physicsOnTriggerEnter(value) {
+          self.physicsOnTriggerEnter = value
+        },
+        get physicsOnTriggerLeave() {
+          return self.physicsOnTriggerLeave
+        },
+        set physicsOnTriggerLeave(value) {
+          self.physicsOnTriggerLeave = value
+        },
+        get doubleside() {
+          return self.doubleside
+        },
+        set doubleside(value) {
+          self.doubleside = value
         },
       }
       proxy = Object.defineProperties(proxy, Object.getOwnPropertyDescriptors(super.getProxy())) // inherit Node properties
