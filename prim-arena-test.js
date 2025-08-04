@@ -26,7 +26,7 @@ const floor = app.create('prim', {
   color: '#2a2a2a',
   metalness: 0.2,
   roughness: 0.8,
-  physics: true
+  physics: 'static'
 })
 app.add(floor)
 
@@ -39,7 +39,7 @@ walls.push(app.create('prim', {
   scale: [ARENA_SIZE, WALL_HEIGHT, WALL_THICKNESS],
   position: [0, WALL_HEIGHT/2, -ARENA_SIZE/2],
   color: '#444444',
-  physics: true
+  physics: 'static'
 }))
 
 // South wall
@@ -48,7 +48,7 @@ walls.push(app.create('prim', {
   scale: [ARENA_SIZE, WALL_HEIGHT, WALL_THICKNESS],
   position: [0, WALL_HEIGHT/2, ARENA_SIZE/2],
   color: '#444444',
-  physics: true
+  physics: 'static'
 }))
 
 // East wall
@@ -57,7 +57,7 @@ walls.push(app.create('prim', {
   scale: [WALL_THICKNESS, WALL_HEIGHT, ARENA_SIZE],
   position: [ARENA_SIZE/2, WALL_HEIGHT/2, 0],
   color: '#444444',
-  physics: true
+  physics: 'static'
 }))
 
 // West wall
@@ -66,7 +66,7 @@ walls.push(app.create('prim', {
   scale: [WALL_THICKNESS, WALL_HEIGHT, ARENA_SIZE],
   position: [-ARENA_SIZE/2, WALL_HEIGHT/2, 0],
   color: '#444444',
-  physics: true
+  physics: 'static'
 }))
 
 walls.forEach(wall => app.add(wall))
@@ -92,7 +92,7 @@ for (let i = 0; i < OBSTACLE_COUNT; i++) {
     color: `hsl(${200 + Math.random() * 40}, 20%, ${30 + Math.random() * 20}%)`,
     metalness: 0.4,
     roughness: 0.6,
-    physics: true
+    physics: 'static'
   })
   
   obstacles.push(obstacle)
@@ -115,14 +115,12 @@ function createRing(index) {
     emissiveIntensity: 2,
     metalness: 0.8,
     roughness: 0.2,
-    physics: {
-      type: 'static',
-      trigger: true,
-      tag: `ring_${index}`,
-      onTriggerEnter: (other) => {
-        if (other.playerId) { // Player touched the ring
-          collectRing(ring, index, other.playerId)
-        }
+    physics: 'static',
+    physicsTrigger: true,
+    physicsTag: `ring_${index}`,
+    physicsOnTriggerEnter: (other) => {
+      if (other.playerId) { // Player touched the ring
+        collectRing(ring, index, other.playerId)
       }
     }
   })

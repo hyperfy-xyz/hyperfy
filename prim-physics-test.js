@@ -13,7 +13,7 @@ const floor = app.create('prim', {
   scale: [50, 0.2, 50],
   position: [0, -0.1, 0],
   color: '#2a2a2a',
-  physics: true,
+  physics: 'static',
 })
 app.add(floor)
 
@@ -31,7 +31,7 @@ wallConfigs.forEach(cfg => {
       scale: cfg.scale,
       position: cfg.pos,
       color: '#444444',
-      physics: true,
+      physics: 'static',
     })
   )
 })
@@ -175,13 +175,11 @@ PRIMITIVE_TYPES.forEach((primType, row) => {
       metalness: 0.5,
       roughness: 0.5,
       doubleside: primType === 'plane',
-      physics: {
-        type: physType,
-        mass: physType === 'dynamic' ? 1 : undefined,
-        restitution: 0.3,
-        linearDamping: 0.1,
-        angularDamping: 0.1,
-      },
+      physics: physType,
+      physicsMass: physType === 'dynamic' ? 1 : 1,
+      physicsRestitution: 0.3,
+      physicsLinearDamping: 0.1,
+      physicsAngularDamping: 0.1,
     })
 
     testPrimitives.push({ prim, type: primType, physicsType: physType, originalY: yPos })
@@ -196,17 +194,16 @@ PRIMITIVE_TYPES.forEach((primType, row) => {
         color: '#00ff00',
         transparent: true,
         opacity: 0.2,
-        physics: {
-          type: 'static',
-          trigger: true,
-          tag: `trigger_${primType}`,
-          onTriggerEnter: other => {
-            console.log(`${primType} trigger entered by:`, other.playerId || 'unknown')
-            updateStatus(`✓ ${primType} trigger entered`)
-          },
-          onTriggerLeave: other => {
-            console.log(`${primType} trigger left by:`, other.playerId || 'unknown')
-          },
+        physics: 'static',
+        physicsTrigger: true,
+        physicsTag: `trigger_${primType}`,
+        physicsOnTriggerEnter: other => {
+          console.log('trigger data', other)
+          console.log(`${primType} trigger entered by:`, other.playerId || 'unknown')
+          updateStatus(`✓ ${primType} trigger entered`)
+        },
+        physicsOnTriggerLeave: other => {
+          console.log(`${primType} trigger left by:`, other.playerId || 'unknown')
         },
       })
       app.add(trigger)
@@ -233,12 +230,10 @@ const testBall = app.create('prim', {
   color: '#ff00ff',
   emissive: '#ff00ff',
   emissiveIntensity: 0.5,
-  physics: {
-    type: 'dynamic',
-    mass: 2,
-    restitution: 0.8,
-    tag: 'test_ball',
-  },
+  physics: 'dynamic',
+  physicsMass: 2,
+  physicsRestitution: 0.8,
+  physicsTag: 'test_ball',
 })
 app.add(testBall)
 

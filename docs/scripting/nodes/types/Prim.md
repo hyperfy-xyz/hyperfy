@@ -59,38 +59,67 @@ Whether the primitive should receive shadows from other objects. Defaults to `tr
 
 Whether the primitive should be rendered from both sides. This is particularly useful for plane primitives that need to be visible from both front and back. Defaults to `false`.
 
-### `.physics`: Boolean | Object | null
+### `.physics`: String | null
 
-Enables physics for the primitive. Can be:
-- `true` - Enables static physics with default settings
-- `Object` - Detailed physics configuration (see below)
+The physics body type for the primitive. Can be:
 - `null` - No physics (default)
+- `'static'` - Immovable objects (walls, floors, etc.)
+- `'kinematic'` - Movable by code but not physics (platforms, doors)
+- `'dynamic'` - Fully simulated physics objects
 
-When passing an object, the following properties are available:
+Defaults to `null`.
 
-```javascript
-{
-  type: 'static' | 'kinematic' | 'dynamic',  // Physics body type (default: 'static')
-  mass: Number,                               // Mass in kg for dynamic bodies (default: 1)
-  linearDamping: Number,                      // Linear velocity damping 0-1 (default: 0)
-  angularDamping: Number,                     // Angular velocity damping 0-1 (default: 0.05)
-  staticFriction: Number,                     // Static friction coefficient 0-1 (default: 0.6)
-  dynamicFriction: Number,                    // Dynamic friction coefficient 0-1 (default: 0.6)
-  restitution: Number,                        // Bounciness 0-1 (default: 0)
-  layer: String,                              // Collision layer (default: 'environment')
-  trigger: Boolean,                           // Is trigger volume? (default: false)
-  tag: String,                                // Custom tag for identification
-  onContactStart: Function,                   // Called when contact begins
-  onContactEnd: Function,                     // Called when contact ends
-  onTriggerEnter: Function,                   // Called when entering trigger (trigger only)
-  onTriggerLeave: Function,                   // Called when leaving trigger (trigger only)
-}
-```
+### `.physicsMass`: Number
 
-Physics types:
-- `static` - Immovable objects (walls, floors, etc.)
-- `kinematic` - Movable by code but not physics (platforms, doors)
-- `dynamic` - Fully simulated physics objects
+The mass in kg for dynamic bodies. Only applies when physics is set to `'dynamic'`. Defaults to `1`.
+
+### `.physicsLinearDamping`: Number
+
+Linear velocity damping factor from 0 to 1. Higher values make objects slow down faster. Defaults to `0`.
+
+### `.physicsAngularDamping`: Number
+
+Angular velocity damping factor from 0 to 1. Higher values reduce rotation speed faster. Defaults to `0.05`.
+
+### `.physicsStaticFriction`: Number
+
+Static friction coefficient from 0 to 1. Determines resistance to start moving when at rest. Defaults to `0.6`.
+
+### `.physicsDynamicFriction`: Number
+
+Dynamic friction coefficient from 0 to 1. Determines resistance while moving. Defaults to `0.6`.
+
+### `.physicsRestitution`: Number
+
+Bounciness factor from 0 to 1. 0 = no bounce, 1 = perfect bounce. Defaults to `0`.
+
+### `.physicsLayer`: String
+
+The collision layer for physics filtering. Defaults to `'environment'`.
+
+### `.physicsTrigger`: Boolean
+
+Whether this is a trigger volume (detects overlaps without causing collisions). Defaults to `false`.
+
+### `.physicsTag`: String | null
+
+Custom tag for identifying physics bodies. Defaults to `null`.
+
+### `.physicsOnContactStart`: Function | null
+
+Callback function called when contact with another physics body begins. Receives the other body as parameter. Defaults to `null`.
+
+### `.physicsOnContactEnd`: Function | null
+
+Callback function called when contact with another physics body ends. Receives the other body as parameter. Defaults to `null`.
+
+### `.physicsOnTriggerEnter`: Function | null
+
+Callback function called when another body enters this trigger volume. Only works when `physicsTrigger` is `true`. Defaults to `null`.
+
+### `.physicsOnTriggerLeave`: Function | null
+
+Callback function called when another body leaves this trigger volume. Only works when `physicsTrigger` is `true`. Defaults to `null`.
 
 ### `.{...Node}`
 
@@ -167,7 +196,7 @@ const floor = app.create('prim', {
   scale: [10, 0.1, 10],
   position: [0, 0, 0],
   color: '#333333',
-  physics: true // Static by default
+  physics: 'static'
 })
 
 // Dynamic bouncing ball
@@ -176,12 +205,10 @@ const ball = app.create('prim', {
   scale: [0.5, 0.5, 0.5],
   position: [0, 5, 0],
   color: '#ff0000',
-  physics: {
-    type: 'dynamic',
-    mass: 1,
-    restitution: 0.8, // Bouncy!
-    linearDamping: 0.1
-  }
+  physics: 'dynamic',
+  physicsMass: 1,
+  physicsRestitution: 0.8, // Bouncy!
+  physicsLinearDamping: 0.1
 })
 
 // Trigger zone
@@ -192,17 +219,19 @@ const triggerZone = app.create('prim', {
   color: '#00ff00',
   transparent: true,
   opacity: 0.3,
-  physics: {
-    type: 'static',
-    trigger: true,
-    onTriggerEnter: (other) => {
-      console.log('Something entered the zone!', other)
-    },
-    onTriggerLeave: (other) => {
-      console.log('Something left the zone!', other)
-    }
+  physics: 'static',
+  physicsTrigger: true,
+  physicsOnTriggerEnter: (other) => {
+    console.log('Something entered the zone!', other)
+  },
+  physicsOnTriggerLeave: (other) => {
+    console.log('Something left the zone!', other)
   }
 })
+
+// Reactive physics properties
+ball.physicsTag = 'player_ball' // Can be changed at runtime
+ball.physicsRestitution = 0.5   // Updates bounciness
 
 app.add(floor)
 app.add(ball)

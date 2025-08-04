@@ -9,7 +9,7 @@ const floor = app.create('prim', {
   scale: [20, 0.1, 10],
   position: [0, -0.05, 0],
   color: '#2a2a2a',
-  physics: true,
+  physics: 'static',
 })
 app.add(floor)
 
