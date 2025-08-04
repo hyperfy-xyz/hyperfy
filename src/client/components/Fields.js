@@ -487,6 +487,16 @@ export function FieldFile({ world, label, hint, kind: kindName, value, onChange 
     if (nRef.current !== n) return
     // cache file locally so this client can insta-load it
     world.loader.insert(kind.type, url, file)
+
+    // Preload texture if it's a texture type
+    if (kind.type === 'texture') {
+      try {
+        await world.loader.load('texture', url)
+      } catch (err) {
+        console.warn('[FieldFile] Failed to preload texture:', err)
+      }
+    }
+
     // apply!
     setLoading(null)
     onChange(newValue)
