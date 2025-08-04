@@ -174,7 +174,7 @@ PRIMITIVE_TYPES.forEach((primType, row) => {
       color: `hsl(${row * 60}, 70%, 50%)`,
       metalness: 0.5,
       roughness: 0.5,
-      doubleSided: primType === 'plane',
+      doubleside: primType === 'plane',
       physics: {
         type: physType,
         mass: physType === 'dynamic' ? 1 : undefined,

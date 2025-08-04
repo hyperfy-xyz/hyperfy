@@ -55,7 +55,7 @@ Whether the primitive should cast shadows. Defaults to `true`.
 
 Whether the primitive should receive shadows from other objects. Defaults to `true`.
 
-### `.doubleSided`: Boolean
+### `.doubleside`: Boolean
 
 Whether the primitive should be rendered from both sides. This is particularly useful for plane primitives that need to be visible from both front and back. Defaults to `false`.
 
@@ -145,7 +145,7 @@ const texturedPlane = app.create('prim', {
   position: [0, 1, -3],
   rotation: [-Math.PI/2, 0, 0],
   texture: 'https://example.com/texture.jpg',
-  doubleSided: true // Visible from both sides
+  doubleside: true // Visible from both sides
 })
 
 app.add(box)

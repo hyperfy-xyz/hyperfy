@@ -20,7 +20,7 @@ const defaults = {
   castShadow: true,
   receiveShadow: true,
   physics: null,
-  doubleSided: false,
+  doubleside: false,
 }
 
 const physicsDefaults = {
@@ -101,7 +101,7 @@ const materialCache = new Map()
 // Create material with specific properties
 const createMaterial = async (props, loader) => {
   // Create a cache key from material properties
-  const cacheKey = `${props.color || '#ffffff'}_${props.emissive || 'null'}_${props.emissiveIntensity || 1}_${props.metalness !== undefined ? props.metalness : 0.2}_${props.roughness !== undefined ? props.roughness : 0.8}_${props.opacity !== undefined ? props.opacity : 1}_${props.transparent || false}_${props.texture || 'null'}_${props.doubleSided || false}`
+  const cacheKey = `${props.color || '#ffffff'}_${props.emissive || 'null'}_${props.emissiveIntensity || 1}_${props.metalness !== undefined ? props.metalness : 0.2}_${props.roughness !== undefined ? props.roughness : 0.8}_${props.opacity !== undefined ? props.opacity : 1}_${props.transparent || false}_${props.texture || 'null'}_${props.doubleside || false}`
   
   // Check cache first
   if (materialCache.has(cacheKey)) {
@@ -116,7 +116,7 @@ const createMaterial = async (props, loader) => {
     roughness: props.roughness !== undefined ? props.roughness : 0.8,
     opacity: props.opacity !== undefined ? props.opacity : 1,
     transparent: props.transparent || false,
-    side: props.doubleSided ? THREE.DoubleSide : THREE.FrontSide,
+    side: props.doubleside ? THREE.DoubleSide : THREE.FrontSide,
   })
   
   // Load texture if provided
@@ -160,7 +160,7 @@ export class Prim extends Node {
     this.castShadow = data.castShadow
     this.receiveShadow = data.receiveShadow
     this.physics = data.physics
-    this.doubleSided = data.doubleSided
+    this.doubleside = data.doubleside
     
     // Physics state
     this.shapes = new Set()
@@ -188,7 +188,7 @@ export class Prim extends Node {
       opacity: this._opacity,
       transparent: this._transparent,
       texture: this._texture,
-      doubleSided: this._doubleSided,
+      doubleside: this._doubleside,
     }, loader)
     
     // Create mesh
@@ -433,7 +433,7 @@ export class Prim extends Node {
     this._castShadow = source._castShadow
     this._receiveShadow = source._receiveShadow
     this._physics = source._physics ? { ...source._physics } : null
-    this._doubleSided = source._doubleSided
+    this._doubleside = source._doubleside
     return this
   }
   
@@ -642,16 +642,16 @@ export class Prim extends Node {
     }
   }
   
-  get doubleSided() {
-    return this._doubleSided
+  get doubleside() {
+    return this._doubleside
   }
   
-  set doubleSided(value = defaults.doubleSided) {
+  set doubleside(value = defaults.doubleside) {
     if (!isBoolean(value)) {
-      throw new Error('[prim] doubleSided must be boolean')
+      throw new Error('[prim] doubleside must be boolean')
     }
-    if (this._doubleSided === value) return
-    this._doubleSided = value
+    if (this._doubleside === value) return
+    this._doubleside = value
     if (this.handle) {
       this.needsRebuild = true
       this.setDirty()
@@ -734,11 +734,11 @@ export class Prim extends Node {
         set physics(value) {
           self.physics = value
         },
-        get doubleSided() {
-          return self.doubleSided
+        get doubleside() {
+          return self.doubleside
         },
-        set doubleSided(value) {
-          self.doubleSided = value
+        set doubleside(value) {
+          self.doubleside = value
         },
       }
       proxy = Object.defineProperties(proxy, Object.getOwnPropertyDescriptors(super.getProxy())) // inherit Node properties

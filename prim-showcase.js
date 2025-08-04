@@ -77,7 +77,7 @@ const plane = app.create('prim', {
   color: '#44ffff',
   metalness: 0.2,
   roughness: 0.8,
-  doubleSided: true,
+  doubleside: true,
 })
 app.add(plane)
 
