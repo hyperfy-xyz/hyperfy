@@ -6,6 +6,12 @@ export class Collections extends System {
     this.collections = []
   }
 
+  init({ collections }) {
+    if (collections) {
+      this.deserialize(collections)
+    }
+  }
+
   get(id) {
     return this.collections.find(coll => coll.id === id)
   }

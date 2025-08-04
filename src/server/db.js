@@ -6,6 +6,7 @@ import { uuid } from '../core/utils'
 import { importApp } from '../core/extras/appTools'
 import { defaults } from 'lodash-es'
 import { Ranks } from '../core/extras/ranks'
+import { assets } from './assets'
 
 let db
 
@@ -39,7 +40,7 @@ async function migrate(db, worldDir) {
   let version = parseInt(versionRow.value)
   // run missing migrations
   for (let i = version; i < migrations.length; i++) {
-    console.log(`running migration #${i + 1}...`)
+    console.log(`[db] migration #${i + 1}`)
     await migrations[i](db, worldDir)
     await db('config')
       .where('key', 'version')
@@ -317,12 +318,16 @@ const migrations = [
         type: 'application/octet-stream',
       })
       const app = await importApp(file)
-      // write the assets to the worlds assets folder
+      // upload the asset
       for (const asset of app.assets) {
         const filename = asset.url.split('asset://').pop()
         const buffer = Buffer.from(await asset.file.arrayBuffer())
-        const dest = path.join(worldDir, '/assets', filename)
-        await fs.writeFile(dest, buffer)
+        const file = new File([buffer], filename, {
+          type: 'application/octet-stream',
+        })
+        // const dest = path.join(worldDir, '/assets', filename)
+        // await fs.writeFile(dest, buffer)
+        await assets.upload(file)
       }
       // create blueprint and entity
       app.blueprint.id = '$scene' // singleton

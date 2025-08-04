@@ -281,7 +281,7 @@ export class ServerNetwork extends System {
       socket.send('snapshot', {
         id: socket.id,
         serverTime: performance.now(),
-        assetsUrl: process.env.PUBLIC_ASSETS_URL,
+        assetsUrl: process.env.ASSETS_BASE_URL,
         apiUrl: process.env.PUBLIC_API_URL,
         maxUploadSize: process.env.PUBLIC_MAX_UPLOAD_SIZE,
         collections: this.world.collections.serialize(),
