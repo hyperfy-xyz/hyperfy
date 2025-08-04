@@ -21,7 +21,7 @@ console.log('Building arena...')
 // Create floor
 const floor = app.create('prim', {
   kind: 'box',
-  size: [ARENA_SIZE, 0.2, ARENA_SIZE],
+  scale: [ARENA_SIZE, 0.2, ARENA_SIZE],
   position: [0, -0.1, 0],
   color: '#2a2a2a',
   metalness: 0.2,
@@ -36,7 +36,7 @@ const walls = []
 // North wall
 walls.push(app.create('prim', {
   kind: 'box',
-  size: [ARENA_SIZE, WALL_HEIGHT, WALL_THICKNESS],
+  scale: [ARENA_SIZE, WALL_HEIGHT, WALL_THICKNESS],
   position: [0, WALL_HEIGHT/2, -ARENA_SIZE/2],
   color: '#444444',
   physics: true
@@ -45,7 +45,7 @@ walls.push(app.create('prim', {
 // South wall
 walls.push(app.create('prim', {
   kind: 'box',
-  size: [ARENA_SIZE, WALL_HEIGHT, WALL_THICKNESS],
+  scale: [ARENA_SIZE, WALL_HEIGHT, WALL_THICKNESS],
   position: [0, WALL_HEIGHT/2, ARENA_SIZE/2],
   color: '#444444',
   physics: true
@@ -54,7 +54,7 @@ walls.push(app.create('prim', {
 // East wall
 walls.push(app.create('prim', {
   kind: 'box',
-  size: [WALL_THICKNESS, WALL_HEIGHT, ARENA_SIZE],
+  scale: [WALL_THICKNESS, WALL_HEIGHT, ARENA_SIZE],
   position: [ARENA_SIZE/2, WALL_HEIGHT/2, 0],
   color: '#444444',
   physics: true
@@ -63,7 +63,7 @@ walls.push(app.create('prim', {
 // West wall
 walls.push(app.create('prim', {
   kind: 'box',
-  size: [WALL_THICKNESS, WALL_HEIGHT, ARENA_SIZE],
+  scale: [WALL_THICKNESS, WALL_HEIGHT, ARENA_SIZE],
   position: [-ARENA_SIZE/2, WALL_HEIGHT/2, 0],
   color: '#444444',
   physics: true
@@ -87,7 +87,7 @@ for (let i = 0; i < OBSTACLE_COUNT; i++) {
   
   const obstacle = app.create('prim', {
     kind: Math.random() < 0.7 ? 'box' : 'cylinder',
-    size: [width, height, width],
+    scale: [width, height, width],
     position: [x, height/2, z],
     color: `hsl(${200 + Math.random() * 40}, 20%, ${30 + Math.random() * 20}%)`,
     metalness: 0.4,
@@ -108,7 +108,7 @@ function createRing(index) {
   
   const ring = app.create('prim', {
     kind: 'torus',
-    size: [0.8, 0.2],
+    scale: [0.8, 0.8, 0.8],
     position: [x, y, z],
     color: '#ffd700',
     emissive: '#ffaa00',
@@ -171,7 +171,7 @@ function createCollectEffect(position) {
   for (let i = 0; i < 8; i++) {
     const particle = app.create('prim', {
       kind: 'box',
-      size: [0.1, 0.1, 0.1],
+      scale: [0.1, 0.1, 0.1],
       position: [...position],
       color: '#ffff00',
       emissive: '#ffff00',
@@ -242,7 +242,7 @@ for (let i = 0; i < 4; i++) {
   
   const crystal = app.create('prim', {
     kind: 'cone',
-    size: [0.5, 2],
+    scale: [0.5, 2, 0.5],
     position: [x, 1, z],
     color: '#4488ff',
     emissive: '#4488ff',
@@ -268,7 +268,7 @@ app.on('update', (dt) => {
 // Create spawn point indicator
 const spawnIndicator = app.create('prim', {
   kind: 'cylinder',
-  size: [2, 0.1],
+  scale: [2, 0.1, 2],
   position: [0, 0.05, 0],
   color: '#00ff00',
   emissive: '#00ff00',

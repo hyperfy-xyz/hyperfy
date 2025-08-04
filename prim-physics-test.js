@@ -10,7 +10,7 @@ const START_Z = -18
 // Create arena
 const floor = app.create('prim', {
   kind: 'box',
-  size: [50, 0.2, 50],
+  scale: [50, 0.2, 50],
   position: [0, -0.1, 0],
   color: '#2a2a2a',
   physics: true,
@@ -19,16 +19,16 @@ app.add(floor)
 
 // Create walls
 const wallConfigs = [
-  { pos: [0, 2, -25], size: [50, 4, 0.5] },
-  { pos: [0, 2, 25], size: [50, 4, 0.5] },
-  { pos: [-25, 2, 0], size: [0.5, 4, 50] },
-  { pos: [25, 2, 0], size: [0.5, 4, 50] },
+  { pos: [0, 2, -25], scale: [50, 4, 0.5] },
+  { pos: [0, 2, 25], scale: [50, 4, 0.5] },
+  { pos: [-25, 2, 0], scale: [0.5, 4, 50] },
+  { pos: [25, 2, 0], scale: [0.5, 4, 50] },
 ]
 wallConfigs.forEach(cfg => {
   app.add(
     app.create('prim', {
       kind: 'box',
-      size: cfg.size,
+      scale: cfg.scale,
       position: cfg.pos,
       color: '#444444',
       physics: true,
@@ -154,12 +154,12 @@ PRIMITIVE_TYPES.forEach((primType, row) => {
 
     // Primitive configuration
     const configs = {
-      sphere: { size: [0.5], height: 0.5 },
-      cylinder: { size: [0.5, 1.5], height: 0.75 },
-      cone: { size: [0.5, 1.5], height: 0.75 },
-      torus: { size: [0.6, 0.2], height: 0.7 },
-      plane: { size: [1.5, 1.5], height: 0.75, rotation: [0, Math.PI / 4, 0] },
-      box: { size: [1, 1, 1], height: 0.5 },
+      sphere: { scale: [0.5, 0.5, 0.5], height: 0.5 },
+      cylinder: { scale: [0.5, 1.5, 0.5], height: 0.75 },
+      cone: { scale: [0.5, 1.5, 0.5], height: 0.75 },
+      torus: { scale: [0.6, 0.6, 0.6], height: 0.7 },
+      plane: { scale: [1.5, 1.5, 1], height: 0.75, rotation: [0, Math.PI / 4, 0] },
+      box: { scale: [1, 1, 1], height: 0.5 },
     }
 
     const config = configs[primType] || configs.box
@@ -168,7 +168,7 @@ PRIMITIVE_TYPES.forEach((primType, row) => {
     // Create test primitive
     const prim = app.create('prim', {
       kind: primType,
-      size: config.size,
+      scale: config.scale,
       position: [x, yPos, rowZ],
       rotation: config.rotation || [0, 0, 0],
       color: `hsl(${row * 60}, 70%, 50%)`,
@@ -191,7 +191,7 @@ PRIMITIVE_TYPES.forEach((primType, row) => {
     if (col === 0) {
       const trigger = app.create('prim', {
         kind: 'box',
-        size: [2, 2, 2],
+        scale: [2, 2, 2],
         position: [x + GRID_SPACING, 1, rowZ],
         color: '#00ff00',
         transparent: true,
@@ -228,7 +228,7 @@ PRIMITIVE_TYPES.forEach((primType, row) => {
 // Add test ball
 const testBall = app.create('prim', {
   kind: 'sphere',
-  size: [0.3],
+  scale: [0.3, 0.3, 0.3],
   position: [0, 5, 0],
   color: '#ff00ff',
   emissive: '#ff00ff',

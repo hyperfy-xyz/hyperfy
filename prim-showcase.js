@@ -6,7 +6,7 @@ const SPACING = 3
 // Create floor
 const floor = app.create('prim', {
   kind: 'box',
-  size: [20, 0.1, 10],
+  scale: [20, 0.1, 10],
   position: [0, -0.05, 0],
   color: '#2a2a2a',
   physics: true,
@@ -16,7 +16,7 @@ app.add(floor)
 // Box primitive
 const box = app.create('prim', {
   kind: 'box',
-  size: [1, 1, 1],
+  scale: [1, 1, 1],
   position: [-7.5, 0.5, 0],
   color: '#ff4444',
   metalness: 0.3,
@@ -27,7 +27,7 @@ app.add(box)
 // Sphere primitive
 const sphere = app.create('prim', {
   kind: 'sphere',
-  size: [0.5],
+  scale: [0.5, 0.5, 0.5],
   position: [-4.5, 0.5, 0],
   color: '#4444ff',
   metalness: 0.8,
@@ -38,7 +38,7 @@ app.add(sphere)
 // Cylinder primitive
 const cylinder = app.create('prim', {
   kind: 'cylinder',
-  size: [0.5, 1.5],
+  scale: [0.5, 1.5, 0.5],
   position: [-1.5, 0.75, 0],
   color: '#44ff44',
   metalness: 0.4,
@@ -49,7 +49,7 @@ app.add(cylinder)
 // Cone primitive
 const cone = app.create('prim', {
   kind: 'cone',
-  size: [0.5, 1.5],
+  scale: [0.5, 1.5, 0.5],
   position: [1.5, 0.75, 0],
   color: '#ff44ff',
   metalness: 0.5,
@@ -60,7 +60,7 @@ app.add(cone)
 // Torus primitive
 const torus = app.create('prim', {
   kind: 'torus',
-  size: [0.6, 0.2],
+  scale: [0.6, 0.6, 0.6],
   position: [4.5, 0.7, 0],
   color: '#ffff44',
   metalness: 0.7,
@@ -71,7 +71,7 @@ app.add(torus)
 // Plane primitive (vertical to be visible)
 const plane = app.create('prim', {
   kind: 'plane',
-  size: [1.5, 1.5],
+  scale: [1.5, 1.5, 1],
   position: [7.5, 0.75, 0],
   rotation: [0, Math.PI / 4, 0], // Rotate to face viewer
   color: '#44ffff',
@@ -95,7 +95,7 @@ const labels = [
 labels.forEach(label => {
   const labelBox = app.create('prim', {
     kind: 'box',
-    size: [1.2, 0.1, 0.3],
+    scale: [1.2, 0.1, 0.3],
     position: [label.x, 0.05, 2],
     color: '#666666',
     emissive: '#ffffff',

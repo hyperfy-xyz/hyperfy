@@ -9,7 +9,6 @@ import { geometryToPxMesh } from '../extras/geometryToPxMesh'
 
 const defaults = {
   kind: 'box',
-  size: [1, 1, 1],
   color: '#ffffff',
   emissive: null,
   emissiveIntensity: 1,
@@ -150,7 +149,6 @@ export class Prim extends Node {
     this.name = 'prim'
     
     this.kind = data.kind
-    this.size = data.size
     this.color = data.color !== undefined ? data.color : defaults.color
     this.emissive = data.emissive !== undefined ? data.emissive : defaults.emissive
     this.emissiveIntensity = data.emissiveIntensity !== undefined ? data.emissiveIntensity : defaults.emissiveIntensity
@@ -176,9 +174,6 @@ export class Prim extends Node {
     
     // Get unit-sized geometry for this kind
     const geometry = getGeometry(this._kind)
-    
-    // Apply size via scale
-    this.updateScaleFromSize()
     
     // Get loader if available (client-side only)
     const loader = this.ctx.world.loader || null
@@ -212,26 +207,6 @@ export class Prim extends Node {
     }
   }
   
-  updateScaleFromSize() {
-    // Apply size as scale transformation
-    if (this._kind === 'sphere') {
-      // Sphere uses uniform scale
-      const radius = this._size[0]
-      this.scale.set(radius, radius, radius)
-    } else if (this._kind === 'torus') {
-      // Torus: major radius as uniform scale, tube ratio handled in geometry
-      const radius = this._size[0]
-      this.scale.set(radius, radius, radius)
-    } else if (this._kind === 'cylinder' || this._kind === 'cone') {
-      // Cylinder/cone: radius for X/Z, height for Y
-      const radius = this._size[0]
-      const height = this._size[1]
-      this.scale.set(radius, height, radius)
-    } else {
-      // Box/plane: direct mapping
-      this.scale.set(this._size[0], this._size[1], this._size[2])
-    }
-  }
   
   mountPhysics() {
     if (!PHYSX) return
@@ -269,19 +244,16 @@ export class Prim extends Node {
     let meshHandle = null
     
     if (this._kind === 'box') {
-      pxGeometry = new PHYSX.PxBoxGeometry(this._size[0] / 2, this._size[1] / 2, this._size[2] / 2)
+      pxGeometry = new PHYSX.PxBoxGeometry(this.scale.x / 2, this.scale.y / 2, this.scale.z / 2)
     } else if (this._kind === 'sphere') {
-      pxGeometry = new PHYSX.PxSphereGeometry(this._size[0])
+      pxGeometry = new PHYSX.PxSphereGeometry(this.scale.x)
     } else {
       // Use convex mesh for cylinder, cone, torus, and plane
       const threeGeometry = getGeometry(this._kind)
       
       // Create a scaled version of the geometry for physics
       const scaledGeometry = threeGeometry.clone()
-      const scale = new THREE.Vector3()
-      this.updateScaleFromSize()
-      scale.copy(this.scale)
-      scaledGeometry.scale(scale.x, scale.y, scale.z)
+      scaledGeometry.scale(this.scale.x, this.scale.y, this.scale.z)
       
       // Create convex mesh
       meshHandle = geometryToPxMesh(this.ctx.world, scaledGeometry, true)
@@ -398,16 +370,16 @@ export class Prim extends Node {
     // Returns the offset needed for colliders to match the visual geometry
     switch (this._kind) {
       case 'box':
-        return [0, this._size[1] * 0.5, 0]
+        return [0, this.scale.y * 0.5, 0]
       case 'sphere':
-        return [0, this._size[0], 0]
+        return [0, this.scale.x, 0]
       case 'cylinder':
-        return [0, this._size[1] * 0.5, 0]
+        return [0, this.scale.y * 0.5, 0]
       case 'cone':
-        return [0, this._size[1] * 0.5, 0]
+        return [0, this.scale.y * 0.5, 0]
       case 'torus':
-        const majorRadius = this._size[0]
-        const tubeRadius = this._size[1] || this._size[0] * 0.3
+        const majorRadius = this.scale.x
+        const tubeRadius = this.scale.x * 0.3 // Standard tube ratio
         return [0, majorRadius + tubeRadius, 0]
       case 'plane':
         return [0, 0, 0]
@@ -420,14 +392,14 @@ export class Prim extends Node {
     // Returns appropriate collider dimensions
     switch (this._kind) {
       case 'cylinder':
-        return [this._size[0] * 2, this._size[1], this._size[0] * 2]
+        return [this.scale.x * 2, this.scale.y, this.scale.z * 2]
       case 'cone':
-        return [this._size[0] * 2, this._size[1], this._size[0] * 2]
+        return [this.scale.x * 2, this.scale.y, this.scale.z * 2]
       case 'torus':
-        const diameter = (this._size[0] + (this._size[1] || this._size[0] * 0.3)) * 2
-        return [diameter, (this._size[1] || this._size[0] * 0.3) * 2, diameter]
+        const diameter = (this.scale.x + this.scale.x * 0.3) * 2
+        return [diameter, this.scale.x * 0.3 * 2, diameter]
       default:
-        return [...this._size]
+        return [this.scale.x, this.scale.y, this.scale.z]
     }
   }
   
@@ -456,7 +428,6 @@ export class Prim extends Node {
   copy(source, recursive) {
     super.copy(source, recursive)
     this._kind = source._kind
-    this._size = [...source._size]
     this._color = source._color
     this._emissive = source._emissive
     this._castShadow = source._castShadow
@@ -491,30 +462,6 @@ export class Prim extends Node {
     this._kind = value
     if (this.handle) {
       this.needsRebuild = true
-      this.setDirty()
-    }
-  }
-  
-  get size() {
-    return this._size
-  }
-  
-  set size(value = defaults.size) {
-    if (!isArray(value) || value.length < 1 || value.length > 3) {
-      throw new Error('[prim] size must be array of 1-3 numbers')
-    }
-    // Normalize size array
-    const normalized = [
-      value[0] || 1,
-      value[1] || value[0] || 1,
-      value[2] || value[0] || 1
-    ]
-    if (this._size && this._size[0] === normalized[0] && this._size[1] === normalized[1] && this._size[2] === normalized[2]) return
-    this._size = normalized
-    
-    // Update scale instead of rebuilding
-    if (this.handle) {
-      this.updateScaleFromSize()
       this.setDirty()
     }
   }
@@ -720,12 +667,6 @@ export class Prim extends Node {
         },
         set kind(value) {
           self.kind = value
-        },
-        get size() {
-          return [...self.size]
-        },
-        set size(value) {
-          self.size = value
         },
         get color() {
           return self.color

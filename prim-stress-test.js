@@ -96,26 +96,31 @@ for (let i = 0; i < TOTAL_PRIMITIVES; i++) {
     (gridZ - gridSize/2) * spacing + (Math.random() - 0.5) * spacing * 0.5
   ]
   
-  // Consistent size variations per shape type
-  let size
-  const scale = 0.5 + Math.random() * 0.5 // 0.5 to 1.0
+  // Consistent scale variations per shape type
+  let scaleArr
+  const scaleFactor = 0.5 + Math.random() * 0.5 // 0.5 to 1.0
   
   if (shape === 'sphere') {
-    size = [0.4 * scale]
+    const r = 0.4 * scaleFactor
+    scaleArr = [r, r, r]
   } else if (shape === 'torus') {
-    size = [0.5 * scale, 0.15 * scale]
+    const r = 0.5 * scaleFactor
+    scaleArr = [r, r, r]
   } else if (shape === 'cylinder' || shape === 'cone') {
-    size = [0.3 * scale, 0.8 * scale]
+    const r = 0.3 * scaleFactor
+    const h = 0.8 * scaleFactor
+    scaleArr = [r, h, r]
   } else if (shape === 'plane') {
-    size = [scale, scale]
+    scaleArr = [scaleFactor, scaleFactor, 1]
   } else { // box
-    size = [0.6 * scale, 0.6 * scale, 0.6 * scale]
+    const s = 0.6 * scaleFactor
+    scaleArr = [s, s, s]
   }
   
   // Create primitive
   const prim = app.create('prim', {
     kind: shape,
-    size: size,
+    scale: scaleArr,
     position: position,
     ...material,
     castShadow: false,
@@ -152,7 +157,7 @@ stats.materialUsage.forEach((count, idx) => {
 if (props.textureFile?.url) {
   const texturedBox = app.create('prim', {
     kind: 'box',
-    size: [4, 4, 4],
+    scale: [4, 4, 4],
     position: [0, 2, -10],
     color: '#ffffff',
     texture: props.textureFile.url,

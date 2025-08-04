@@ -12,19 +12,6 @@ Available options: `box`, `sphere`, `cylinder`, `cone`, `torus`, `plane`.
 
 Defaults to `box`.
 
-### `.size`: Array
-
-The dimensions of the primitive. The array length and meaning varies by shape:
-- `box`: `[width, height, depth]` - all three dimensions
-- `sphere`: `[radius]` - single radius value
-- `cylinder`: `[radius, height]` - radius and height
-- `cone`: `[radius, height]` - base radius and height
-- `torus`: `[radius, tube]` - major radius and tube radius
-- `plane`: `[width, height]` - width and height
-
-If fewer values are provided than required, missing values default to the first value or 1.
-
-Defaults to `[1, 1, 1]`.
 
 ### `.color`: String
 
@@ -115,7 +102,7 @@ Inherits all [Node](/docs/scripting/nodes/Node.md) properties
 // Create various primitives with different materials
 const box = app.create('prim', {
   kind: 'box',
-  size: [2, 1, 3],
+  scale: [2, 1, 3],
   position: [0, 1, 0],
   color: '#ff0000',
   metalness: 0.8,
@@ -124,7 +111,7 @@ const box = app.create('prim', {
 
 const sphere = app.create('prim', {
   kind: 'sphere',
-  size: [0.5],
+  scale: [0.5, 0.5, 0.5],
   position: [3, 1, 0],
   color: '#0000ff',
   emissive: '#00ff00', // Green glow
@@ -134,7 +121,7 @@ const sphere = app.create('prim', {
 // Transparent glass-like cylinder
 const cylinder = app.create('prim', {
   kind: 'cylinder',
-  size: [0.3, 2],
+  scale: [0.3, 2, 0.3],
   position: [-3, 1, 0],
   color: '#ffffff',
   transparent: true,
@@ -146,7 +133,7 @@ const cylinder = app.create('prim', {
 // Animated torus
 const torus = app.create('prim', {
   kind: 'torus',
-  size: [1, 0.3],
+  scale: [1, 1, 1],
   position: [0, 3, 0],
   color: '#ffff00'
 })
@@ -154,7 +141,7 @@ const torus = app.create('prim', {
 // Textured plane (double-sided)
 const texturedPlane = app.create('prim', {
   kind: 'plane',
-  size: [2, 2],
+  scale: [2, 2, 1],
   position: [0, 1, -3],
   rotation: [-Math.PI/2, 0, 0],
   texture: 'https://example.com/texture.jpg',
@@ -177,7 +164,7 @@ app.on('update', (dt) => {
 // Static floor
 const floor = app.create('prim', {
   kind: 'box',
-  size: [10, 0.1, 10],
+  scale: [10, 0.1, 10],
   position: [0, 0, 0],
   color: '#333333',
   physics: true // Static by default
@@ -186,7 +173,7 @@ const floor = app.create('prim', {
 // Dynamic bouncing ball
 const ball = app.create('prim', {
   kind: 'sphere',
-  size: [0.5],
+  scale: [0.5, 0.5, 0.5],
   position: [0, 5, 0],
   color: '#ff0000',
   physics: {
@@ -200,7 +187,7 @@ const ball = app.create('prim', {
 // Trigger zone
 const triggerZone = app.create('prim', {
   kind: 'box',
-  size: [2, 2, 2],
+  scale: [2, 2, 2],
   position: [5, 1, 0],
   color: '#00ff00',
   transparent: true,
@@ -224,6 +211,10 @@ app.add(triggerZone)
 
 ## Notes
 
+- Use the `scale` property (inherited from Node) to control the size of primitives
+- For spheres, use uniform scale (e.g., `scale: [0.5, 0.5, 0.5]` for a radius of 0.5)
+- For cylinders/cones, X and Z control radius, Y controls height
+- For torus, use uniform scale to control the major radius
 - Primitives with identical material properties are automatically instanced for optimal performance
 - Material properties (color, emissive, metalness, etc.) determine which primitives can be instanced together
 - Changing material properties requires rebuilding the primitive instance
