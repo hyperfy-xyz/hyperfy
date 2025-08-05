@@ -10,6 +10,7 @@ class Collections {
   }
 
   async init({ rootDir, worldDir }) {
+    console.log('[collections] initializing')
     this.dir = path.join(worldDir, '/collections')
     // ensure collections directory exists
     await fs.ensureDir(this.dir)

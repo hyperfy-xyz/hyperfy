@@ -9,6 +9,7 @@ export class AssetsLocal {
   }
 
   async init({ rootDir, worldDir }) {
+    console.log('[assets] initializing')
     this.dir = path.join(worldDir, '/assets')
     // ensure assets directory exists
     await fs.ensureDir(this.dir)

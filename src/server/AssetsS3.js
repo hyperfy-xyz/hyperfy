@@ -132,6 +132,7 @@ export class AssetsS3 {
   }
 
   async init({ rootDir, worldDir }) {
+    console.log('[assets] initializing')
     // Verify bucket access
     try {
       await this.client.send(
