@@ -6,6 +6,7 @@ export { Audio as audio } from './Audio.js'
 export { Video as video } from './Video.js'
 export { Image as image } from './Image.js'
 export { Snap as snap } from './Snap.js'
+export { Prim as prim } from './Prim.js'
 
 export { Avatar as avatar } from './Avatar.js'
 export { Action as action } from './Action.js'
