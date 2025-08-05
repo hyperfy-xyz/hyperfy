@@ -92,19 +92,25 @@ export class AssetsS3 {
 
       // Detect if this is AWS S3 or a custom endpoint
       if (host.includes('.amazonaws.com')) {
-        // AWS S3 format: bucket.s3.region.amazonaws.com or bucket.s3.amazonaws.com
+        // Example: play.hyperfy.xyz.s3.eu-west-1.amazonaws.com
         const hostParts = host.split('.')
-        config.bucket = hostParts[0]
 
-        if (hostParts.length === 4) {
-          // bucket.s3.amazonaws.com format (us-east-1)
-          config.region = 'us-east-1'
-        } else if (hostParts.length === 5) {
-          // bucket.s3.region.amazonaws.com format
-          config.region = hostParts[2]
+        const s3Index = hostParts.indexOf('s3')
+        if (s3Index === -1) {
+          throw new Error('Invalid S3 host: missing "s3" in hostname')
         }
 
-        config.prefix = pathParts.join('/') + (pathParts.length > 0 ? '/' : '')
+        // Bucket is everything before 's3'
+        config.bucket = hostParts.slice(0, s3Index).join('.')
+
+        // Region is the part right after 's3', if present
+        config.region = hostParts[s3Index + 1] || 'us-east-1'
+
+        // Build prefix and ensure it ends with a single slash
+        config.prefix = pathParts.join('/')
+        if (config.prefix && !config.prefix.endsWith('/')) {
+          config.prefix += '/'
+        }
       } else if (host.includes('.')) {
         // Custom endpoint (like R2): endpoint/bucket/prefix
         config.endpoint = `https://${host}`
