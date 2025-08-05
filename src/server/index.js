@@ -72,7 +72,7 @@ await assets.init({ rootDir, worldDir })
 await collections.init({ rootDir, worldDir })
 
 // init db
-const db = await getDB(worldDir)
+const db = await getDB({ worldDir })
 
 // init cleaner
 await cleaner.init({ db })

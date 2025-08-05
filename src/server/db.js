@@ -10,22 +10,36 @@ import { assets } from './assets'
 
 let db
 
-export async function getDB(worldDir) {
-  const filename = path.join(worldDir, '/db.sqlite')
+export async function getDB({ worldDir }) {
   if (!db) {
-    db = Knex({
-      client: 'better-sqlite3',
-      connection: {
-        filename,
-      },
-      useNullAsDefault: true,
-    })
-    await migrate(db, worldDir)
+    const isPostgres = process.env.DB_URI?.startsWith('postgres://') || process.env.DB_URI?.startsWith('postgresql://')
+    if (isPostgres) {
+      const schema = process.env.DB_SCHEMA || 'public'
+      db = Knex({
+        client: 'pg',
+        connection: process.env.DB_URI,
+        pool: { min: 2, max: 10 },
+        searchPath: [schema],
+        useNullAsDefault: true,
+      })
+      if (schema !== 'public') {
+        await db.raw(`CREATE SCHEMA IF NOT EXISTS ??`, [schema])
+      }
+    } else {
+      db = Knex({
+        client: 'better-sqlite3',
+        connection: {
+          filename: path.join(worldDir, '/db.sqlite'),
+        },
+        useNullAsDefault: true,
+      })
+    }
+    await migrate(db)
   }
   return db
 }
 
-async function migrate(db, worldDir) {
+async function migrate(db) {
   // ensure we have our config table
   const exists = await db.schema.hasTable('config')
   if (!exists) {
@@ -41,7 +55,7 @@ async function migrate(db, worldDir) {
   // run missing migrations
   for (let i = version; i < migrations.length; i++) {
     console.log(`[db] migration #${i + 1}`)
-    await migrations[i](db, worldDir)
+    await migrations[i](db)
     await db('config')
       .where('key', 'version')
       .update('value', (i + 1).toString())
@@ -251,7 +265,7 @@ const migrations = [
     }
   },
   // migrate or generate scene app
-  async (db, worldDir) => {
+  async db => {
     const now = moment().toISOString()
     const record = await db('config').where('key', 'settings').first()
     const settings = JSON.parse(record?.value || '{}')
