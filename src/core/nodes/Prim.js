@@ -114,7 +114,7 @@ const getGeometry = (type, size) => {
 const materialCache = new Map()
 
 // Create material with specific properties
-const getMaterial = (props, loader) => {
+const getMaterial = props => {
   // Create a cache key from material properties
   const cacheKey = `${props.color}_${props.emissive}_${props.emissiveIntensity}_${props.metalness}_${props.roughness}_${props.opacity}_${props.transparent}_${props.texture}_${props.doubleside}`
 
@@ -134,32 +134,22 @@ const getMaterial = (props, loader) => {
     side: props.doubleside ? THREE.DoubleSide : THREE.FrontSide,
   })
 
-  // Load texture if provided
-  if (props.texture && loader) {
-    applyTexture(material, props.texture, loader)
-  }
-
   // Cache the material
   materialCache.set(cacheKey, material)
 
   return material
 }
 
-const applyTexture = async (material, textureUrl, loader) => {
-  try {
-    // Check if texture is already loaded
-    let texture = loader.get('texture', textureUrl)
-    if (!texture) {
-      // Load the texture
-      texture = await loader.load('texture', textureUrl)
-    }
-    if (texture) {
+const applyTexture = (material, textureUrl, loader) => {
+  if (!material._texPromise) {
+    material._texPromise = new Promise(async resolve => {
+      let texture = loader.get('texture', textureUrl)
+      if (!texture) texture = await loader.load('texture', textureUrl)
       material.map = texture
-      material.needsUpdate = true
-    }
-  } catch (err) {
-    console.warn('[prim] Failed to load texture:', textureUrl, err)
+      resolve()
+    })
   }
+  return material._texPromise
 }
 
 export class Prim extends Node {
@@ -201,9 +191,11 @@ export class Prim extends Node {
     this._tm = null
     this.tempVec3 = new THREE.Vector3()
     this.tempQuat = new THREE.Quaternion()
+
+    this.n = 0
   }
 
-  mount() {
+  async mount() {
     this.needsRebuild = false
 
     // Get unit-sized geometry for this type
@@ -213,20 +205,23 @@ export class Prim extends Node {
     const loader = this.ctx.world.loader || null
 
     // Create material with current properties
-    const material = getMaterial(
-      {
-        color: this._color,
-        emissive: this._emissive,
-        emissiveIntensity: this._emissiveIntensity,
-        metalness: this._metalness,
-        roughness: this._roughness,
-        opacity: this._opacity,
-        transparent: this._transparent,
-        texture: this._texture,
-        doubleside: this._doubleside,
-      },
-      loader
-    )
+    const material = getMaterial({
+      color: this._color,
+      emissive: this._emissive,
+      emissiveIntensity: this._emissiveIntensity,
+      metalness: this._metalness,
+      roughness: this._roughness,
+      opacity: this._opacity,
+      transparent: this._transparent,
+      texture: this._texture,
+      doubleside: this._doubleside,
+    })
+
+    if (this._texture && !material._texApplied) {
+      const n = ++this.n
+      await applyTexture(material, this._texture, loader)
+      if (n !== this.n) return // remounted or destroyed
+    }
 
     // Create mesh
     this.handle = this.ctx.world.stage.insertPrimitive({
@@ -429,6 +424,7 @@ export class Prim extends Node {
   }
 
   unmount() {
+    this.n++
     this.handle?.destroy()
     this.handle = null
     this.unmountPhysics()
