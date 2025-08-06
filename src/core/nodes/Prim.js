@@ -81,7 +81,7 @@ const getGeometry = (type, size) => {
       case 'cylinder':
         {
           const [radiusTop, radiusBtm, height] = size
-          geometry = new THREE.CylinderGeometry(radiusTop, radiusBtm, height, 16)
+          geometry = new THREE.CylinderGeometry(radiusTop, radiusBtm, height, 20)
         }
         break
       case 'cone':
@@ -93,7 +93,7 @@ const getGeometry = (type, size) => {
       case 'torus':
         {
           const [innerRadius, tubeRadius] = size
-          geometry = new THREE.TorusGeometry(innerRadius, tubeRadius, 12, 16)
+          geometry = new THREE.TorusGeometry(innerRadius, tubeRadius, 12, 30)
         }
         break
       case 'plane':
