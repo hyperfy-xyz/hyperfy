@@ -155,13 +155,13 @@ const audio = app.create('audio', {
 audio.play()
 ```
 
-### Colorwheel
+### Color
 
 A visual color picker that displays a color swatch and opens a color wheel when clicked.
 
 ```jsx
 {
-  type: 'colorwheel',
+  type: 'color',
   key: String,           // the key on `props` to set this value
   label: String,         // the label for the color picker
   hint: String,          // optional hint text displayed on hover

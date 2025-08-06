@@ -1051,7 +1051,7 @@ export function FieldBtn({ label, note, hint, nav, onClick }) {
   )
 }
 
-export function FieldColorWheel({ label, hint, value, onChange }) {
+export function FieldColor({ label, hint, value, onChange }) {
   const { setHint } = useContext(HintContext)
   const [showPicker, setShowPicker] = useState(false)
   const [localValue, setLocalValue] = useState(value || '#ffffff')
@@ -1111,7 +1111,7 @@ export function FieldColorWheel({ label, hint, value, onChange }) {
   const handleHexInputChange = e => {
     const input = e.target.value
     setHexInput(input)
-    
+
     // Validate hex color
     const hexPattern = /^#([0-9A-Fa-f]{6}|[0-9A-Fa-f]{3})$/
     if (hexPattern.test(input)) {
@@ -1162,17 +1162,17 @@ export function FieldColorWheel({ label, hint, value, onChange }) {
 
   return (
     <div
-      className='fieldcolorwheel'
+      className='fieldcolor'
       css={css`
         position: relative;
-        .fieldcolorwheel-control {
+        .fieldcolor-control {
           display: flex;
           align-items: center;
           height: 2.5rem;
           padding: 0 1rem;
           cursor: pointer;
         }
-        .fieldcolorwheel-label {
+        .fieldcolor-label {
           width: 9.4rem;
           flex-shrink: 0;
           white-space: nowrap;
@@ -1181,20 +1181,20 @@ export function FieldColorWheel({ label, hint, value, onChange }) {
           font-size: 0.9375rem;
           color: rgba(255, 255, 255, 0.6);
         }
-        .fieldcolorwheel-preview {
+        .fieldcolor-preview {
           flex: 1;
           display: flex;
           align-items: center;
           justify-content: flex-end;
           gap: 0.5rem;
         }
-        .fieldcolorwheel-text {
+        .fieldcolor-text {
           font-size: 0.9375rem;
           font-family: monospace;
           text-transform: uppercase;
           text-align: right;
         }
-        .fieldcolorwheel-swatch {
+        .fieldcolor-swatch {
           width: 1.25rem;
           height: 1.25rem;
           border-radius: 0.375rem;
@@ -1202,10 +1202,10 @@ export function FieldColorWheel({ label, hint, value, onChange }) {
           box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.2);
           flex-shrink: 0;
         }
-        .fieldcolorwheel-control:hover {
+        .fieldcolor-control:hover {
           background-color: rgba(255, 255, 255, 0.03);
         }
-        .fieldcolorwheel-picker {
+        .fieldcolor-picker {
           position: fixed;
           z-index: 10000;
           background: rgba(11, 10, 21, 0.95);
@@ -1234,7 +1234,7 @@ export function FieldColorWheel({ label, hint, value, onChange }) {
           height: 1rem;
           border-width: 2px;
         }
-        .fieldcolorwheel-hexinput {
+        .fieldcolor-hexinput {
           margin-top: 0.75rem;
           input {
             width: 100%;
@@ -1258,7 +1258,7 @@ export function FieldColorWheel({ label, hint, value, onChange }) {
             }
           }
         }
-        .fieldcolorwheel-presets {
+        .fieldcolor-presets {
           display: grid;
           grid-template-columns: repeat(6, 1fr);
           gap: 0.375rem;
@@ -1266,7 +1266,7 @@ export function FieldColorWheel({ label, hint, value, onChange }) {
           padding-top: 0.75rem;
           border-top: 1px solid rgba(255, 255, 255, 0.1);
         }
-        .fieldcolorwheel-preset {
+        .fieldcolor-preset {
           width: 1.25rem;
           height: 1.25rem;
           border-radius: 0.25rem;
@@ -1275,11 +1275,11 @@ export function FieldColorWheel({ label, hint, value, onChange }) {
           transition: all 0.1s;
           position: relative;
         }
-        .fieldcolorwheel-preset:hover {
+        .fieldcolor-preset:hover {
           transform: scale(1.1);
           border-color: rgba(255, 255, 255, 0.4);
         }
-        .fieldcolorwheel-preset.active {
+        .fieldcolor-preset.active {
           border-color: #ffffff;
           box-shadow:
             0 0 0 2px #ffffff,
@@ -1289,17 +1289,17 @@ export function FieldColorWheel({ label, hint, value, onChange }) {
       onPointerEnter={() => setHint(hint)}
       onPointerLeave={() => setHint(null)}
     >
-      <div ref={controlRef} className='fieldcolorwheel-control' onClick={handleControlClick}>
-        <div className='fieldcolorwheel-label'>{label}</div>
-        <div className='fieldcolorwheel-preview'>
-          <div className='fieldcolorwheel-text'>{localValue}</div>
-          <div className='fieldcolorwheel-swatch' style={{ backgroundColor: localValue }} />
+      <div ref={controlRef} className='fieldcolor-control' onClick={handleControlClick}>
+        <div className='fieldcolor-label'>{label}</div>
+        <div className='fieldcolor-preview'>
+          <div className='fieldcolor-text'>{localValue}</div>
+          <div className='fieldcolor-swatch' style={{ backgroundColor: localValue }} />
         </div>
       </div>
 
       {showPicker && (
         <div
-          className='fieldcolorwheel-picker'
+          className='fieldcolor-picker'
           ref={pickerRef}
           style={{
             top: `${pickerPosition.top}px`,
@@ -1307,7 +1307,7 @@ export function FieldColorWheel({ label, hint, value, onChange }) {
           }}
         >
           <HexColorPicker color={localValue} onChange={handleColorChange} />
-          <div className='fieldcolorwheel-hexinput'>
+          <div className='fieldcolor-hexinput'>
             <input
               type='text'
               value={hexInput}
@@ -1317,11 +1317,11 @@ export function FieldColorWheel({ label, hint, value, onChange }) {
               maxLength={7}
             />
           </div>
-          <div className='fieldcolorwheel-presets'>
+          <div className='fieldcolor-presets'>
             {presetColors.map(color => (
               <div
                 key={color}
-                className={`fieldcolorwheel-preset ${localValue === color ? 'active' : ''}`}
+                className={`fieldcolor-preset ${localValue === color ? 'active' : ''}`}
                 style={{ backgroundColor: color }}
                 onClick={() => handlePresetClick(color)}
               />

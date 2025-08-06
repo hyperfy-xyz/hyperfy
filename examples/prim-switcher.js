@@ -61,7 +61,7 @@ app.configure([
     initial: 1,
   },
   {
-    type: 'colorwheel',
+    type: 'color',
     key: 'color',
     label: 'Color',
     hint: 'Choose a color for the primitive',
