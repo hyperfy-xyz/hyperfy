@@ -1055,7 +1055,34 @@ export function FieldColorWheel({ label, hint, value, onChange }) {
   const { setHint } = useContext(HintContext)
   const [showPicker, setShowPicker] = useState(false)
   const [localValue, setLocalValue] = useState(value || '#ffffff')
+  const [pickerPosition, setPickerPosition] = useState({ top: 0, left: 0 })
   const pickerRef = useRef()
+  const controlRef = useRef()
+  
+  // Default preset colors (3 rows of 6)
+  const presetColors = [
+    // Row 1: Primary colors
+    '#ff0000', // Red
+    '#ff8800', // Orange
+    '#ffff00', // Yellow
+    '#00ff00', // Green
+    '#00ffff', // Cyan
+    '#0088ff', // Blue
+    // Row 2: Secondary colors
+    '#8800ff', // Purple
+    '#ff00ff', // Magenta
+    '#ff4488', // Pink
+    '#88ff44', // Lime
+    '#4488ff', // Sky Blue
+    '#44ff88', // Mint
+    // Row 3: Grayscale
+    '#ffffff', // White
+    '#cccccc', // Light Gray
+    '#888888', // Gray
+    '#444444', // Dark Gray
+    '#222222', // Very Dark Gray
+    '#000000', // Black
+  ]
   
   useEffect(() => {
     if (localValue !== value) setLocalValue(value || '#ffffff')
@@ -1067,7 +1094,6 @@ export function FieldColorWheel({ label, hint, value, onChange }) {
     function handleClickOutside(e) {
       if (pickerRef.current && !pickerRef.current.contains(e.target)) {
         setShowPicker(false)
-        onChange(localValue)
       }
     }
     
@@ -1077,6 +1103,38 @@ export function FieldColorWheel({ label, hint, value, onChange }) {
 
   const handleColorChange = (color) => {
     setLocalValue(color)
+    onChange(color) // Update immediately when color changes
+  }
+
+  const handlePresetClick = (color) => {
+    setLocalValue(color)
+    onChange(color)
+    // Don't close the picker when selecting a preset
+  }
+
+  const handleControlClick = () => {
+    if (!showPicker && controlRef.current) {
+      const rect = controlRef.current.getBoundingClientRect()
+      const pickerWidth = 182 // 150px picker + 32px padding
+      const pickerHeight = 250 // approximate height with presets
+      
+      // Calculate position to keep picker on screen
+      let left = rect.right - pickerWidth
+      let top = rect.bottom + 8
+      
+      // Check if picker would go off right edge
+      if (left < 0) {
+        left = rect.left
+      }
+      
+      // Check if picker would go off bottom
+      if (top + pickerHeight > window.innerHeight) {
+        top = rect.top - pickerHeight - 8
+      }
+      
+      setPickerPosition({ top, left })
+    }
+    setShowPicker(!showPicker)
   }
 
   return (
@@ -1125,10 +1183,8 @@ export function FieldColorWheel({ label, hint, value, onChange }) {
           background-color: rgba(255, 255, 255, 0.03);
         }
         .fieldcolorwheel-picker {
-          position: absolute;
-          top: calc(100% + 0.5rem);
-          right: 0;
-          z-index: 1000;
+          position: fixed;
+          z-index: 10000;
           background: rgba(11, 10, 21, 0.95);
           border: 1px solid rgba(255, 255, 255, 0.1);
           border-radius: 1rem;
@@ -1155,13 +1211,39 @@ export function FieldColorWheel({ label, hint, value, onChange }) {
           height: 1rem;
           border-width: 2px;
         }
+        .fieldcolorwheel-presets {
+          display: grid;
+          grid-template-columns: repeat(6, 1fr);
+          gap: 0.375rem;
+          margin-top: 1rem;
+          padding-top: 1rem;
+          border-top: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        .fieldcolorwheel-preset {
+          width: 1.25rem;
+          height: 1.25rem;
+          border-radius: 0.25rem;
+          border: 1px solid rgba(255, 255, 255, 0.2);
+          cursor: pointer;
+          transition: all 0.1s;
+          position: relative;
+        }
+        .fieldcolorwheel-preset:hover {
+          transform: scale(1.1);
+          border-color: rgba(255, 255, 255, 0.4);
+        }
+        .fieldcolorwheel-preset.active {
+          border-color: #ffffff;
+          box-shadow: 0 0 0 2px #ffffff, 0 0 0 3px rgba(0, 0, 0, 0.5);
+        }
       `}
       onPointerEnter={() => setHint(hint)}
       onPointerLeave={() => setHint(null)}
     >
       <div 
+        ref={controlRef}
         className='fieldcolorwheel-control'
-        onClick={() => setShowPicker(!showPicker)}
+        onClick={handleControlClick}
       >
         <div className='fieldcolorwheel-label'>{label}</div>
         <div className='fieldcolorwheel-preview'>
@@ -1174,11 +1256,28 @@ export function FieldColorWheel({ label, hint, value, onChange }) {
       </div>
       
       {showPicker && (
-        <div className='fieldcolorwheel-picker' ref={pickerRef}>
+        <div 
+          className='fieldcolorwheel-picker' 
+          ref={pickerRef}
+          style={{
+            top: `${pickerPosition.top}px`,
+            left: `${pickerPosition.left}px`,
+          }}
+        >
           <HexColorPicker 
             color={localValue} 
             onChange={handleColorChange}
           />
+          <div className='fieldcolorwheel-presets'>
+            {presetColors.map((color) => (
+              <div
+                key={color}
+                className={`fieldcolorwheel-preset ${localValue === color ? 'active' : ''}`}
+                style={{ backgroundColor: color }}
+                onClick={() => handlePresetClick(color)}
+              />
+            ))}
+          </div>
         </div>
       )}
     </div>
