@@ -65,11 +65,7 @@ Creates and returns a node of the specified name.
 
 ### `.control(options)`: Control
 
-Provides input and output control to the app. The control object allows apps to:
-- Capture input events (keyboard, mouse, touch, XR controllers)
-- Control the camera position and rotation
-- Set custom UI actions
-- Customize the reticle (crosshair)
+TODO: provides control to a client to respond to inputs and move the camera etc
 
 Returns a Control object with the following methods:
 
@@ -86,16 +82,6 @@ Parameters:
 Note: 
 - This only works on the client
 - The image will be scaled to fit the calculated size while maintaining aspect ratio
-- If multiple apps set reticles, the most recent one wins
-- When an app is deleted/restarted, its reticle is automatically cleared
-- If all app reticles are cleared, the default reticle is restored
-
-Example:
-```javascript
-const control = app.control()
-control.setReticle('https://example.com/crosshair.png', 1.5) // 150% size
-control.setReticle(null) // Clear this app's reticle
-```
 
 ##### `control.release()`
 
