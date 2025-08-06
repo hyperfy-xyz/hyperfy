@@ -159,6 +159,7 @@ export class ClientLoader extends System {
           const img = new Image()
           img.onload = () => {
             const texture = this.texLoader.load(img.src)
+            texture.colorSpace = THREE.SRGBColorSpace
             this.results.set(key, texture)
             resolve(texture)
             URL.revokeObjectURL(img.src)
