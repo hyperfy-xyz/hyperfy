@@ -1055,6 +1055,7 @@ export function FieldColorWheel({ label, hint, value, onChange }) {
   const { setHint } = useContext(HintContext)
   const [showPicker, setShowPicker] = useState(false)
   const [localValue, setLocalValue] = useState(value || '#ffffff')
+  const [hexInput, setHexInput] = useState(value || '#ffffff')
   const [pickerPosition, setPickerPosition] = useState({ top: 0, left: 0 })
   const pickerRef = useRef()
   const controlRef = useRef()
@@ -1082,7 +1083,10 @@ export function FieldColorWheel({ label, hint, value, onChange }) {
   ]
 
   useEffect(() => {
-    if (localValue !== value) setLocalValue(value || '#ffffff')
+    if (localValue !== value) {
+      setLocalValue(value || '#ffffff')
+      setHexInput(value || '#ffffff')
+    }
   }, [value])
 
   useEffect(() => {
@@ -1100,11 +1104,33 @@ export function FieldColorWheel({ label, hint, value, onChange }) {
 
   const handleColorChange = color => {
     setLocalValue(color)
+    setHexInput(color)
     onChange(color) // Update immediately when color changes
+  }
+
+  const handleHexInputChange = e => {
+    const input = e.target.value
+    setHexInput(input)
+    
+    // Validate hex color
+    const hexPattern = /^#([0-9A-Fa-f]{6}|[0-9A-Fa-f]{3})$/
+    if (hexPattern.test(input)) {
+      setLocalValue(input)
+      onChange(input)
+    }
+  }
+
+  const handleHexInputBlur = () => {
+    // Reset to current color if invalid
+    const hexPattern = /^#([0-9A-Fa-f]{6}|[0-9A-Fa-f]{3})$/
+    if (!hexPattern.test(hexInput)) {
+      setHexInput(localValue)
+    }
   }
 
   const handlePresetClick = color => {
     setLocalValue(color)
+    setHexInput(color)
     onChange(color)
     // Don't close the picker when selecting a preset
   }
@@ -1191,7 +1217,7 @@ export function FieldColorWheel({ label, hint, value, onChange }) {
         }
         /* Custom styles for react-colorful */
         .react-colorful {
-          width: 150px;
+          width: 100%;
           height: 150px;
         }
         .react-colorful__saturation {
@@ -1208,12 +1234,36 @@ export function FieldColorWheel({ label, hint, value, onChange }) {
           height: 1rem;
           border-width: 2px;
         }
+        .fieldcolorwheel-hexinput {
+          margin-top: 0.75rem;
+          input {
+            width: 100%;
+            padding: 0.5rem;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 0.375rem;
+            color: #ffffff;
+            font-family: monospace;
+            font-size: 0.875rem;
+            text-align: center;
+            text-transform: uppercase;
+            transition: all 0.2s;
+            &:focus {
+              outline: none;
+              border-color: rgba(255, 255, 255, 0.3);
+              background: rgba(255, 255, 255, 0.08);
+            }
+            &::placeholder {
+              color: rgba(255, 255, 255, 0.3);
+            }
+          }
+        }
         .fieldcolorwheel-presets {
           display: grid;
           grid-template-columns: repeat(6, 1fr);
           gap: 0.375rem;
-          margin-top: 1rem;
-          padding-top: 1rem;
+          margin-top: 0.75rem;
+          padding-top: 0.75rem;
           border-top: 1px solid rgba(255, 255, 255, 0.1);
         }
         .fieldcolorwheel-preset {
@@ -1257,6 +1307,16 @@ export function FieldColorWheel({ label, hint, value, onChange }) {
           }}
         >
           <HexColorPicker color={localValue} onChange={handleColorChange} />
+          <div className='fieldcolorwheel-hexinput'>
+            <input
+              type='text'
+              value={hexInput}
+              onChange={handleHexInputChange}
+              onBlur={handleHexInputBlur}
+              placeholder='#FFFFFF'
+              maxLength={7}
+            />
+          </div>
           <div className='fieldcolorwheel-presets'>
             {presetColors.map(color => (
               <div
