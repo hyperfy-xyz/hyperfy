@@ -8,9 +8,6 @@ app.configure([
   },
 ])
 
-console.log('Color wheel test loaded')
-console.log('Props:', props)
-
 // Create a simple box to show the color
 const box = app.create('prim', {
   kind: 'box',

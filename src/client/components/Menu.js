@@ -956,7 +956,6 @@ export function MenuItemToggle({ label, hint, trueLabel = 'Yes', falseLabel = 'N
 }
 
 export function MenuItemColorWheel({ label, hint, value, onChange }) {
-  console.log('[MenuItemColorWheel] Rendering with:', { label, hint, value })
   const setHint = useContext(MenuContext)
   const [showPicker, setShowPicker] = useState(false)
   const [localValue, setLocalValue] = useState(value || '#ffffff')
