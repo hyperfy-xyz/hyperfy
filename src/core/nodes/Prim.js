@@ -124,8 +124,8 @@ const getMaterial = props => {
   }
 
   const material = new THREE.MeshStandardMaterial({
-    color: new THREE.Color(props.color),
-    emissive: props.emissive ? new THREE.Color(props.emissive) : new THREE.Color(0x000000),
+    color: props.color,
+    emissive: props.emissive,
     emissiveIntensity: props.emissiveIntensity,
     metalness: props.metalness,
     roughness: props.roughness,
