@@ -63,11 +63,45 @@ NOTE: Blender GLTF exporter renames objects in some cases, eg by removing spaces
 
 Creates and returns a node of the specified name.
 
-#### `.control(options)`: Control
+### `.control(options)`: Control
 
-TODO: provides control to a client to respond to inputs and move the camera etc
+Provides input and output control to the app. The control object allows apps to:
+- Capture input events (keyboard, mouse, touch, XR controllers)
+- Control the camera position and rotation
+- Set custom UI actions
+- Customize the reticle (crosshair)
 
-#### `.configure(fields)`
+Returns a Control object with the following methods:
+
+#### Control Methods
+
+##### `control.setReticle(url, scale)`
+
+Sets a custom image for the reticle (crosshair). 
+
+Parameters:
+- `url`: The image URL or `null` to clear this control's reticle
+- `scale`: Optional scale multiplier (default: 1). Base size is 2rem, so scale 2 = 4rem, scale 0.5 = 1rem, etc.
+
+Note: 
+- This only works on the client
+- The image will be scaled to fit the calculated size while maintaining aspect ratio
+- If multiple apps set reticles, the most recent one wins
+- When an app is deleted/restarted, its reticle is automatically cleared
+- If all app reticles are cleared, the default reticle is restored
+
+Example:
+```javascript
+const control = app.control()
+control.setReticle('https://example.com/crosshair.png', 1.5) // 150% size
+control.setReticle(null) // Clear this app's reticle
+```
+
+##### `control.release()`
+
+Releases the control, removing all input captures and restoring any modified UI elements (including reticles).
+
+### `.configure(fields)`
 
 Configures custom UI for your app. See [Props](/docs/scripting/app/Props.md) for more info.
 

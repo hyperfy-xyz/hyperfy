@@ -274,8 +274,13 @@ export class ClientControls extends System {
           }
           self.buildActions()
         },
+        setReticle(url, scale) {
+          self.world.ui.setControlReticle(control, url, scale)
+        },
         release: () => {
           reticleSupressor?.()
+          // Clean up any reticle set by this control
+          self.world.ui.removeControlReticle(control)
           const idx = this.controls.indexOf(control)
           if (idx === -1) return
           this.controls.splice(idx, 1)

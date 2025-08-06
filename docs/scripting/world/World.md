@@ -64,13 +64,3 @@ Sets a query parameter in the browsers url
 ### `.open(url: string, newTab: ?Boolean)`
 
 Opens a link, defaults to new tab.
-
-### `.setReticleImage(url: ?String, scale: ?Number)`
-
-Sets a custom image for the reticle (crosshair). Pass `null` or empty string to restore the default reticle.
-
-Parameters:
-- `url`: The image URL or `null` to restore default
-- `scale`: Optional scale multiplier (default: 1). Base size is 2rem, so scale 2 = 4rem, scale 0.5 = 1rem, etc.
-
-Note: This only works on the client. The image will be scaled to fit the calculated size while maintaining aspect ratio.
