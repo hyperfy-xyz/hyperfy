@@ -965,10 +965,12 @@ function Reticle({ world }) {
   const [pointerLocked, setPointerLocked] = useState(world.controls.pointer.locked)
   const [buildMode, setBuildMode] = useState(world.builder.enabled)
   const [customImage, setCustomImage] = useState(world.ui.state.reticleImage)
+  const [customScale, setCustomScale] = useState(world.ui.state.reticleScale)
 
   useEffect(() => {
     const handleUI = state => {
       setCustomImage(state.reticleImage)
+      setCustomScale(state.reticleScale)
     }
     world.on('pointer-lock', setPointerLocked)
     world.on('build-mode', setBuildMode)
@@ -1032,8 +1034,8 @@ function Reticle({ world }) {
           }
         }
         .reticle-image {
-          width: 2rem;
-          height: 2rem;
+          width: ${2 * customScale}rem;
+          height: ${2 * customScale}rem;
           background-size: contain;
           background-repeat: no-repeat;
           background-position: center;

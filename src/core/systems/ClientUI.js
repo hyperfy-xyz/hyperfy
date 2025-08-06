@@ -15,6 +15,7 @@ export class ClientUI extends System {
       pane: null,
       reticleSuppressors: 0,
       reticleImage: null,
+      reticleScale: 1,
     }
     this.lastAppPane = 'app'
     this.control = null
@@ -93,12 +94,23 @@ export class ClientUI extends System {
     }
   }
 
-  setReticleImage(url) {
+  setReticleImage(url, scale) {
     if (url) {
       this.state.reticleImage = this.world.resolveURL(url)
     } else {
       this.state.reticleImage = null
     }
+    
+    // Validate scale parameter - only accept numbers
+    if (scale !== undefined && typeof scale === 'number' && scale > 0) {
+      this.state.reticleScale = scale
+    } else {
+      if (scale !== undefined) {
+        console.warn(`Invalid reticle scale value: ${scale}. Scale must be a positive number. Using default scale of 1.`)
+      }
+      this.state.reticleScale = 1
+    }
+    
     this.broadcast()
   }
 
