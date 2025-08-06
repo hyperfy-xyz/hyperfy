@@ -1101,9 +1101,17 @@ export function FieldColorWheel({ label, hint, value, onChange }) {
           color: rgba(255, 255, 255, 0.6);
         }
         .fieldcolorwheel-preview {
+          flex: 1;
           display: flex;
           align-items: center;
+          justify-content: flex-end;
           gap: 0.5rem;
+        }
+        .fieldcolorwheel-text {
+          font-size: 0.9375rem;
+          font-family: monospace;
+          text-transform: uppercase;
+          text-align: right;
         }
         .fieldcolorwheel-swatch {
           width: 1.25rem;
@@ -1111,12 +1119,7 @@ export function FieldColorWheel({ label, hint, value, onChange }) {
           border-radius: 0.375rem;
           border: 1px solid rgba(255, 255, 255, 0.2);
           box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.2);
-        }
-        .fieldcolorwheel-text {
-          font-size: 0.875rem;
-          font-family: monospace;
-          text-transform: uppercase;
-          color: rgba(255, 255, 255, 0.8);
+          flex-shrink: 0;
         }
         .fieldcolorwheel-control:hover {
           background-color: rgba(255, 255, 255, 0.03);
@@ -1124,8 +1127,7 @@ export function FieldColorWheel({ label, hint, value, onChange }) {
         .fieldcolorwheel-picker {
           position: absolute;
           top: calc(100% + 0.5rem);
-          left: 50%;
-          transform: translateX(-50%);
+          right: 0;
           z-index: 1000;
           background: rgba(11, 10, 21, 0.95);
           border: 1px solid rgba(255, 255, 255, 0.1);
@@ -1163,11 +1165,11 @@ export function FieldColorWheel({ label, hint, value, onChange }) {
       >
         <div className='fieldcolorwheel-label'>{label}</div>
         <div className='fieldcolorwheel-preview'>
+          <div className='fieldcolorwheel-text'>{localValue}</div>
           <div 
             className='fieldcolorwheel-swatch' 
             style={{ backgroundColor: localValue }}
           />
-          <div className='fieldcolorwheel-text'>{localValue}</div>
         </div>
       </div>
       
