@@ -114,7 +114,7 @@ const getGeometry = (type, size) => {
 const materialCache = new Map()
 
 // Create material with specific properties
-const createMaterial = async (props, loader) => {
+const getMaterial = (props, loader) => {
   // Create a cache key from material properties
   const cacheKey = `${props.color}_${props.emissive}_${props.emissiveIntensity}_${props.metalness}_${props.roughness}_${props.opacity}_${props.transparent}_${props.texture}_${props.doubleside}`
 
@@ -136,26 +136,30 @@ const createMaterial = async (props, loader) => {
 
   // Load texture if provided
   if (props.texture && loader) {
-    try {
-      // Check if texture is already loaded
-      let texture = loader.get('texture', props.texture)
-      if (!texture) {
-        // Load the texture
-        texture = await loader.load('texture', props.texture)
-      }
-      if (texture) {
-        material.map = texture
-        material.needsUpdate = true
-      }
-    } catch (err) {
-      console.warn('[prim] Failed to load texture:', props.texture, err)
-    }
+    applyTexture(material, props.texture, loader)
   }
 
   // Cache the material
   materialCache.set(cacheKey, material)
 
   return material
+}
+
+const applyTexture = async (material, textureUrl, loader) => {
+  try {
+    // Check if texture is already loaded
+    let texture = loader.get('texture', textureUrl)
+    if (!texture) {
+      // Load the texture
+      texture = await loader.load('texture', textureUrl)
+    }
+    if (texture) {
+      material.map = texture
+      material.needsUpdate = true
+    }
+  } catch (err) {
+    console.warn('[prim] Failed to load texture:', textureUrl, err)
+  }
 }
 
 export class Prim extends Node {
@@ -199,7 +203,7 @@ export class Prim extends Node {
     this.tempQuat = new THREE.Quaternion()
   }
 
-  async mount() {
+  mount() {
     this.needsRebuild = false
 
     // Get unit-sized geometry for this type
@@ -209,7 +213,7 @@ export class Prim extends Node {
     const loader = this.ctx.world.loader || null
 
     // Create material with current properties
-    const material = await createMaterial(
+    const material = getMaterial(
       {
         color: this._color,
         emissive: this._emissive,
