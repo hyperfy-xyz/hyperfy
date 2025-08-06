@@ -13,20 +13,20 @@ const gameState = {
   score: 0,
   ringsCollected: 0,
   rings: [],
-  startTime: Date.now()
+  startTime: Date.now(),
 }
 
 console.log('Building arena...')
 
 // Create floor
 const floor = app.create('prim', {
-  kind: 'box',
+  type: 'box',
   scale: [ARENA_SIZE, 0.2, ARENA_SIZE],
   position: [0, -0.1, 0],
   color: '#2a2a2a',
   metalness: 0.2,
   roughness: 0.8,
-  physics: 'static'
+  physics: 'static',
 })
 app.add(floor)
 
@@ -34,40 +34,48 @@ app.add(floor)
 const walls = []
 
 // North wall
-walls.push(app.create('prim', {
-  kind: 'box',
-  scale: [ARENA_SIZE, WALL_HEIGHT, WALL_THICKNESS],
-  position: [0, WALL_HEIGHT/2, -ARENA_SIZE/2],
-  color: '#444444',
-  physics: 'static'
-}))
+walls.push(
+  app.create('prim', {
+    type: 'box',
+    scale: [ARENA_SIZE, WALL_HEIGHT, WALL_THICKNESS],
+    position: [0, WALL_HEIGHT / 2, -ARENA_SIZE / 2],
+    color: '#444444',
+    physics: 'static',
+  })
+)
 
 // South wall
-walls.push(app.create('prim', {
-  kind: 'box',
-  scale: [ARENA_SIZE, WALL_HEIGHT, WALL_THICKNESS],
-  position: [0, WALL_HEIGHT/2, ARENA_SIZE/2],
-  color: '#444444',
-  physics: 'static'
-}))
+walls.push(
+  app.create('prim', {
+    type: 'box',
+    scale: [ARENA_SIZE, WALL_HEIGHT, WALL_THICKNESS],
+    position: [0, WALL_HEIGHT / 2, ARENA_SIZE / 2],
+    color: '#444444',
+    physics: 'static',
+  })
+)
 
 // East wall
-walls.push(app.create('prim', {
-  kind: 'box',
-  scale: [WALL_THICKNESS, WALL_HEIGHT, ARENA_SIZE],
-  position: [ARENA_SIZE/2, WALL_HEIGHT/2, 0],
-  color: '#444444',
-  physics: 'static'
-}))
+walls.push(
+  app.create('prim', {
+    type: 'box',
+    scale: [WALL_THICKNESS, WALL_HEIGHT, ARENA_SIZE],
+    position: [ARENA_SIZE / 2, WALL_HEIGHT / 2, 0],
+    color: '#444444',
+    physics: 'static',
+  })
+)
 
 // West wall
-walls.push(app.create('prim', {
-  kind: 'box',
-  scale: [WALL_THICKNESS, WALL_HEIGHT, ARENA_SIZE],
-  position: [-ARENA_SIZE/2, WALL_HEIGHT/2, 0],
-  color: '#444444',
-  physics: 'static'
-}))
+walls.push(
+  app.create('prim', {
+    type: 'box',
+    scale: [WALL_THICKNESS, WALL_HEIGHT, ARENA_SIZE],
+    position: [-ARENA_SIZE / 2, WALL_HEIGHT / 2, 0],
+    color: '#444444',
+    physics: 'static',
+  })
+)
 
 walls.forEach(wall => app.add(wall))
 
@@ -77,24 +85,24 @@ for (let i = 0; i < OBSTACLE_COUNT; i++) {
   const isLarge = Math.random() < 0.3
   const height = isLarge ? 3 : 1.5
   const width = isLarge ? 3 : 1.5
-  
+
   // Random position avoiding center spawn area
   let x, z
   do {
     x = (Math.random() - 0.5) * (ARENA_SIZE - 4)
     z = (Math.random() - 0.5) * (ARENA_SIZE - 4)
   } while (Math.abs(x) < 5 && Math.abs(z) < 5) // Keep center clear
-  
+
   const obstacle = app.create('prim', {
-    kind: Math.random() < 0.7 ? 'box' : 'cylinder',
+    type: Math.random() < 0.7 ? 'box' : 'cylinder',
     scale: [width, height, width],
-    position: [x, height/2, z],
+    position: [x, height / 2, z],
     color: `hsl(${200 + Math.random() * 40}, 20%, ${30 + Math.random() * 20}%)`,
     metalness: 0.4,
     roughness: 0.6,
-    physics: 'static'
+    physics: 'static',
   })
-  
+
   obstacles.push(obstacle)
   app.add(obstacle)
 }
@@ -105,9 +113,9 @@ function createRing(index) {
   const x = (Math.random() - 0.5) * (ARENA_SIZE - 4)
   const y = 0.5 + Math.random() * 3
   const z = (Math.random() - 0.5) * (ARENA_SIZE - 4)
-  
+
   const ring = app.create('prim', {
-    kind: 'torus',
+    type: 'torus',
     scale: [0.8, 0.8, 0.8],
     position: [x, y, z],
     color: '#ffd700',
@@ -116,44 +124,45 @@ function createRing(index) {
     metalness: 0.8,
     roughness: 0.2,
     physics: 'static',
-    physicsTrigger: true,
-    physicsTag: `ring_${index}`,
-    physicsOnTriggerEnter: (other) => {
-      if (other.playerId) { // Player touched the ring
+    trigger: true,
+    tag: `ring_${index}`,
+    onTriggerEnter: other => {
+      if (other.playerId) {
+        // Player touched the ring
         collectRing(ring, index, other.playerId)
       }
-    }
+    },
   })
-  
+
   // Store reference
   gameState.rings[index] = ring
-  
+
   return ring
 }
 
 // Ring collection handler
 function collectRing(ring, index, playerId) {
   if (!gameState.rings[index]) return // Already collected
-  
+
   // Remove ring
   app.remove(ring)
   gameState.rings[index] = null
-  
+
   // Update score
   gameState.score += 100
   gameState.ringsCollected++
-  
+
   console.log(`Player ${playerId} collected ring! Score: ${gameState.score}`)
-  
+
   // Create particle effect at ring position
   createCollectEffect(ring.position)
-  
+
   // Check win condition
   if (gameState.ringsCollected >= RING_COUNT) {
     const time = Math.floor((Date.now() - gameState.startTime) / 1000)
     console.log(`🎉 All rings collected in ${time} seconds! Final score: ${gameState.score}`)
   }
-  
+
   // Respawn ring after delay
   setTimeout(() => {
     if (gameState.ringsCollected < RING_COUNT) {
@@ -168,50 +177,46 @@ function createCollectEffect(position) {
   const particles = []
   for (let i = 0; i < 8; i++) {
     const particle = app.create('prim', {
-      kind: 'box',
+      type: 'box',
       scale: [0.1, 0.1, 0.1],
       position: [...position],
       color: '#ffff00',
       emissive: '#ffff00',
-      emissiveIntensity: 3
+      emissiveIntensity: 3,
     })
-    
+
     app.add(particle)
     particles.push({
       prim: particle,
-      velocity: [
-        (Math.random() - 0.5) * 10,
-        5 + Math.random() * 5,
-        (Math.random() - 0.5) * 10
-      ],
-      lifetime: 1
+      velocity: [(Math.random() - 0.5) * 10, 5 + Math.random() * 5, (Math.random() - 0.5) * 10],
+      lifetime: 1,
     })
   }
-  
+
   // Animate particles
   let elapsed = 0
-  const updateParticles = (dt) => {
+  const updateParticles = dt => {
     elapsed += dt
-    
+
     particles.forEach(p => {
       p.prim.position.x += p.velocity[0] * dt
       p.prim.position.y += p.velocity[1] * dt - 9.8 * dt * dt // gravity
       p.prim.position.z += p.velocity[2] * dt
-      
+
       // Fade out
-      const alpha = Math.max(0, 1 - (elapsed / p.lifetime))
+      const alpha = Math.max(0, 1 - elapsed / p.lifetime)
       p.prim.opacity = alpha
       p.prim.transparent = true
       p.prim.emissiveIntensity = 3 * alpha
     })
-    
+
     if (elapsed >= 1) {
       // Remove particles
       particles.forEach(p => app.remove(p.prim))
       app.off('update', updateParticles)
     }
   }
-  
+
   app.on('update', updateParticles)
 }
 
@@ -222,7 +227,7 @@ for (let i = 0; i < RING_COUNT; i++) {
 }
 
 // Add spinning animation to rings
-app.on('update', (dt) => {
+app.on('update', dt => {
   gameState.rings.forEach(ring => {
     if (ring) {
       ring.rotation.y += 2 * dt
@@ -235,11 +240,11 @@ app.on('update', (dt) => {
 const crystals = []
 for (let i = 0; i < 4; i++) {
   const angle = (i / 4) * Math.PI * 2
-  const x = Math.cos(angle) * (ARENA_SIZE/2 - 3)
-  const z = Math.sin(angle) * (ARENA_SIZE/2 - 3)
-  
+  const x = Math.cos(angle) * (ARENA_SIZE / 2 - 3)
+  const z = Math.sin(angle) * (ARENA_SIZE / 2 - 3)
+
   const crystal = app.create('prim', {
-    kind: 'cone',
+    type: 'cone',
     scale: [0.5, 2, 0.5],
     position: [x, 1, z],
     color: '#4488ff',
@@ -248,15 +253,15 @@ for (let i = 0; i < 4; i++) {
     metalness: 0.2,
     roughness: 0.3,
     transparent: true,
-    opacity: 0.8
+    opacity: 0.8,
   })
-  
+
   crystals.push(crystal)
   app.add(crystal)
 }
 
 // Animate crystals
-app.on('update', (dt) => {
+app.on('update', dt => {
   crystals.forEach((crystal, i) => {
     crystal.position.y = 1 + Math.sin(Date.now() * 0.001 + i) * 0.3
     crystal.emissiveIntensity = 2 + Math.sin(Date.now() * 0.002 + i * 0.5) * 1
@@ -265,14 +270,14 @@ app.on('update', (dt) => {
 
 // Create spawn point indicator
 const spawnIndicator = app.create('prim', {
-  kind: 'cylinder',
+  type: 'cylinder',
   scale: [2, 0.1, 2],
   position: [0, 0.05, 0],
   color: '#00ff00',
   emissive: '#00ff00',
   emissiveIntensity: 1,
   transparent: true,
-  opacity: 0.5
+  opacity: 0.5,
 })
 app.add(spawnIndicator)
 

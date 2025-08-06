@@ -135,7 +135,7 @@ function updatePrimitive() {
 
   // Create new primitive - geometry is already translated so y=0 is the bottom
   currentPrim = app.create('prim', {
-    kind: props.primType || 'box',
+    type: props.primType || 'box',
     scale: scaleArray,
     position: [0, 0, 0],
     color: props.color || '#4488ff',
@@ -147,6 +147,7 @@ function updatePrimitive() {
     castShadow: true,
     receiveShadow: true,
   })
+  currentPrim.position.y += props.scaleY / 2
 
   app.add(currentPrim)
 }

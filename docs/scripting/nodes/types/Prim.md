@@ -4,7 +4,7 @@ Creates primitive 3D shapes with built-in geometry caching for optimal performan
 
 ## Properties
 
-### `.kind`: String
+### `.type`: String
 
 The type of primitive shape to create. 
 
@@ -12,6 +12,25 @@ Available options: `box`, `sphere`, `cylinder`, `cone`, `torus`, `plane`.
 
 Defaults to `box`.
 
+### `.size`: Array
+
+The size of the shape, depending on the `type` (defaults shown):
+
+- **Box**: `[width = 1, height = 1, depth = 1]`
+- **Sphere**: `[radius = 0.5]`
+- **Cylinder**: `[radiusTop = 0.5, radiusBtm = 0.5, height = 1]`
+- **Cone**: `[radius = 0.5, height = 1]`
+- **Torus**: `[innerRadius = 0.4, tubeRadius = 0.1]`
+- **Plane**: `[width = 1, height = 1]`
+
+Default sizes all roughly fit inside a 1m cubed space for consistency.
+
+**Note**: The origin of all primitives are at the center of the volume. To position a primitive with its bottom at y=0:
+- Box: `position.y = height / 2`
+- Sphere: `position.y = radius`
+- Cylinder: `position.y = height / 2`
+- Cone: `position.y = height / 2`
+- Torus: `position.y = innerRadius + tubeRadius`
 
 ### `.color`: String
 
@@ -59,25 +78,6 @@ Whether the primitive should receive shadows from other objects. Defaults to `tr
 
 Whether the primitive should be rendered from both sides. This is particularly useful for plane primitives that need to be visible from both front and back. Defaults to `false`.
 
-### `.scale`: Array (inherited from Node)
-
-Controls the size of the primitive using a 3-component array `[x, y, z]`. Since primitives use unit-sized geometry, the scale directly determines the final dimensions.
-
-**Scale behavior by primitive type:**
-- **Box**: `[width, height, depth]` - Direct mapping to box dimensions
-- **Sphere**: `[radius, radius, radius]` - Use uniform scale for proper spheres
-- **Cylinder**: `[radius, height, radius]` - X/Z control radius, Y controls height
-- **Cone**: `[radius, height, radius]` - X/Z control base radius, Y controls height  
-- **Torus**: `[radius, radius, radius]` - Use uniform scale for major radius (tube radius is 0.3× major)
-- **Plane**: `[width, height, 1]` - X/Y control dimensions, Z typically kept at 1
-
-Defaults to `[1, 1, 1]`.
-
-**Note**: Primitives are centered at their origin. To position a primitive with its bottom at y=0:
-- Box/Cylinder/Cone: `position.y = scale.y / 2`
-- Sphere: `position.y = scale.x` (assuming uniform scale)
-- Torus: `position.y = scale.x * 1.3` (major radius + tube radius)
-
 ### `.physics`: String | null
 
 The physics body type for the primitive. Can be:
@@ -88,57 +88,57 @@ The physics body type for the primitive. Can be:
 
 Defaults to `null`.
 
-### `.physicsMass`: Number
+### `.mass`: Number
 
-The mass in kg for dynamic bodies. Only applies when physics is set to `'dynamic'`. Defaults to `1`.
+Physics mass for dynamic bodies. Only applies when physics is set to `'dynamic'`. Defaults to `1`.
 
-### `.physicsLinearDamping`: Number
+### `.linearDamping`: Number
 
-Linear velocity damping factor from 0 to 1. Higher values make objects slow down faster. Defaults to `0`.
+Physics linear velocity damping. Higher values make objects slow down faster. Defaults to `0`.
 
-### `.physicsAngularDamping`: Number
+### `.angularDamping`: Number
 
-Angular velocity damping factor from 0 to 1. Higher values reduce rotation speed faster. Defaults to `0.05`.
+Physics angular velocity damping. Higher values reduce rotation speed faster. Defaults to `0.05`.
 
-### `.physicsStaticFriction`: Number
+### `.staticFriction`: Number
 
-Static friction coefficient from 0 to 1. Determines resistance to start moving when at rest. Defaults to `0.6`.
+Physics material static friction. Determines resistance to start moving when at rest. Defaults to `0.6`.
 
-### `.physicsDynamicFriction`: Number
+### `.dynamicFriction`: Number
 
-Dynamic friction coefficient from 0 to 1. Determines resistance while moving. Defaults to `0.6`.
+Physics material dynamic friction. Determines resistance while moving. Defaults to `0.6`.
 
-### `.physicsRestitution`: Number
+### `.restitution`: Number
 
-Bounciness factor from 0 to 1. 0 = no bounce, 1 = perfect bounce. Defaults to `0`.
+Physics material bounciness. 0 = no bounce, 1 = perfect bounce. Defaults to `0`.
 
-### `.physicsLayer`: String
+### `.layer`: String
 
-The collision layer for physics filtering. Defaults to `'environment'`.
+Physics collision layer. Defaults to `'environment'`.
 
-### `.physicsTrigger`: Boolean
+### `.trigger`: Boolean
 
-Whether this is a trigger volume (detects overlaps without causing collisions). Defaults to `false`.
+Whether this physics shape is a trigger volume (detects overlaps without causing collisions). Defaults to `false`.
 
-### `.physicsTag`: String | null
+### `.tag`: String | null
 
-Custom tag for identifying physics bodies. Defaults to `null`.
+Tag for identifying physics bodies when raycasting etc. Defaults to `null`.
 
-### `.physicsOnContactStart`: Function | null
+### `.onContactStart`: Function | null
 
-Callback function called when contact with another physics body begins. Receives the other body as parameter. Defaults to `null`.
+Physics callback function, called when contact with another physics body begins. Receives the other body as parameter. Defaults to `null`.
 
-### `.physicsOnContactEnd`: Function | null
+### `.onContactEnd`: Function | null
 
-Callback function called when contact with another physics body ends. Receives the other body as parameter. Defaults to `null`.
+Physics callback function, called when contact with another physics body ends. Receives the other body as parameter. Defaults to `null`.
 
-### `.physicsOnTriggerEnter`: Function | null
+### `.onTriggerEnter`: Function | null
 
-Callback function called when another body enters this trigger volume. Only works when `physicsTrigger` is `true`. Defaults to `null`.
+Physics callback function, called when another body enters this trigger volume. Only works when `trigger` is `true`. Defaults to `null`.
 
-### `.physicsOnTriggerLeave`: Function | null
+### `.onTriggerLeave`: Function | null
 
-Callback function called when another body leaves this trigger volume. Only works when `physicsTrigger` is `true`. Defaults to `null`.
+Physics callback function, called when another body leaves this trigger volume. Only works when `trigger` is `true`. Defaults to `null`.
 
 ### `.{...Node}`
 
@@ -149,7 +149,7 @@ Inherits all [Node](/docs/scripting/nodes/Node.md) properties
 ```javascript
 // Create various primitives with different materials
 const box = app.create('prim', {
-  kind: 'box',
+  type: 'box',
   scale: [2, 1, 3],
   position: [0, 1, 0],
   color: '#ff0000',
@@ -158,7 +158,7 @@ const box = app.create('prim', {
 })
 
 const sphere = app.create('prim', {
-  kind: 'sphere',
+  type: 'sphere',
   scale: [0.5, 0.5, 0.5],
   position: [3, 1, 0],
   color: '#0000ff',
@@ -168,7 +168,7 @@ const sphere = app.create('prim', {
 
 // Transparent glass-like cylinder
 const cylinder = app.create('prim', {
-  kind: 'cylinder',
+  type: 'cylinder',
   scale: [0.3, 2, 0.3],
   position: [-3, 1, 0],
   color: '#ffffff',
@@ -180,7 +180,7 @@ const cylinder = app.create('prim', {
 
 // Animated torus
 const torus = app.create('prim', {
-  kind: 'torus',
+  type: 'torus',
   scale: [1, 1, 1],
   position: [0, 3, 0],
   color: '#ffff00'
@@ -188,7 +188,7 @@ const torus = app.create('prim', {
 
 // Textured plane (double-sided)
 const texturedPlane = app.create('prim', {
-  kind: 'plane',
+  type: 'plane',
   scale: [2, 2, 1],
   position: [0, 1, -3],
   rotation: [-Math.PI/2, 0, 0],
@@ -211,7 +211,7 @@ app.on('update', (dt) => {
 // Physics examples
 // Static floor
 const floor = app.create('prim', {
-  kind: 'box',
+  type: 'box',
   scale: [10, 0.1, 10],
   position: [0, 0, 0],
   color: '#333333',
@@ -220,37 +220,37 @@ const floor = app.create('prim', {
 
 // Dynamic bouncing ball
 const ball = app.create('prim', {
-  kind: 'sphere',
+  type: 'sphere',
   scale: [0.5, 0.5, 0.5],
   position: [0, 5, 0],
   color: '#ff0000',
   physics: 'dynamic',
-  physicsMass: 1,
-  physicsRestitution: 0.8, // Bouncy!
-  physicsLinearDamping: 0.1
+  mass: 1,
+  restitution: 0.8, // Bouncy!
+  linearDamping: 0.1
 })
 
 // Trigger zone
 const triggerZone = app.create('prim', {
-  kind: 'box',
+  type: 'box',
   scale: [2, 2, 2],
   position: [5, 1, 0],
   color: '#00ff00',
   transparent: true,
   opacity: 0.3,
   physics: 'static',
-  physicsTrigger: true,
-  physicsOnTriggerEnter: (other) => {
+  trigger: true,
+  onTriggerEnter: (other) => {
     console.log('Something entered the zone!', other)
   },
-  physicsOnTriggerLeave: (other) => {
+  onTriggerLeave: (other) => {
     console.log('Something left the zone!', other)
   }
 })
 
 // Reactive physics properties
-ball.physicsTag = 'player_ball' // Can be changed at runtime
-ball.physicsRestitution = 0.5   // Updates bounciness
+ball.tag = 'player_ball' // Can be changed at runtime
+ball.restitution = 0.5   // Updates bounciness
 
 app.add(floor)
 app.add(ball)

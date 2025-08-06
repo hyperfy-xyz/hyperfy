@@ -14,7 +14,7 @@ docker build -t hyperfydemo . && docker run -d -p 3000:3000 \
   -e ASSETS_DIR=/world/assets \
   -e PUBLIC_WS_URL=https://demo.hyperfy.host/ws \
   -e PUBLIC_API_URL=https://demo.hyperfy.host/api \
-  -e PUBLIC_ASSETS_URL=https://demo.hyperfy.host/assets \
+  -e ASSETS_BASE_URL=https://demo.hyperfy.host/assets \
   hyperfydemo
 ```
 
