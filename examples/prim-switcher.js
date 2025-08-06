@@ -14,9 +14,9 @@ app.configure([
       { label: 'Cylinder', value: 'cylinder' },
       { label: 'Cone', value: 'cone' },
       { label: 'Torus', value: 'torus' },
-      { label: 'Plane', value: 'plane' }
+      { label: 'Plane', value: 'plane' },
     ],
-    initial: 'box'
+    initial: 'box',
   },
   {
     type: 'range',
@@ -25,7 +25,7 @@ app.configure([
     min: 0.1,
     max: 5,
     step: 0.1,
-    initial: 1
+    initial: 1,
   },
   {
     type: 'range',
@@ -34,7 +34,7 @@ app.configure([
     min: 0.1,
     max: 5,
     step: 0.1,
-    initial: 1
+    initial: 1,
   },
   {
     type: 'range',
@@ -43,13 +43,13 @@ app.configure([
     min: 0.1,
     max: 5,
     step: 0.1,
-    initial: 1
+    initial: 1,
   },
   {
     type: 'toggle',
     key: 'rotate',
     label: 'Auto Rotate',
-    initial: true
+    initial: true,
   },
   {
     type: 'range',
@@ -58,14 +58,14 @@ app.configure([
     min: 0,
     max: 5,
     step: 0.1,
-    initial: 1
+    initial: 1,
   },
   {
     type: 'text',
     key: 'color',
     label: 'Color (hex)',
     placeholder: '#ff0000',
-    initial: '#4488ff'
+    initial: '#4488ff',
   },
   {
     type: 'range',
@@ -74,7 +74,7 @@ app.configure([
     min: 0,
     max: 1,
     step: 0.05,
-    initial: 0.5
+    initial: 0.5,
   },
   {
     type: 'range',
@@ -83,13 +83,13 @@ app.configure([
     min: 0,
     max: 1,
     step: 0.05,
-    initial: 0.5
+    initial: 0.5,
   },
   {
     type: 'toggle',
     key: 'emissive',
     label: 'Emissive (Glow)',
-    initial: false
+    initial: false,
   },
   {
     type: 'range',
@@ -98,13 +98,13 @@ app.configure([
     min: 0,
     max: 3,
     step: 0.1,
-    initial: 1
+    initial: 1,
   },
   {
     type: 'toggle',
     key: 'doubleside',
     label: 'Double Sided',
-    initial: false
+    initial: false,
   },
   {
     type: 'button',
@@ -115,8 +115,8 @@ app.configure([
         currentPrim.position.set(0, 0, 0)
         currentPrim.rotation.set(0, 0, 0)
       }
-    }
-  }
+    },
+  },
 ])
 
 // Track current primitive
@@ -129,17 +129,13 @@ function updatePrimitive() {
     app.remove(currentPrim)
     currentPrim = null
   }
-  
+
   // Get scale from individual axis controls
-  const scaleArray = [
-    props.scaleX || 1,
-    props.scaleY || 1,
-    props.scaleZ || 1
-  ]
-  
+  const scaleArray = [props.scaleX || 1, props.scaleY || 1, props.scaleZ || 1]
+
   // Create new primitive - geometry is already translated so y=0 is the bottom
   currentPrim = app.create('prim', {
-    kind: props.primType || 'box',
+    type: props.primType || 'box',
     scale: scaleArray,
     position: [0, 0, 0],
     color: props.color || '#4488ff',
@@ -149,9 +145,9 @@ function updatePrimitive() {
     emissiveIntensity: props.emissiveIntensity || 1,
     doubleside: props.doubleside || false,
     castShadow: true,
-    receiveShadow: true
+    receiveShadow: true,
   })
-  
+
   app.add(currentPrim)
 }
 
@@ -160,14 +156,14 @@ updatePrimitive()
 
 // Watch for prop changes
 let lastProps = JSON.stringify(props)
-app.on('update', (dt) => {
+app.on('update', dt => {
   // Check if props changed
   const currentPropsString = JSON.stringify(props)
   if (currentPropsString !== lastProps) {
     lastProps = currentPropsString
     updatePrimitive()
   }
-  
+
   // Auto rotate if enabled
   if (props.rotate && currentPrim) {
     currentPrim.rotation.y += dt * (props.rotationSpeed || 1)
@@ -185,7 +181,7 @@ const info = app.create('ui', {
   borderRadius: 10,
   padding: 10,
   flexDirection: 'column',
-  gap: 5
+  gap: 5,
 })
 
 const title = app.create('uitext', {
@@ -193,14 +189,14 @@ const title = app.create('uitext', {
   fontSize: 20,
   color: '#ffffff',
   fontWeight: 'bold',
-  textAlign: 'center'
+  textAlign: 'center',
 })
 
 const subtitle = app.create('uitext', {
   value: 'Use the props panel to change settings',
   fontSize: 14,
   color: '#aaaaaa',
-  textAlign: 'center'
+  textAlign: 'center',
 })
 
 info.add(title)

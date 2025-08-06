@@ -7,8 +7,8 @@ app.configure([
     type: 'file',
     key: 'textureFile',
     label: 'Texture Image',
-    kind: 'texture'
-  }
+    kind: 'texture',
+  },
 ])
 
 const TOTAL_PRIMITIVES = 50000
@@ -32,7 +32,7 @@ const materials = [
   { color: '#45b7d1', metalness: 0.0, roughness: 0.6 }, // Blue
   { color: '#96f2d7', metalness: 0.0, roughness: 0.5 }, // Mint
   { color: '#ffd93d', metalness: 0.1, roughness: 0.4 }, // Gold
-  
+
   // Special materials (used by 20% of objects)
   { color: '#ffffff', metalness: 0.9, roughness: 0.1 }, // Polished metal
   { color: '#ffd700', metalness: 0.8, roughness: 0.2 }, // Gold metal
@@ -49,7 +49,7 @@ if (props.textureFile?.url) {
     color: '#ffffff',
     metalness: 0.0,
     roughness: 0.8,
-    texture: props.textureFile.url
+    texture: props.textureFile.url,
   })
 }
 
@@ -58,17 +58,17 @@ const stats = {
   shapes: {},
   materialUsage: new Array(materials.length).fill(0),
   startTime: Date.now(),
-  instances: []
+  instances: [],
 }
 
-SHAPES.forEach(shape => stats.shapes[shape] = 0)
+SHAPES.forEach(shape => (stats.shapes[shape] = 0))
 
 // Create primitives
 for (let i = 0; i < TOTAL_PRIMITIVES; i++) {
   // Select shape type
   const shape = SHAPES[i % SHAPES.length]
   stats.shapes[shape]++
-  
+
   // Select material with weighted distribution
   let materialIndex
   if (Math.random() < 0.8) {
@@ -81,25 +81,25 @@ for (let i = 0; i < TOTAL_PRIMITIVES; i++) {
   }
   const material = materials[materialIndex]
   stats.materialUsage[materialIndex]++
-  
+
   // Grid-based positioning with variation
-  const gridSize = Math.ceil(Math.pow(TOTAL_PRIMITIVES, 1/3))
+  const gridSize = Math.ceil(Math.pow(TOTAL_PRIMITIVES, 1 / 3))
   const spacing = WORLD_SIZE / gridSize
-  
+
   const gridX = i % gridSize
   const gridY = Math.floor(i / gridSize) % gridSize
   const gridZ = Math.floor(i / (gridSize * gridSize))
-  
+
   const position = [
-    (gridX - gridSize/2) * spacing + (Math.random() - 0.5) * spacing * 0.5,
+    (gridX - gridSize / 2) * spacing + (Math.random() - 0.5) * spacing * 0.5,
     gridY * spacing * 0.5,
-    (gridZ - gridSize/2) * spacing + (Math.random() - 0.5) * spacing * 0.5
+    (gridZ - gridSize / 2) * spacing + (Math.random() - 0.5) * spacing * 0.5,
   ]
-  
+
   // Consistent scale variations per shape type
   let scaleArr
   const scaleFactor = 0.5 + Math.random() * 0.5 // 0.5 to 1.0
-  
+
   if (shape === 'sphere') {
     const r = 0.4 * scaleFactor
     scaleArr = [r, r, r]
@@ -112,24 +112,25 @@ for (let i = 0; i < TOTAL_PRIMITIVES; i++) {
     scaleArr = [r, h, r]
   } else if (shape === 'plane') {
     scaleArr = [scaleFactor, scaleFactor, 1]
-  } else { // box
+  } else {
+    // box
     const s = 0.6 * scaleFactor
     scaleArr = [s, s, s]
   }
-  
+
   // Create primitive
   const prim = app.create('prim', {
-    kind: shape,
+    type: shape,
     scale: scaleArr,
     position: position,
     ...material,
     castShadow: false,
-    receiveShadow: false
+    receiveShadow: false,
   })
-  
+
   app.add(prim)
   stats.instances.push(prim)
-  
+
   // Log progress
   if ((i + 1) % 1000 === 0) {
     console.log(`Created ${i + 1}/${TOTAL_PRIMITIVES} primitives...`)
@@ -137,7 +138,9 @@ for (let i = 0; i < TOTAL_PRIMITIVES; i++) {
 }
 
 const creationTime = Date.now() - stats.startTime
-console.log(`\nCreation complete in ${creationTime}ms (${(creationTime / TOTAL_PRIMITIVES).toFixed(2)}ms per primitive)`)
+console.log(
+  `\nCreation complete in ${creationTime}ms (${(creationTime / TOTAL_PRIMITIVES).toFixed(2)}ms per primitive)`
+)
 
 // Log statistics
 console.log('\nShape distribution:')
@@ -156,22 +159,22 @@ stats.materialUsage.forEach((count, idx) => {
 // Create a special textured showcase primitive if texture is provided
 if (props.textureFile?.url) {
   const texturedBox = app.create('prim', {
-    kind: 'box',
+    type: 'box',
     scale: [4, 4, 4],
     position: [0, 2, -10],
     color: '#ffffff',
     texture: props.textureFile.url,
     metalness: 0.0,
-    roughness: 0.8
+    roughness: 0.8,
   })
   app.add(texturedBox)
   stats.instances.push(texturedBox)
-  
+
   // Make it rotate slowly
-  app.on('update', (dt) => {
+  app.on('update', dt => {
     texturedBox.rotation.y += 0.3 * dt
   })
-  
+
   console.log('\nCreated textured showcase box at [0, 2, -10]')
 }
 
@@ -189,11 +192,11 @@ for (let i = 0; i < animatedCount; i++) {
   animatedPrims.push({
     prim: stats.instances[idx],
     speed: 0.5 + Math.random() * 1.5,
-    axis: ['x', 'y', 'z'][Math.floor(Math.random() * 3)]
+    axis: ['x', 'y', 'z'][Math.floor(Math.random() * 3)],
   })
 }
 
-app.on('update', (dt) => {
+app.on('update', dt => {
   animatedPrims.forEach(({ prim, speed, axis }) => {
     prim.rotation[axis] += speed * dt
   })

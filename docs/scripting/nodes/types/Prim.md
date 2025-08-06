@@ -4,7 +4,7 @@ Creates primitive 3D shapes with built-in geometry caching for optimal performan
 
 ## Properties
 
-### `.kind`: String
+### `.type`: String
 
 The type of primitive shape to create. 
 
@@ -149,7 +149,7 @@ Inherits all [Node](/docs/scripting/nodes/Node.md) properties
 ```javascript
 // Create various primitives with different materials
 const box = app.create('prim', {
-  kind: 'box',
+  type: 'box',
   scale: [2, 1, 3],
   position: [0, 1, 0],
   color: '#ff0000',
@@ -158,7 +158,7 @@ const box = app.create('prim', {
 })
 
 const sphere = app.create('prim', {
-  kind: 'sphere',
+  type: 'sphere',
   scale: [0.5, 0.5, 0.5],
   position: [3, 1, 0],
   color: '#0000ff',
@@ -168,7 +168,7 @@ const sphere = app.create('prim', {
 
 // Transparent glass-like cylinder
 const cylinder = app.create('prim', {
-  kind: 'cylinder',
+  type: 'cylinder',
   scale: [0.3, 2, 0.3],
   position: [-3, 1, 0],
   color: '#ffffff',
@@ -180,7 +180,7 @@ const cylinder = app.create('prim', {
 
 // Animated torus
 const torus = app.create('prim', {
-  kind: 'torus',
+  type: 'torus',
   scale: [1, 1, 1],
   position: [0, 3, 0],
   color: '#ffff00'
@@ -188,7 +188,7 @@ const torus = app.create('prim', {
 
 // Textured plane (double-sided)
 const texturedPlane = app.create('prim', {
-  kind: 'plane',
+  type: 'plane',
   scale: [2, 2, 1],
   position: [0, 1, -3],
   rotation: [-Math.PI/2, 0, 0],
@@ -211,7 +211,7 @@ app.on('update', (dt) => {
 // Physics examples
 // Static floor
 const floor = app.create('prim', {
-  kind: 'box',
+  type: 'box',
   scale: [10, 0.1, 10],
   position: [0, 0, 0],
   color: '#333333',
@@ -220,7 +220,7 @@ const floor = app.create('prim', {
 
 // Dynamic bouncing ball
 const ball = app.create('prim', {
-  kind: 'sphere',
+  type: 'sphere',
   scale: [0.5, 0.5, 0.5],
   position: [0, 5, 0],
   color: '#ff0000',
@@ -232,7 +232,7 @@ const ball = app.create('prim', {
 
 // Trigger zone
 const triggerZone = app.create('prim', {
-  kind: 'box',
+  type: 'box',
   scale: [2, 2, 2],
   position: [5, 1, 0],
   color: '#00ff00',

@@ -5,7 +5,7 @@ const SPACING = 3
 
 // Create floor
 const floor = app.create('prim', {
-  kind: 'box',
+  type: 'box',
   scale: [20, 0.1, 10],
   position: [0, -0.05, 0],
   color: '#2a2a2a',
@@ -15,7 +15,7 @@ app.add(floor)
 
 // Box primitive
 const box = app.create('prim', {
-  kind: 'box',
+  type: 'box',
   scale: [1, 1, 1],
   position: [-7.5, 0.5, 0],
   color: '#ff4444',
@@ -26,7 +26,7 @@ app.add(box)
 
 // Sphere primitive
 const sphere = app.create('prim', {
-  kind: 'sphere',
+  type: 'sphere',
   scale: [0.5, 0.5, 0.5],
   position: [-4.5, 0.5, 0],
   color: '#4444ff',
@@ -37,7 +37,7 @@ app.add(sphere)
 
 // Cylinder primitive
 const cylinder = app.create('prim', {
-  kind: 'cylinder',
+  type: 'cylinder',
   scale: [0.5, 1.5, 0.5],
   position: [-1.5, 0.75, 0],
   color: '#44ff44',
@@ -48,7 +48,7 @@ app.add(cylinder)
 
 // Cone primitive
 const cone = app.create('prim', {
-  kind: 'cone',
+  type: 'cone',
   scale: [0.5, 1.5, 0.5],
   position: [1.5, 0.75, 0],
   color: '#ff44ff',
@@ -59,7 +59,7 @@ app.add(cone)
 
 // Torus primitive
 const torus = app.create('prim', {
-  kind: 'torus',
+  type: 'torus',
   scale: [0.6, 0.6, 0.6],
   position: [4.5, 0.7, 0],
   color: '#ffff44',
@@ -70,7 +70,7 @@ app.add(torus)
 
 // Plane primitive (vertical to be visible)
 const plane = app.create('prim', {
-  kind: 'plane',
+  type: 'plane',
   scale: [1.5, 1.5, 1],
   position: [7.5, 0.75, 0],
   rotation: [0, Math.PI / 4, 0], // Rotate to face viewer
@@ -94,7 +94,7 @@ const labels = [
 // Create text labels (using small boxes as placeholders for demonstration)
 labels.forEach(label => {
   const labelBox = app.create('prim', {
-    kind: 'box',
+    type: 'box',
     scale: [1.2, 0.1, 0.3],
     position: [label.x, 0.05, 2],
     color: '#666666',

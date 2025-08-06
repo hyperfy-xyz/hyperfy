@@ -9,7 +9,7 @@ const START_Z = -18
 
 // Create arena
 const floor = app.create('prim', {
-  kind: 'box',
+  type: 'box',
   scale: [50, 0.2, 50],
   position: [0, -0.1, 0],
   color: '#2a2a2a',
@@ -27,7 +27,7 @@ const wallConfigs = [
 wallConfigs.forEach(cfg => {
   app.add(
     app.create('prim', {
-      kind: 'box',
+      type: 'box',
       scale: cfg.scale,
       position: cfg.pos,
       color: '#444444',
@@ -167,7 +167,7 @@ PRIMITIVE_TYPES.forEach((primType, row) => {
 
     // Create test primitive
     const prim = app.create('prim', {
-      kind: primType,
+      type: primType,
       scale: config.scale,
       position: [x, yPos, rowZ],
       rotation: config.rotation || [0, 0, 0],
@@ -188,7 +188,7 @@ PRIMITIVE_TYPES.forEach((primType, row) => {
     // Add trigger zone for first column
     if (col === 0) {
       const trigger = app.create('prim', {
-        kind: 'box',
+        type: 'box',
         scale: [2, 2, 2],
         position: [x + GRID_SPACING, 1, rowZ],
         color: '#00ff00',
@@ -224,7 +224,7 @@ PRIMITIVE_TYPES.forEach((primType, row) => {
 
 // Add test ball
 const testBall = app.create('prim', {
-  kind: 'sphere',
+  type: 'sphere',
   scale: [0.3, 0.3, 0.3],
   position: [0, 5, 0],
   color: '#ff00ff',
