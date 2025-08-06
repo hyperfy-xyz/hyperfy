@@ -61,10 +61,10 @@ app.configure([
     initial: 1,
   },
   {
-    type: 'text',
+    type: 'colorwheel',
     key: 'color',
-    label: 'Color (hex)',
-    placeholder: '#ff0000',
+    label: 'Color',
+    hint: 'Choose a color for the primitive',
     initial: '#4488ff',
   },
   {
