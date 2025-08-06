@@ -965,7 +965,7 @@ function Reticle({ world }) {
   const [pointerLocked, setPointerLocked] = useState(world.controls.pointer.locked)
   const [buildMode, setBuildMode] = useState(world.builder.enabled)
   const [customImage, setCustomImage] = useState(world.ui.state.reticleImage)
-  
+
   useEffect(() => {
     const handleUI = state => {
       setCustomImage(state.reticleImage)
@@ -979,10 +979,10 @@ function Reticle({ world }) {
       world.off('ui', handleUI)
     }
   }, [])
-  
+
   const visible = isTouch ? true : pointerLocked
   if (!visible) return null
-  
+
   return (
     <div
       className='reticle'
@@ -999,31 +999,36 @@ function Reticle({ world }) {
           align-items: center;
           justify-content: center;
         }
+        /* Optimized build mode indicator */
         .reticle-container.build-mode::before {
           content: '';
           position: absolute;
           top: 50%;
           left: 50%;
           transform: translate(-50%, -50%);
-          width: 3rem;
-          height: 3rem;
+          width: 2.5rem;
+          height: 2.5rem;
           border-radius: 50%;
-          background: radial-gradient(
-            circle,
-            rgba(255, 77, 77, 0.4) 0%,
-            rgba(255, 77, 77, 0.2) 40%,
-            rgba(255, 77, 77, 0) 70%
-          );
-          animation: buildPulse 2s ease-in-out infinite;
+          pointer-events: none;
+          border: 2px solid transparent;
+          border-top-color: rgba(255, 120, 120, 0.8);
+          border-right-color: rgba(255, 120, 120, 0.5);
+          box-shadow: 0 0 20px rgba(255, 80, 80, 0.5);
+          animation: buildRotate 3s cubic-bezier(0.4, 0, 0.6, 1) infinite;
         }
-        @keyframes buildPulse {
-          0%, 100% {
-            transform: translate(-50%, -50%) scale(1);
-            opacity: 0.8;
+
+        @keyframes buildRotate {
+          0% {
+            transform: translate(-50%, -50%) rotate(0deg) scale(0.9);
+            opacity: 0.6;
           }
           50% {
-            transform: translate(-50%, -50%) scale(1.2);
-            opacity: 1;
+            transform: translate(-50%, -50%) rotate(180deg) scale(1.1);
+            opacity: 0.9;
+          }
+          100% {
+            transform: translate(-50%, -50%) rotate(360deg) scale(0.9);
+            opacity: 0.6;
           }
         }
         .reticle-image {
