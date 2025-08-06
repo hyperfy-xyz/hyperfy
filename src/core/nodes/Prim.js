@@ -53,7 +53,7 @@ const defaultSizes = {
   sphere: [0.5], // radius
   cylinder: [0.5, 0.5, 1], // radiusTop, radiusBtm, height
   cone: [0.5, 1], // radius, height
-  torus: [0.4, 0.1], // innerRadius, tubeRadius
+  torus: [0.4, 0.1], // radius, tubeRadius
   plane: [1, 1], // width, height
 }
 

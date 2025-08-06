@@ -11,7 +11,7 @@ const START_Z = -18
 const floor = app.create('prim', {
   type: 'box',
   scale: [50, 0.2, 50],
-  position: [0, -0.1, 0],
+  position: [0, -0.07, 0],
   color: '#2a2a2a',
   physics: 'static',
 })
@@ -154,12 +154,12 @@ PRIMITIVE_TYPES.forEach((primType, row) => {
 
     // Primitive configuration
     const configs = {
-      sphere: { scale: [0.5, 0.5, 0.5], height: 0.5 },
-      cylinder: { scale: [0.5, 1.5, 0.5], height: 0.75 },
-      cone: { scale: [0.5, 1.5, 0.5], height: 0.75 },
-      torus: { scale: [0.6, 0.6, 0.6], height: 0.7 },
-      plane: { scale: [1.5, 1.5, 1], height: 0.75, rotation: [0, Math.PI / 4, 0] },
-      box: { scale: [1, 1, 1], height: 0.5 },
+      box: { size: [1, 1, 1], height: 0.5 },
+      sphere: { size: [0.5], height: 0.5 },
+      cylinder: { size: [0.5, 0.5, 1], height: 0.5 },
+      cone: { size: [0.5, 1], height: 0.5 },
+      torus: { size: [0.4, 0.1], height: 0.5 },
+      plane: { size: [1, 1], height: 0.5, rotation: [0, Math.PI / 4, 0] },
     }
 
     const config = configs[primType] || configs.box
@@ -168,7 +168,7 @@ PRIMITIVE_TYPES.forEach((primType, row) => {
     // Create test primitive
     const prim = app.create('prim', {
       type: primType,
-      scale: config.scale,
+      size: config.size,
       position: [x, yPos, rowZ],
       rotation: config.rotation || [0, 0, 0],
       color: `hsl(${row * 60}, 70%, 50%)`,
@@ -188,21 +188,24 @@ PRIMITIVE_TYPES.forEach((primType, row) => {
     // Add trigger zone for first column
     if (col === 0) {
       const trigger = app.create('prim', {
-        type: 'box',
+        type: primType,
         scale: [2, 2, 2],
         position: [x + GRID_SPACING, 1, rowZ],
         color: '#00ff00',
+        doubleside: primType === 'plane',
         transparent: true,
         opacity: 0.2,
         physics: 'static',
         trigger: true,
         tag: `trigger_${primType}`,
         onTriggerEnter: other => {
+          trigger.color = 'red'
           console.log('trigger data', other)
           console.log(`${primType} trigger entered by:`, other.playerId || 'unknown')
           updateStatus(`✓ ${primType} trigger entered`)
         },
         onTriggerLeave: other => {
+          trigger.color = '#00ff00'
           console.log(`${primType} trigger left by:`, other.playerId || 'unknown')
         },
       })
@@ -248,7 +251,8 @@ app.on('fixedUpdate', dt => {
   // Animate kinematic objects
   testPrimitives.forEach(item => {
     if (item.physicsType === 'kinematic') {
-      item.prim.position.y = item.originalY + Math.sin(time * 2) * 0.5
+      // item.prim.position.y = item.originalY + Math.sin(time * 2) * 0.5
+      item.prim.position.y = item.originalY + Math.abs(Math.sin(time * 2)) * 0.5
       item.prim.rotation.y = time
       item.prim.clean()
     }

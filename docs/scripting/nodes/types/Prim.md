@@ -20,7 +20,7 @@ The size of the shape, depending on the `type` (defaults shown):
 - **Sphere**: `[radius = 0.5]`
 - **Cylinder**: `[radiusTop = 0.5, radiusBtm = 0.5, height = 1]`
 - **Cone**: `[radius = 0.5, height = 1]`
-- **Torus**: `[innerRadius = 0.4, tubeRadius = 0.1]`
+- **Torus**: `[radius = 0.4, tubeRadius = 0.1]`
 - **Plane**: `[width = 1, height = 1]`
 
 Default sizes all roughly fit inside a 1m cubed space for consistency.
