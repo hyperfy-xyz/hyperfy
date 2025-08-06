@@ -11,6 +11,7 @@ import { Portal } from './Portal'
 import { CurvePane } from './CurvePane'
 import { isArray } from 'lodash-es'
 import { downloadFile } from '../../core/extras/downloadFile'
+import { HexColorPicker } from 'react-colorful'
 
 export function FieldText({ label, hint, placeholder, value, onChange }) {
   const { setHint } = useContext(HintContext)
@@ -1046,6 +1047,138 @@ export function FieldBtn({ label, note, hint, nav, onClick }) {
       <div className='fieldbtn-label'>{label}</div>
       {note && <div className='fieldbtn-note'>{note}</div>}
       {nav && <ChevronRightIcon size='1.5rem' />}
+    </div>
+  )
+}
+
+export function FieldColorWheel({ label, hint, value, onChange }) {
+  const { setHint } = useContext(HintContext)
+  const [showPicker, setShowPicker] = useState(false)
+  const [localValue, setLocalValue] = useState(value || '#ffffff')
+  const pickerRef = useRef()
+  
+  useEffect(() => {
+    if (localValue !== value) setLocalValue(value || '#ffffff')
+  }, [value])
+
+  useEffect(() => {
+    if (!showPicker) return
+    
+    function handleClickOutside(e) {
+      if (pickerRef.current && !pickerRef.current.contains(e.target)) {
+        setShowPicker(false)
+        onChange(localValue)
+      }
+    }
+    
+    document.addEventListener('mousedown', handleClickOutside)
+    return () => document.removeEventListener('mousedown', handleClickOutside)
+  }, [showPicker, localValue])
+
+  const handleColorChange = (color) => {
+    setLocalValue(color)
+  }
+
+  return (
+    <div
+      className='fieldcolorwheel'
+      css={css`
+        position: relative;
+        .fieldcolorwheel-control {
+          display: flex;
+          align-items: center;
+          height: 2.5rem;
+          padding: 0 1rem;
+          cursor: pointer;
+        }
+        .fieldcolorwheel-label {
+          width: 9.4rem;
+          flex-shrink: 0;
+          white-space: nowrap;
+          text-overflow: ellipsis;
+          overflow: hidden;
+          font-size: 0.9375rem;
+          color: rgba(255, 255, 255, 0.6);
+        }
+        .fieldcolorwheel-preview {
+          display: flex;
+          align-items: center;
+          gap: 0.5rem;
+        }
+        .fieldcolorwheel-swatch {
+          width: 1.25rem;
+          height: 1.25rem;
+          border-radius: 0.375rem;
+          border: 1px solid rgba(255, 255, 255, 0.2);
+          box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.2);
+        }
+        .fieldcolorwheel-text {
+          font-size: 0.875rem;
+          font-family: monospace;
+          text-transform: uppercase;
+          color: rgba(255, 255, 255, 0.8);
+        }
+        .fieldcolorwheel-control:hover {
+          background-color: rgba(255, 255, 255, 0.03);
+        }
+        .fieldcolorwheel-picker {
+          position: absolute;
+          top: calc(100% + 0.5rem);
+          left: 50%;
+          transform: translateX(-50%);
+          z-index: 1000;
+          background: rgba(11, 10, 21, 0.95);
+          border: 1px solid rgba(255, 255, 255, 0.1);
+          border-radius: 1rem;
+          padding: 1rem;
+          backdrop-filter: blur(10px);
+          box-shadow: 0 4px 24px rgba(0, 0, 0, 0.5);
+        }
+        /* Custom styles for react-colorful */
+        .react-colorful {
+          width: 150px;
+          height: 150px;
+        }
+        .react-colorful__saturation {
+          border-radius: 0.5rem 0.5rem 0 0;
+        }
+        .react-colorful__hue {
+          margin-top: 0.75rem;
+          height: 0.75rem;
+          border-radius: 0.375rem;
+        }
+        .react-colorful__saturation-pointer,
+        .react-colorful__hue-pointer {
+          width: 1rem;
+          height: 1rem;
+          border-width: 2px;
+        }
+      `}
+      onPointerEnter={() => setHint(hint)}
+      onPointerLeave={() => setHint(null)}
+    >
+      <div 
+        className='fieldcolorwheel-control'
+        onClick={() => setShowPicker(!showPicker)}
+      >
+        <div className='fieldcolorwheel-label'>{label}</div>
+        <div className='fieldcolorwheel-preview'>
+          <div 
+            className='fieldcolorwheel-swatch' 
+            style={{ backgroundColor: localValue }}
+          />
+          <div className='fieldcolorwheel-text'>{localValue}</div>
+        </div>
+      </div>
+      
+      {showPicker && (
+        <div className='fieldcolorwheel-picker' ref={pickerRef}>
+          <HexColorPicker 
+            color={localValue} 
+            onChange={handleColorChange}
+          />
+        </div>
+      )}
     </div>
   )
 }

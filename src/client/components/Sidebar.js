@@ -46,6 +46,7 @@ import {
   FieldTextarea,
   FieldToggle,
   FieldVec3,
+  FieldColorWheel,
 } from './Fields'
 import { HintContext, HintProvider } from './Hint'
 import { useFullscreen } from './useFullscreen'
@@ -1471,6 +1472,16 @@ function AppField({ world, props, field, value, modify }) {
   }
   if (field.type === 'button') {
     return <FieldBtn label={field.label} hint={field.hint} onClick={field.onClick} />
+  }
+  if (field.type === 'colorwheel') {
+    return (
+      <FieldColorWheel
+        label={field.label}
+        hint={field.hint}
+        value={value}
+        onChange={value => modify(field.key, value)}
+      />
+    )
   }
   return null
 }

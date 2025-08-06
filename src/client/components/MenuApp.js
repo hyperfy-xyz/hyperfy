@@ -12,9 +12,11 @@ import {
   MenuItemText,
   MenuItemTextarea,
   MenuItemToggle,
+  MenuItemColorWheel,
   MenuLine,
   MenuSection,
 } from './Menu'
+console.log('[MenuApp] MenuItemColorWheel imported:', MenuItemColorWheel)
 import { exportApp } from '../../core/extras/appTools'
 import { downloadFile } from '../../core/extras/downloadFile'
 import { hashFile } from '../../core/utils-client'
@@ -125,13 +127,16 @@ function MenuAppIndex({ world, app, blueprint, pop, push }) {
 
 function MenuItemFields({ world, app, blueprint }) {
   const [fields, setFields] = useState(() => app.fields)
+  console.log('[MenuItemFields] Initial fields:', fields)
   const props = blueprint.props
   useEffect(() => {
+    console.log('[MenuItemFields] Setting onFields callback')
     app.onFields = setFields
     return () => {
       app.onFields = null
     }
   }, [])
+  console.log('[MenuItemFields] Rendering with fields:', fields)
   const modify = (key, value) => {
     if (props[key] === value) return
     const bp = world.blueprints.get(blueprint.id)
@@ -149,6 +154,7 @@ function MenuItemFields({ world, app, blueprint }) {
 }
 
 function MenuItemField({ world, props, field, value, modify }) {
+  console.log('[MenuItemField] Rendering field:', field.type, field.label, 'full field:', field)
   if (field.hidden) {
     return null
   }
@@ -272,6 +278,21 @@ function MenuItemField({ world, props, field, value, modify }) {
   if (field.type === 'button') {
     return <MenuItemBtn label={field.label} hint={field.hint} onClick={field.onClick} />
   }
+  if (field.type === 'colorwheel') {
+    console.log('[MenuItemField] Rendering colorwheel field:', field)
+    console.log('[MenuItemField] MenuItemColorWheel component:', MenuItemColorWheel)
+    const element = (
+      <MenuItemColorWheel
+        label={field.label}
+        hint={field.hint}
+        value={value}
+        onChange={value => modify(field.key, value)}
+      />
+    )
+    console.log('[MenuItemField] Created element:', element)
+    return element
+  }
+  console.log('[MenuItemField] Unknown field type:', field.type)
   return null
 }
 
