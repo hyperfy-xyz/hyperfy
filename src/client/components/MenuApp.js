@@ -12,7 +12,6 @@ import {
   MenuItemText,
   MenuItemTextarea,
   MenuItemToggle,
-  MenuItemColorWheel,
   MenuLine,
   MenuSection,
 } from './Menu'
@@ -272,16 +271,6 @@ function MenuItemField({ world, props, field, value, modify }) {
   }
   if (field.type === 'button') {
     return <MenuItemBtn label={field.label} hint={field.hint} onClick={field.onClick} />
-  }
-  if (field.type === 'colorwheel') {
-    return (
-      <MenuItemColorWheel
-        label={field.label}
-        hint={field.hint}
-        value={value}
-        onChange={value => modify(field.key, value)}
-      />
-    )
   }
   return null
 }
