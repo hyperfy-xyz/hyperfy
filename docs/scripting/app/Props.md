@@ -155,6 +155,22 @@ const audio = app.create('audio', {
 audio.play()
 ```
 
+### Color
+
+A visual color picker that displays a color swatch and opens a color wheel when clicked.
+
+```jsx
+{
+  type: 'color',
+  key: String,           // the key on `props` to set this value
+  label: String,         // the label for the color picker
+  hint: String,          // optional hint text displayed on hover
+  initial: String,       // the initial hex color value (default = '#ffffff')
+}
+```
+
+The value set on props is a hex color string (e.g., '#ff0000' for red).
+
 ### Button
 
 Displays a button that when clicked, executes something in the running app.
