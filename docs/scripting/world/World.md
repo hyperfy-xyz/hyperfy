@@ -64,3 +64,21 @@ Sets a query parameter in the browsers url
 ### `.open(url: string, newTab: ?Boolean)`
 
 Opens a link, defaults to new tab.
+
+### `.setReticleImage(url: ?String)`
+
+Sets a custom image for the reticle (crosshair). Pass `null` or empty string to restore the default reticle.
+
+Example:
+```jsx
+// Set a custom reticle
+world.setReticleImage('https://example.com/crosshair.png')
+
+// Or use an asset
+world.setReticleImage(props.reticleImage?.url)
+
+// Restore default reticle
+world.setReticleImage(null)
+```
+
+Note: This only works on the client. The image will be scaled to fit a 2rem x 2rem area while maintaining aspect ratio.

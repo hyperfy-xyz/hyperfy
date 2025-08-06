@@ -14,6 +14,7 @@ export class ClientUI extends System {
       app: null,
       pane: null,
       reticleSuppressors: 0,
+      reticleImage: null,
     }
     this.lastAppPane = 'app'
     this.control = null
@@ -90,6 +91,15 @@ export class ClientUI extends System {
       this.broadcast()
       released = true
     }
+  }
+
+  setReticleImage(url) {
+    if (url) {
+      this.state.reticleImage = this.world.resolveURL(url)
+    } else {
+      this.state.reticleImage = null
+    }
+    this.broadcast()
   }
 
   confirm(options) {

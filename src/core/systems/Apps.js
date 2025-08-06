@@ -55,6 +55,10 @@ export class Apps extends System {
       // ...
     }
     this.worldMethods = {
+      setReticleImage(entity, url) {
+        if (!world.network.isClient) return
+        world.ui.setReticleImage(url)
+      },
       add(entity, pNode) {
         const node = getRef(pNode)
         if (!node) return
