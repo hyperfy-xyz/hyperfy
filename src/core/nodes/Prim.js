@@ -20,21 +20,21 @@ const defaults = {
   castShadow: true,
   receiveShadow: true,
   doubleside: false,
-  // Physics properties
+  // physics
   physics: null, // null | 'static' | 'kinematic' | 'dynamic'
-  physicsMass: 1,
-  physicsLinearDamping: 0,
-  physicsAngularDamping: 0.05,
-  physicsStaticFriction: 0.6,
-  physicsDynamicFriction: 0.6,
-  physicsRestitution: 0,
-  physicsLayer: 'environment',
-  physicsTrigger: false,
-  physicsTag: null,
-  physicsOnContactStart: null,
-  physicsOnContactEnd: null,
-  physicsOnTriggerEnter: null,
-  physicsOnTriggerLeave: null,
+  mass: 1,
+  linearDamping: 0,
+  angularDamping: 0.05,
+  staticFriction: 0.6,
+  dynamicFriction: 0.6,
+  restitution: 0,
+  layer: 'environment',
+  trigger: false,
+  tag: null,
+  onContactStart: null,
+  onContactEnd: null,
+  onTriggerEnter: null,
+  onTriggerLeave: null,
 }
 
 const _v1 = new THREE.Vector3()
@@ -164,19 +164,19 @@ export class Prim extends Node {
     this.doubleside = data.doubleside
     // Physics properties
     this.physics = data.physics
-    this.physicsMass = data.physicsMass
-    this.physicsLinearDamping = data.physicsLinearDamping
-    this.physicsAngularDamping = data.physicsAngularDamping
-    this.physicsStaticFriction = data.physicsStaticFriction
-    this.physicsDynamicFriction = data.physicsDynamicFriction
-    this.physicsRestitution = data.physicsRestitution
-    this.physicsLayer = data.physicsLayer
-    this.physicsTrigger = data.physicsTrigger
-    this.physicsTag = data.physicsTag
-    this.physicsOnContactStart = data.physicsOnContactStart
-    this.physicsOnContactEnd = data.physicsOnContactEnd
-    this.physicsOnTriggerEnter = data.physicsOnTriggerEnter
-    this.physicsOnTriggerLeave = data.physicsOnTriggerLeave
+    this.mass = data.mass
+    this.linearDamping = data.linearDamping
+    this.angularDamping = data.angularDamping
+    this.staticFriction = data.staticFriction
+    this.dynamicFriction = data.dynamicFriction
+    this.restitution = data.restitution
+    this.layer = data.layer
+    this.trigger = data.trigger
+    this.tag = data.tag
+    this.onContactStart = data.onContactStart
+    this.onContactEnd = data.onContactEnd
+    this.onTriggerEnter = data.onTriggerEnter
+    this.onTriggerLeave = data.onTriggerLeave
 
     // Physics state
     this.shapes = new Set()
@@ -230,10 +230,10 @@ export class Prim extends Node {
     if (!PHYSX) return
 
     const type = this._physics // 'static' | 'kinematic' | 'dynamic'
-    const mass = this._physicsMass
-    const linearDamping = this._physicsLinearDamping
-    const angularDamping = this._physicsAngularDamping
-    const trigger = this._physicsTrigger
+    const mass = this._mass
+    const linearDamping = this._linearDamping
+    const angularDamping = this._angularDamping
+    const trigger = this._trigger
 
     // Create transform
     this.matrixWorld.decompose(_v1, _q1, _v2)
@@ -285,9 +285,9 @@ export class Prim extends Node {
     }
 
     // Get material
-    const staticFriction = this._physicsStaticFriction
-    const dynamicFriction = this._physicsDynamicFriction
-    const restitution = this._physicsRestitution
+    const staticFriction = this._staticFriction
+    const dynamicFriction = this._dynamicFriction
+    const restitution = this._restitution
     const material = this.ctx.world.physics.getMaterial(staticFriction, dynamicFriction, restitution)
 
     // Create shape flags
@@ -302,7 +302,7 @@ export class Prim extends Node {
     this.shape = this.ctx.world.physics.physics.createShape(pxGeometry, material, true, flags)
 
     // Set filter data
-    const layerName = this._physicsLayer
+    const layerName = this._layer
     const layer = Layers[layerName]
     let pairFlags = PHYSX.PxPairFlagEnum.eNOTIFY_TOUCH_FOUND | PHYSX.PxPairFlagEnum.eNOTIFY_TOUCH_LOST
     if (!trigger) {
@@ -332,22 +332,22 @@ export class Prim extends Node {
       onInterpolate: type === 'kinematic' || type === 'dynamic' ? this.onInterpolate : null,
       node: this,
       get tag() {
-        return self._physicsTag
+        return self._tag
       },
       get playerId() {
         return playerId
       },
       get onContactStart() {
-        return self._physicsOnContactStart
+        return self._onContactStart
       },
       get onContactEnd() {
-        return self._physicsOnContactEnd
+        return self._onContactEnd
       },
       get onTriggerEnter() {
-        return self._physicsOnTriggerEnter
+        return self._onTriggerEnter
       },
       get onTriggerLeave() {
-        return self._physicsOnTriggerLeave
+        return self._onTriggerLeave
       },
     })
 
@@ -452,19 +452,19 @@ export class Prim extends Node {
     this._doubleside = source._doubleside
     // Physics properties
     this._physics = source._physics
-    this._physicsMass = source._physicsMass
-    this._physicsLinearDamping = source._physicsLinearDamping
-    this._physicsAngularDamping = source._physicsAngularDamping
-    this._physicsStaticFriction = source._physicsStaticFriction
-    this._physicsDynamicFriction = source._physicsDynamicFriction
-    this._physicsRestitution = source._physicsRestitution
-    this._physicsLayer = source._physicsLayer
-    this._physicsTrigger = source._physicsTrigger
-    this._physicsTag = source._physicsTag
-    this._physicsOnContactStart = source._physicsOnContactStart
-    this._physicsOnContactEnd = source._physicsOnContactEnd
-    this._physicsOnTriggerEnter = source._physicsOnTriggerEnter
-    this._physicsOnTriggerLeave = source._physicsOnTriggerLeave
+    this._mass = source._mass
+    this._linearDamping = source._linearDamping
+    this._angularDamping = source._angularDamping
+    this._staticFriction = source._staticFriction
+    this._dynamicFriction = source._dynamicFriction
+    this._restitution = source._restitution
+    this._layer = source._layer
+    this._trigger = source._trigger
+    this._tag = source._tag
+    this._onContactStart = source._onContactStart
+    this._onContactEnd = source._onContactEnd
+    this._onTriggerEnter = source._onTriggerEnter
+    this._onTriggerLeave = source._onTriggerLeave
     return this
   }
 
@@ -673,192 +673,192 @@ export class Prim extends Node {
     }
   }
 
-  get physicsMass() {
-    return this._physicsMass
+  get mass() {
+    return this._mass
   }
 
-  set physicsMass(value = defaults.physicsMass) {
+  set mass(value = defaults.mass) {
     if (!isNumber(value) || value <= 0) {
-      throw new Error('[prim] physicsMass must be positive number')
+      throw new Error('[prim] mass must be positive number')
     }
-    if (this._physicsMass === value) return
-    this._physicsMass = value
+    if (this._mass === value) return
+    this._mass = value
     if (this.handle && this._physics) {
       this.needsRebuild = true
       this.setDirty()
     }
   }
 
-  get physicsLinearDamping() {
-    return this._physicsLinearDamping
+  get linearDamping() {
+    return this._linearDamping
   }
 
-  set physicsLinearDamping(value = defaults.physicsLinearDamping) {
+  set linearDamping(value = defaults.linearDamping) {
     if (!isNumber(value) || value < 0) {
-      throw new Error('[prim] physicsLinearDamping must be non-negative number')
+      throw new Error('[prim] linearDamping must be non-negative number')
     }
-    if (this._physicsLinearDamping === value) return
-    this._physicsLinearDamping = value
+    if (this._linearDamping === value) return
+    this._linearDamping = value
     if (this.handle && this._physics) {
       this.needsRebuild = true
       this.setDirty()
     }
   }
 
-  get physicsAngularDamping() {
-    return this._physicsAngularDamping
+  get angularDamping() {
+    return this._angularDamping
   }
 
-  set physicsAngularDamping(value = defaults.physicsAngularDamping) {
+  set angularDamping(value = defaults.angularDamping) {
     if (!isNumber(value) || value < 0) {
-      throw new Error('[prim] physicsAngularDamping must be non-negative number')
+      throw new Error('[prim] angularDamping must be non-negative number')
     }
-    if (this._physicsAngularDamping === value) return
-    this._physicsAngularDamping = value
+    if (this._angularDamping === value) return
+    this._angularDamping = value
     if (this.handle && this._physics) {
       this.needsRebuild = true
       this.setDirty()
     }
   }
 
-  get physicsStaticFriction() {
-    return this._physicsStaticFriction
+  get staticFriction() {
+    return this._staticFriction
   }
 
-  set physicsStaticFriction(value = defaults.physicsStaticFriction) {
+  set staticFriction(value = defaults.staticFriction) {
     if (!isNumber(value) || value < 0 || value > 1) {
-      throw new Error('[prim] physicsStaticFriction must be number between 0 and 1')
+      throw new Error('[prim] staticFriction must be number between 0 and 1')
     }
-    if (this._physicsStaticFriction === value) return
-    this._physicsStaticFriction = value
+    if (this._staticFriction === value) return
+    this._staticFriction = value
     if (this.handle && this._physics) {
       this.needsRebuild = true
       this.setDirty()
     }
   }
 
-  get physicsDynamicFriction() {
-    return this._physicsDynamicFriction
+  get dynamicFriction() {
+    return this._dynamicFriction
   }
 
-  set physicsDynamicFriction(value = defaults.physicsDynamicFriction) {
+  set dynamicFriction(value = defaults.dynamicFriction) {
     if (!isNumber(value) || value < 0 || value > 1) {
-      throw new Error('[prim] physicsDynamicFriction must be number between 0 and 1')
+      throw new Error('[prim] dynamicFriction must be number between 0 and 1')
     }
-    if (this._physicsDynamicFriction === value) return
-    this._physicsDynamicFriction = value
+    if (this._dynamicFriction === value) return
+    this._dynamicFriction = value
     if (this.handle && this._physics) {
       this.needsRebuild = true
       this.setDirty()
     }
   }
 
-  get physicsRestitution() {
-    return this._physicsRestitution
+  get restitution() {
+    return this._restitution
   }
 
-  set physicsRestitution(value = defaults.physicsRestitution) {
+  set restitution(value = defaults.restitution) {
     if (!isNumber(value) || value < 0 || value > 1) {
-      throw new Error('[prim] physicsRestitution must be number between 0 and 1')
+      throw new Error('[prim] restitution must be number between 0 and 1')
     }
-    if (this._physicsRestitution === value) return
-    this._physicsRestitution = value
+    if (this._restitution === value) return
+    this._restitution = value
     if (this.handle && this._physics) {
       this.needsRebuild = true
       this.setDirty()
     }
   }
 
-  get physicsLayer() {
-    return this._physicsLayer
+  get layer() {
+    return this._layer
   }
 
-  set physicsLayer(value = defaults.physicsLayer) {
+  set layer(value = defaults.layer) {
     if (!isString(value)) {
-      throw new Error('[prim] physicsLayer must be string')
+      throw new Error('[prim] layer must be string')
     }
-    if (this._physicsLayer === value) return
-    this._physicsLayer = value
+    if (this._layer === value) return
+    this._layer = value
     if (this.handle && this._physics) {
       this.needsRebuild = true
       this.setDirty()
     }
   }
 
-  get physicsTrigger() {
-    return this._physicsTrigger
+  get trigger() {
+    return this._trigger
   }
 
-  set physicsTrigger(value = defaults.physicsTrigger) {
+  set trigger(value = defaults.trigger) {
     if (!isBoolean(value)) {
-      throw new Error('[prim] physicsTrigger must be boolean')
+      throw new Error('[prim] trigger must be boolean')
     }
-    if (this._physicsTrigger === value) return
-    this._physicsTrigger = value
+    if (this._trigger === value) return
+    this._trigger = value
     if (this.handle && this._physics) {
       this.needsRebuild = true
       this.setDirty()
     }
   }
 
-  get physicsTag() {
-    return this._physicsTag
+  get tag() {
+    return this._tag
   }
 
-  set physicsTag(value = defaults.physicsTag) {
+  set tag(value = defaults.tag) {
     if (value !== null && !isString(value)) {
-      throw new Error('[prim] physicsTag must be string or null')
+      throw new Error('[prim] tag must be string or null')
     }
-    if (this._physicsTag === value) return
-    this._physicsTag = value
+    if (this._tag === value) return
+    this._tag = value
     // Tag can be updated without rebuild since it uses getter
   }
 
-  get physicsOnContactStart() {
-    return this._physicsOnContactStart
+  get onContactStart() {
+    return this._onContactStart
   }
 
-  set physicsOnContactStart(value = defaults.physicsOnContactStart) {
+  set onContactStart(value = defaults.onContactStart) {
     if (value !== null && typeof value !== 'function') {
-      throw new Error('[prim] physicsOnContactStart must be function or null')
+      throw new Error('[prim] onContactStart must be function or null')
     }
-    this._physicsOnContactStart = value
+    this._onContactStart = value
     // Callbacks can be updated without rebuild since they use getters
   }
 
-  get physicsOnContactEnd() {
-    return this._physicsOnContactEnd
+  get onContactEnd() {
+    return this._onContactEnd
   }
 
-  set physicsOnContactEnd(value = defaults.physicsOnContactEnd) {
+  set onContactEnd(value = defaults.onContactEnd) {
     if (value !== null && typeof value !== 'function') {
-      throw new Error('[prim] physicsOnContactEnd must be function or null')
+      throw new Error('[prim] onContactEnd must be function or null')
     }
-    this._physicsOnContactEnd = value
+    this._onContactEnd = value
     // Callbacks can be updated without rebuild since they use getters
   }
 
-  get physicsOnTriggerEnter() {
-    return this._physicsOnTriggerEnter
+  get onTriggerEnter() {
+    return this._onTriggerEnter
   }
 
-  set physicsOnTriggerEnter(value = defaults.physicsOnTriggerEnter) {
+  set onTriggerEnter(value = defaults.onTriggerEnter) {
     if (value !== null && typeof value !== 'function') {
-      throw new Error('[prim] physicsOnTriggerEnter must be function or null')
+      throw new Error('[prim] onTriggerEnter must be function or null')
     }
-    this._physicsOnTriggerEnter = value
+    this._onTriggerEnter = value
     // Callbacks can be updated without rebuild since they use getters
   }
 
-  get physicsOnTriggerLeave() {
-    return this._physicsOnTriggerLeave
+  get onTriggerLeave() {
+    return this._onTriggerLeave
   }
 
-  set physicsOnTriggerLeave(value = defaults.physicsOnTriggerLeave) {
+  set onTriggerLeave(value = defaults.onTriggerLeave) {
     if (value !== null && typeof value !== 'function') {
-      throw new Error('[prim] physicsOnTriggerLeave must be function or null')
+      throw new Error('[prim] onTriggerLeave must be function or null')
     }
-    this._physicsOnTriggerLeave = value
+    this._onTriggerLeave = value
     // Callbacks can be updated without rebuild since they use getters
   }
 
@@ -954,83 +954,83 @@ export class Prim extends Node {
         set physics(value) {
           self.physics = value
         },
-        get physicsMass() {
-          return self.physicsMass
+        get mass() {
+          return self.mass
         },
-        set physicsMass(value) {
-          self.physicsMass = value
+        set mass(value) {
+          self.mass = value
         },
-        get physicsLinearDamping() {
-          return self.physicsLinearDamping
+        get linearDamping() {
+          return self.linearDamping
         },
-        set physicsLinearDamping(value) {
-          self.physicsLinearDamping = value
+        set linearDamping(value) {
+          self.linearDamping = value
         },
-        get physicsAngularDamping() {
-          return self.physicsAngularDamping
+        get angularDamping() {
+          return self.angularDamping
         },
-        set physicsAngularDamping(value) {
-          self.physicsAngularDamping = value
+        set angularDamping(value) {
+          self.angularDamping = value
         },
-        get physicsStaticFriction() {
-          return self.physicsStaticFriction
+        get staticFriction() {
+          return self.staticFriction
         },
-        set physicsStaticFriction(value) {
-          self.physicsStaticFriction = value
+        set staticFriction(value) {
+          self.staticFriction = value
         },
-        get physicsDynamicFriction() {
-          return self.physicsDynamicFriction
+        get dynamicFriction() {
+          return self.dynamicFriction
         },
-        set physicsDynamicFriction(value) {
-          self.physicsDynamicFriction = value
+        set dynamicFriction(value) {
+          self.dynamicFriction = value
         },
-        get physicsRestitution() {
-          return self.physicsRestitution
+        get restitution() {
+          return self.restitution
         },
-        set physicsRestitution(value) {
-          self.physicsRestitution = value
+        set restitution(value) {
+          self.restitution = value
         },
-        get physicsLayer() {
-          return self.physicsLayer
+        get layer() {
+          return self.layer
         },
-        set physicsLayer(value) {
-          self.physicsLayer = value
+        set layer(value) {
+          self.layer = value
         },
-        get physicsTrigger() {
-          return self.physicsTrigger
+        get trigger() {
+          return self.trigger
         },
-        set physicsTrigger(value) {
-          self.physicsTrigger = value
+        set trigger(value) {
+          self.trigger = value
         },
-        get physicsTag() {
-          return self.physicsTag
+        get tag() {
+          return self.tag
         },
-        set physicsTag(value) {
-          self.physicsTag = value
+        set tag(value) {
+          self.tag = value
         },
-        get physicsOnContactStart() {
-          return self.physicsOnContactStart
+        get onContactStart() {
+          return self.onContactStart
         },
-        set physicsOnContactStart(value) {
-          self.physicsOnContactStart = value
+        set onContactStart(value) {
+          self.onContactStart = value
         },
-        get physicsOnContactEnd() {
-          return self.physicsOnContactEnd
+        get onContactEnd() {
+          return self.onContactEnd
         },
-        set physicsOnContactEnd(value) {
-          self.physicsOnContactEnd = value
+        set onContactEnd(value) {
+          self.onContactEnd = value
         },
-        get physicsOnTriggerEnter() {
-          return self.physicsOnTriggerEnter
+        get onTriggerEnter() {
+          return self.onTriggerEnter
         },
-        set physicsOnTriggerEnter(value) {
-          self.physicsOnTriggerEnter = value
+        set onTriggerEnter(value) {
+          self.onTriggerEnter = value
         },
-        get physicsOnTriggerLeave() {
-          return self.physicsOnTriggerLeave
+        get onTriggerLeave() {
+          return self.onTriggerLeave
         },
-        set physicsOnTriggerLeave(value) {
-          self.physicsOnTriggerLeave = value
+        set onTriggerLeave(value) {
+          self.onTriggerLeave = value
         },
         get doubleside() {
           return self.doubleside

@@ -176,10 +176,10 @@ PRIMITIVE_TYPES.forEach((primType, row) => {
       roughness: 0.5,
       doubleside: primType === 'plane',
       physics: physType,
-      physicsMass: physType === 'dynamic' ? 1 : 1,
-      physicsRestitution: 0.3,
-      physicsLinearDamping: 0.1,
-      physicsAngularDamping: 0.1,
+      mass: physType === 'dynamic' ? 1 : 1,
+      restitution: 0.3,
+      linearDamping: 0.1,
+      angularDamping: 0.1,
     })
 
     testPrimitives.push({ prim, type: primType, physicsType: physType, originalY: yPos })
@@ -195,14 +195,14 @@ PRIMITIVE_TYPES.forEach((primType, row) => {
         transparent: true,
         opacity: 0.2,
         physics: 'static',
-        physicsTrigger: true,
-        physicsTag: `trigger_${primType}`,
-        physicsOnTriggerEnter: other => {
+        trigger: true,
+        tag: `trigger_${primType}`,
+        onTriggerEnter: other => {
           console.log('trigger data', other)
           console.log(`${primType} trigger entered by:`, other.playerId || 'unknown')
           updateStatus(`✓ ${primType} trigger entered`)
         },
-        physicsOnTriggerLeave: other => {
+        onTriggerLeave: other => {
           console.log(`${primType} trigger left by:`, other.playerId || 'unknown')
         },
       })
@@ -231,9 +231,9 @@ const testBall = app.create('prim', {
   emissive: '#ff00ff',
   emissiveIntensity: 0.5,
   physics: 'dynamic',
-  physicsMass: 2,
-  physicsRestitution: 0.8,
-  physicsTag: 'test_ball',
+  mass: 2,
+  restitution: 0.8,
+  tag: 'test_ball',
 })
 app.add(testBall)
 

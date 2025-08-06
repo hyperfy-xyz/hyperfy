@@ -124,9 +124,9 @@ function createRing(index) {
     metalness: 0.8,
     roughness: 0.2,
     physics: 'static',
-    physicsTrigger: true,
-    physicsTag: `ring_${index}`,
-    physicsOnTriggerEnter: other => {
+    trigger: true,
+    tag: `ring_${index}`,
+    onTriggerEnter: other => {
       if (other.playerId) {
         // Player touched the ring
         collectRing(ring, index, other.playerId)

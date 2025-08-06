@@ -88,57 +88,57 @@ The physics body type for the primitive. Can be:
 
 Defaults to `null`.
 
-### `.physicsMass`: Number
+### `.mass`: Number
 
-The mass in kg for dynamic bodies. Only applies when physics is set to `'dynamic'`. Defaults to `1`.
+Physics mass for dynamic bodies. Only applies when physics is set to `'dynamic'`. Defaults to `1`.
 
-### `.physicsLinearDamping`: Number
+### `.linearDamping`: Number
 
-Linear velocity damping factor from 0 to 1. Higher values make objects slow down faster. Defaults to `0`.
+Physics linear velocity damping. Higher values make objects slow down faster. Defaults to `0`.
 
-### `.physicsAngularDamping`: Number
+### `.angularDamping`: Number
 
-Angular velocity damping factor from 0 to 1. Higher values reduce rotation speed faster. Defaults to `0.05`.
+Physics angular velocity damping. Higher values reduce rotation speed faster. Defaults to `0.05`.
 
-### `.physicsStaticFriction`: Number
+### `.staticFriction`: Number
 
-Static friction coefficient from 0 to 1. Determines resistance to start moving when at rest. Defaults to `0.6`.
+Physics material static friction. Determines resistance to start moving when at rest. Defaults to `0.6`.
 
-### `.physicsDynamicFriction`: Number
+### `.dynamicFriction`: Number
 
-Dynamic friction coefficient from 0 to 1. Determines resistance while moving. Defaults to `0.6`.
+Physics material dynamic friction. Determines resistance while moving. Defaults to `0.6`.
 
-### `.physicsRestitution`: Number
+### `.restitution`: Number
 
-Bounciness factor from 0 to 1. 0 = no bounce, 1 = perfect bounce. Defaults to `0`.
+Physics material bounciness. 0 = no bounce, 1 = perfect bounce. Defaults to `0`.
 
-### `.physicsLayer`: String
+### `.layer`: String
 
-The collision layer for physics filtering. Defaults to `'environment'`.
+Physics collision layer. Defaults to `'environment'`.
 
-### `.physicsTrigger`: Boolean
+### `.trigger`: Boolean
 
-Whether this is a trigger volume (detects overlaps without causing collisions). Defaults to `false`.
+Whether this physics shape is a trigger volume (detects overlaps without causing collisions). Defaults to `false`.
 
-### `.physicsTag`: String | null
+### `.tag`: String | null
 
-Custom tag for identifying physics bodies. Defaults to `null`.
+Tag for identifying physics bodies when raycasting etc. Defaults to `null`.
 
-### `.physicsOnContactStart`: Function | null
+### `.onContactStart`: Function | null
 
-Callback function called when contact with another physics body begins. Receives the other body as parameter. Defaults to `null`.
+Physics callback function, called when contact with another physics body begins. Receives the other body as parameter. Defaults to `null`.
 
-### `.physicsOnContactEnd`: Function | null
+### `.onContactEnd`: Function | null
 
-Callback function called when contact with another physics body ends. Receives the other body as parameter. Defaults to `null`.
+Physics callback function, called when contact with another physics body ends. Receives the other body as parameter. Defaults to `null`.
 
-### `.physicsOnTriggerEnter`: Function | null
+### `.onTriggerEnter`: Function | null
 
-Callback function called when another body enters this trigger volume. Only works when `physicsTrigger` is `true`. Defaults to `null`.
+Physics callback function, called when another body enters this trigger volume. Only works when `trigger` is `true`. Defaults to `null`.
 
-### `.physicsOnTriggerLeave`: Function | null
+### `.onTriggerLeave`: Function | null
 
-Callback function called when another body leaves this trigger volume. Only works when `physicsTrigger` is `true`. Defaults to `null`.
+Physics callback function, called when another body leaves this trigger volume. Only works when `trigger` is `true`. Defaults to `null`.
 
 ### `.{...Node}`
 
@@ -225,9 +225,9 @@ const ball = app.create('prim', {
   position: [0, 5, 0],
   color: '#ff0000',
   physics: 'dynamic',
-  physicsMass: 1,
-  physicsRestitution: 0.8, // Bouncy!
-  physicsLinearDamping: 0.1
+  mass: 1,
+  restitution: 0.8, // Bouncy!
+  linearDamping: 0.1
 })
 
 // Trigger zone
@@ -239,18 +239,18 @@ const triggerZone = app.create('prim', {
   transparent: true,
   opacity: 0.3,
   physics: 'static',
-  physicsTrigger: true,
-  physicsOnTriggerEnter: (other) => {
+  trigger: true,
+  onTriggerEnter: (other) => {
     console.log('Something entered the zone!', other)
   },
-  physicsOnTriggerLeave: (other) => {
+  onTriggerLeave: (other) => {
     console.log('Something left the zone!', other)
   }
 })
 
 // Reactive physics properties
-ball.physicsTag = 'player_ball' // Can be changed at runtime
-ball.physicsRestitution = 0.5   // Updates bounciness
+ball.tag = 'player_ball' // Can be changed at runtime
+ball.restitution = 0.5   // Updates bounciness
 
 app.add(floor)
 app.add(ball)
