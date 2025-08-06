@@ -58,37 +58,24 @@ const getGeometry = type => {
     switch (type) {
       case 'box':
         geometry = new THREE.BoxGeometry(1, 1, 1)
-        // Translate geometry so bottom is at y=0
-        geometry.translate(0, 0.5, 0)
         break
       case 'sphere':
         geometry = new THREE.SphereGeometry(1, 16, 12)
-        // Translate geometry so bottom is at y=0
-        geometry.translate(0, 1, 0)
         break
       case 'cylinder':
         geometry = new THREE.CylinderGeometry(1, 1, 1, 16)
-        // Translate geometry so bottom is at y=0
-        geometry.translate(0, 0.5, 0)
         break
       case 'cone':
         geometry = new THREE.ConeGeometry(1, 1, 16)
-        // Translate geometry so bottom is at y=0
-        geometry.translate(0, 0.5, 0)
         break
       case 'torus':
         geometry = new THREE.TorusGeometry(1, 0.3, 12, 16) // Default tube ratio
-        // Translate geometry so bottom is at y=0
-        // Bottom of torus is at -(majorRadius + tubeRadius) = -(1 + 0.3) = -1.3
-        geometry.translate(0, 1.3, 0)
         break
       case 'plane':
         geometry = new THREE.PlaneGeometry(1, 1)
-        // Keep plane centered
         break
       default:
         geometry = new THREE.BoxGeometry(1, 1, 1)
-        geometry.translate(0, 0.5, 0)
     }
 
     geometryCache.set(type, geometry)
@@ -103,7 +90,7 @@ const materialCache = new Map()
 // Create material with specific properties
 const createMaterial = async (props, loader) => {
   // Create a cache key from material properties
-  const cacheKey = `${props.color || '#ffffff'}_${props.emissive || 'null'}_${props.emissiveIntensity || 1}_${props.metalness !== undefined ? props.metalness : 0.2}_${props.roughness !== undefined ? props.roughness : 0.8}_${props.opacity !== undefined ? props.opacity : 1}_${props.transparent || false}_${props.texture || 'null'}_${props.doubleside || false}`
+  const cacheKey = `${props.color}_${props.emissive}_${props.emissiveIntensity}_${props.metalness}_${props.roughness}_${props.opacity}_${props.transparent}_${props.texture}_${props.doubleside}`
 
   // Check cache first
   if (materialCache.has(cacheKey)) {
@@ -111,13 +98,13 @@ const createMaterial = async (props, loader) => {
   }
 
   const material = new THREE.MeshStandardMaterial({
-    color: new THREE.Color(props.color || '#ffffff'),
+    color: new THREE.Color(props.color),
     emissive: props.emissive ? new THREE.Color(props.emissive) : new THREE.Color(0x000000),
-    emissiveIntensity: props.emissiveIntensity || 1,
-    metalness: props.metalness !== undefined ? props.metalness : 0.2,
-    roughness: props.roughness !== undefined ? props.roughness : 0.8,
-    opacity: props.opacity !== undefined ? props.opacity : 1,
-    transparent: props.transparent || false,
+    emissiveIntensity: props.emissiveIntensity,
+    metalness: props.metalness,
+    roughness: props.roughness,
+    opacity: props.opacity,
+    transparent: props.transparent,
     side: props.doubleside ? THREE.DoubleSide : THREE.FrontSide,
   })
 
@@ -151,14 +138,14 @@ export class Prim extends Node {
     this.name = 'prim'
 
     this.type = data.type
-    this.color = data.color !== undefined ? data.color : defaults.color
-    this.emissive = data.emissive !== undefined ? data.emissive : defaults.emissive
-    this.emissiveIntensity = data.emissiveIntensity !== undefined ? data.emissiveIntensity : defaults.emissiveIntensity
-    this.metalness = data.metalness !== undefined ? data.metalness : defaults.metalness
-    this.roughness = data.roughness !== undefined ? data.roughness : defaults.roughness
-    this.opacity = data.opacity !== undefined ? data.opacity : defaults.opacity
-    this.transparent = data.transparent !== undefined ? data.transparent : defaults.transparent
-    this.texture = data.texture !== undefined ? data.texture : defaults.texture
+    this.color = data.color
+    this.emissive = data.emissive
+    this.emissiveIntensity = data.emissiveIntensity
+    this.metalness = data.metalness
+    this.roughness = data.roughness
+    this.opacity = data.opacity
+    this.transparent = data.transparent
+    this.texture = data.texture
     this.castShadow = data.castShadow
     this.receiveShadow = data.receiveShadow
     this.doubleside = data.doubleside
@@ -256,28 +243,25 @@ export class Prim extends Node {
     }
 
     // Create collider shape
-    const offset = this.getColliderOffset()
     let pxGeometry = null
-    let meshHandle = null
+    let pmesh = null
 
     if (this._type === 'box') {
-      pxGeometry = new PHYSX.PxBoxGeometry(this.scale.x / 2, this.scale.y / 2, this.scale.z / 2)
-    } else if (this._type === 'sphere') {
-      pxGeometry = new PHYSX.PxSphereGeometry(this.scale.x)
+      pxGeometry = new PHYSX.PxBoxGeometry(0.5 * _v2.x, 0.5 * _v2.y, 0.5 * _v2.z)
+    } else if (this._type === 'sphere' && isUniformScale(_v2)) {
+      pxGeometry = new PHYSX.PxSphereGeometry(0.5 * _v2.x)
     } else {
       // Use convex mesh for cylinder, cone, torus, and plane
       const threeGeometry = getGeometry(this._type)
 
-      // Create a scaled version of the geometry for physics
-      const scaledGeometry = threeGeometry.clone()
-      scaledGeometry.scale(this.scale.x, this.scale.y, this.scale.z)
-
       // Create convex mesh
-      meshHandle = geometryToPxMesh(this.ctx.world, scaledGeometry, true)
-      if (meshHandle && meshHandle.value) {
-        pxGeometry = new PHYSX.PxConvexMeshGeometry(meshHandle.value)
-        this.meshHandle = meshHandle // Store for cleanup
+      pmesh = geometryToPxMesh(this.ctx.world, threeGeometry, true)
+      if (pmesh && pmesh.value) {
+        const scale = new PHYSX.PxMeshScale(new PHYSX.PxVec3(_v2.x, _v2.y, _v2.z), new PHYSX.PxQuat(0, 0, 0, 1))
+        pxGeometry = new PHYSX.PxConvexMeshGeometry(pmesh.value, scale)
+        this.pmesh = pmesh // Store for cleanup
       } else {
+        // TODO: think we can remove this? why would this happen?
         console.warn(`[prim] Failed to create convex mesh for ${this._type}, falling back to box`)
         const boxSize = this.getColliderSize()
         pxGeometry = new PHYSX.PxBoxGeometry(boxSize[0] / 2, boxSize[1] / 2, boxSize[2] / 2)
@@ -312,14 +296,11 @@ export class Prim extends Node {
     this.shape.setQueryFilterData(filterData)
     this.shape.setSimulationFilterData(filterData)
 
-    // Set local pose with offset (only for box and sphere)
-    if (this._type === 'box' || this._type === 'sphere') {
-      const pose = new PHYSX.PxTransform()
-      _v1.set(offset[0], offset[1], offset[2])
-      _v1.toPxTransform(pose)
-      _q1.set(0, 0, 0, 1).toPxTransform(pose)
-      this.shape.setLocalPose(pose)
-    }
+    // const position = _v1.copy(this.position).multiply(this.parent.scale)
+    // const pose = new PHYSX.PxTransform()
+    // position.toPxTransform(pose)
+    // this.quaternion.toPxTransform(pose)
+    // this.shape.setLocalPose(pose)
 
     // Attach shape to actor
     this.actor.attachShape(this.shape)
@@ -365,9 +346,9 @@ export class Prim extends Node {
       this.actor.release()
       this.actor = null
     }
-    if (this.meshHandle) {
-      this.meshHandle.release()
-      this.meshHandle = null
+    if (this.pmesh) {
+      this.pmesh.release()
+      this.pmesh = null
     }
   }
 
@@ -380,28 +361,6 @@ export class Prim extends Node {
     } else {
       this.position.copy(position)
       this.quaternion.copy(quaternion)
-    }
-  }
-
-  getColliderOffset() {
-    // Returns the offset needed for colliders to match the visual geometry
-    switch (this._type) {
-      case 'box':
-        return [0, this.scale.y * 0.5, 0]
-      case 'sphere':
-        return [0, this.scale.x, 0]
-      case 'cylinder':
-        return [0, this.scale.y * 0.5, 0]
-      case 'cone':
-        return [0, this.scale.y * 0.5, 0]
-      case 'torus':
-        const majorRadius = this.scale.x
-        const tubeRadius = this.scale.x * 0.3 // Standard tube ratio
-        return [0, majorRadius + tubeRadius, 0]
-      case 'plane':
-        return [0, 0, 0]
-      default:
-        return [0, 0, 0]
     }
   }
 
@@ -447,6 +406,12 @@ export class Prim extends Node {
     this._type = source._type
     this._color = source._color
     this._emissive = source._emissive
+    this._emissiveIntensity = source._emissiveIntensity
+    this._metalness = source._metalness
+    this._roughness = source._roughness
+    this._opacity = source._opacity
+    this._transparent = source._transparent
+    this._texture = source._texture
     this._castShadow = source._castShadow
     this._receiveShadow = source._receiveShadow
     this._doubleside = source._doubleside
@@ -1044,4 +1009,8 @@ export class Prim extends Node {
     }
     return this.proxy
   }
+}
+
+function isUniformScale(vec3) {
+  return vec3.x === vec3.y && vec3.y === vec3.z
 }
