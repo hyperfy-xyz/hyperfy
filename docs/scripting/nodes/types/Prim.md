@@ -12,6 +12,25 @@ Available options: `box`, `sphere`, `cylinder`, `cone`, `torus`, `plane`.
 
 Defaults to `box`.
 
+### `.size`: Array
+
+The size of the shape, depending on the `type` (defaults shown):
+
+- **Box**: `[width = 1, height = 1, depth = 1]`
+- **Sphere**: `[radius = 0.5]`
+- **Cylinder**: `[radiusTop = 0.5, radiusBtm = 0.5, height = 1]`
+- **Cone**: `[radius = 0.5, height = 1]`
+- **Torus**: `[innerRadius = 0.4, tubeRadius = 0.1]`
+- **Plane**: `[width = 1, height = 1]`
+
+Default sizes all roughly fit inside a 1m cubed space for consistency.
+
+**Note**: The origin of all primitives are at the center of the volume. To position a primitive with its bottom at y=0:
+- Box: `position.y = height / 2`
+- Sphere: `position.y = radius`
+- Cylinder: `position.y = height / 2`
+- Cone: `position.y = height / 2`
+- Torus: `position.y = innerRadius + tubeRadius`
 
 ### `.color`: String
 
@@ -58,25 +77,6 @@ Whether the primitive should receive shadows from other objects. Defaults to `tr
 ### `.doubleside`: Boolean
 
 Whether the primitive should be rendered from both sides. This is particularly useful for plane primitives that need to be visible from both front and back. Defaults to `false`.
-
-### `.scale`: Array (inherited from Node)
-
-Controls the size of the primitive using a 3-component array `[x, y, z]`. Since primitives use unit-sized geometry, the scale directly determines the final dimensions.
-
-**Scale behavior by primitive type:**
-- **Box**: `[width, height, depth]` - Direct mapping to box dimensions
-- **Sphere**: `[radius, radius, radius]` - Use uniform scale for proper spheres
-- **Cylinder**: `[radius, height, radius]` - X/Z control radius, Y controls height
-- **Cone**: `[radius, height, radius]` - X/Z control base radius, Y controls height  
-- **Torus**: `[radius, radius, radius]` - Use uniform scale for major radius (tube radius is 0.3× major)
-- **Plane**: `[width, height, 1]` - X/Y control dimensions, Z typically kept at 1
-
-Defaults to `[1, 1, 1]`.
-
-**Note**: Primitives are centered at their origin. To position a primitive with its bottom at y=0:
-- Box/Cylinder/Cone: `position.y = scale.y / 2`
-- Sphere: `position.y = scale.x` (assuming uniform scale)
-- Torus: `position.y = scale.x * 1.3` (major radius + tube radius)
 
 ### `.physics`: String | null
 
