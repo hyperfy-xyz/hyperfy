@@ -147,6 +147,7 @@ function updatePrimitive() {
     castShadow: true,
     receiveShadow: true,
   })
+  currentPrim.position.y += props.scaleY / 2
 
   app.add(currentPrim)
 }

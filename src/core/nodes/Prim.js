@@ -1,5 +1,5 @@
 import * as THREE from '../extras/three'
-import { isBoolean, isNumber, isString, isArray, isObject, isFunction } from 'lodash-es'
+import { isBoolean, isNumber, isString, isArray, isObject, isFunction, isEqual } from 'lodash-es'
 
 import { Node, secureRef } from './Node'
 import { getTrianglesFromGeometry } from '../extras/getTrianglesFromGeometry'
@@ -9,6 +9,7 @@ import { geometryToPxMesh } from '../extras/geometryToPxMesh'
 
 const defaults = {
   type: 'box',
+  size: null,
   color: '#ffffff',
   emissive: null,
   emissiveIntensity: 1,
@@ -47,41 +48,66 @@ const _defaultScale = new THREE.Vector3(1, 1, 1)
 
 const types = ['box', 'sphere', 'cylinder', 'cone', 'torus', 'plane']
 
+const defaultSizes = {
+  box: [1, 1, 1], // width, height, depth
+  sphere: [0.5], // radius
+  cylinder: [0.5, 0.5, 1], // radiusTop, radiusBtm, height
+  cone: [0.5, 1], // radius, height
+  torus: [0.4, 0.1], // innerRadius, tubeRadius
+  plane: [1, 1], // width, height
+}
+
 // Geometry cache
 let geometryCache = new Map()
 
-const getGeometry = type => {
+const getGeometry = (type, size) => {
   // All primitives of the same type share one unit-sized geometry
-  if (!geometryCache.has(type)) {
-    let geometry
-
+  const key = `${type}${size}`
+  let geometry = geometryCache.get(key)
+  if (!geometry) {
     switch (type) {
       case 'box':
-        geometry = new THREE.BoxGeometry(1, 1, 1)
+        {
+          const [width, height, depth] = size
+          geometry = new THREE.BoxGeometry(width, height, depth)
+        }
         break
       case 'sphere':
-        geometry = new THREE.SphereGeometry(1, 16, 12)
+        {
+          const [radius] = size
+          geometry = new THREE.SphereGeometry(radius, 16, 12)
+        }
         break
       case 'cylinder':
-        geometry = new THREE.CylinderGeometry(1, 1, 1, 16)
+        {
+          const [radiusTop, radiusBtm, height] = size
+          geometry = new THREE.CylinderGeometry(radiusTop, radiusBtm, height, 16)
+        }
         break
       case 'cone':
-        geometry = new THREE.ConeGeometry(1, 1, 16)
+        {
+          const [radius, height] = size
+          geometry = new THREE.ConeGeometry(radius, height, 16)
+        }
         break
       case 'torus':
-        geometry = new THREE.TorusGeometry(1, 0.3, 12, 16) // Default tube ratio
+        {
+          const [innerRadius, tubeRadius] = size
+          geometry = new THREE.TorusGeometry(innerRadius, tubeRadius, 12, 16)
+        }
         break
       case 'plane':
-        geometry = new THREE.PlaneGeometry(1, 1)
+        {
+          const [width, height] = size
+          geometry = new THREE.PlaneGeometry(width, height)
+        }
         break
       default:
         geometry = new THREE.BoxGeometry(1, 1, 1)
     }
-
-    geometryCache.set(type, geometry)
+    geometryCache.set(key, geometry)
   }
-
-  return geometryCache.get(type)
+  return geometryCache.get(key)
 }
 
 // Material cache - reuse materials with identical properties
@@ -138,6 +164,7 @@ export class Prim extends Node {
     this.name = 'prim'
 
     this.type = data.type
+    this.size = data.size
     this.color = data.color
     this.emissive = data.emissive
     this.emissiveIntensity = data.emissiveIntensity
@@ -176,7 +203,7 @@ export class Prim extends Node {
     this.needsRebuild = false
 
     // Get unit-sized geometry for this type
-    const geometry = getGeometry(this._type)
+    const geometry = getGeometry(this._type, this._size)
 
     // Get loader if available (client-side only)
     const loader = this.ctx.world.loader || null
@@ -247,12 +274,14 @@ export class Prim extends Node {
     let pmesh = null
 
     if (this._type === 'box') {
-      pxGeometry = new PHYSX.PxBoxGeometry(0.5 * _v2.x, 0.5 * _v2.y, 0.5 * _v2.z)
+      const [width, height, depth] = this._size
+      pxGeometry = new PHYSX.PxBoxGeometry((width / 2) * _v2.x, (height / 2) * _v2.y, (depth / 2) * _v2.z)
     } else if (this._type === 'sphere' && isUniformScale(_v2)) {
-      pxGeometry = new PHYSX.PxSphereGeometry(0.5 * _v2.x)
+      const [radius] = this._size
+      pxGeometry = new PHYSX.PxSphereGeometry(radius * _v2.x)
     } else {
       // Use convex mesh for cylinder, cone, torus, and plane
-      const threeGeometry = getGeometry(this._type)
+      const threeGeometry = getGeometry(this._type, this._size)
 
       // Create convex mesh
       pmesh = geometryToPxMesh(this.ctx.world, threeGeometry, true)
@@ -404,6 +433,7 @@ export class Prim extends Node {
   copy(source, recursive) {
     super.copy(source, recursive)
     this._type = source._type
+    this._size = source._size
     this._color = source._color
     this._emissive = source._emissive
     this._emissiveIntensity = source._emissiveIntensity
@@ -456,6 +486,25 @@ export class Prim extends Node {
     }
     if (this._type === value) return
     this._type = value
+    if (this.handle) {
+      this.needsRebuild = true
+      this.setDirty()
+    }
+  }
+
+  get size() {
+    return this._size
+  }
+
+  set size(value) {
+    if (value === null || value === undefined) {
+      value = defaultSizes[this._type].slice()
+    }
+    if (!isArray(value)) {
+      throw new Error('[prim] size must be an array')
+    }
+    if (isEqual(this._size, value)) return
+    this._size = value
     if (this.handle) {
       this.needsRebuild = true
       this.setDirty()
@@ -852,6 +901,12 @@ export class Prim extends Node {
         },
         set type(value) {
           self.type = value
+        },
+        get size() {
+          return self.size
+        },
+        set size(value) {
+          self.size = value
         },
         get color() {
           return self.color
