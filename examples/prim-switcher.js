@@ -68,6 +68,11 @@ app.configure([
     initial: '#4488ff',
   },
   {
+    type: 'texture',
+    key: 'texture',
+    label: 'Texture',
+  },
+  {
     type: 'range',
     key: 'metalness',
     label: 'Metalness',
@@ -113,58 +118,36 @@ app.configure([
     onClick: () => {
       if (currentPrim) {
         currentPrim.position.set(0, 0, 0)
+        currentPrim.position.y += props.scaleY / 2
         currentPrim.rotation.set(0, 0, 0)
       }
     },
   },
 ])
 
-// Track current primitive
-let currentPrim = null
+// Get scale from individual axis controls
+const scaleArray = [props.scaleX || 1, props.scaleY || 1, props.scaleZ || 1]
 
-// Function to update or create primitive
-function updatePrimitive() {
-  // Remove old primitive
-  if (currentPrim) {
-    app.remove(currentPrim)
-    currentPrim = null
-  }
+// Create new primitive - geometry is already translated so y=0 is the bottom
+const currentPrim = app.create('prim', {
+  type: props.primType || 'box',
+  scale: scaleArray,
+  position: [0, 0, 0],
+  color: props.color || '#4488ff',
+  texture: props.texture?.url,
+  metalness: props.metalness ?? 0.5,
+  roughness: props.roughness ?? 0.5,
+  emissive: props.emissive ? props.color || '#4488ff' : null,
+  emissiveIntensity: props.emissiveIntensity || 1,
+  doubleside: props.doubleside || false,
+  castShadow: true,
+  receiveShadow: true,
+})
+currentPrim.position.y += props.scaleY / 2
 
-  // Get scale from individual axis controls
-  const scaleArray = [props.scaleX || 1, props.scaleY || 1, props.scaleZ || 1]
+app.add(currentPrim)
 
-  // Create new primitive - geometry is already translated so y=0 is the bottom
-  currentPrim = app.create('prim', {
-    type: props.primType || 'box',
-    scale: scaleArray,
-    position: [0, 0, 0],
-    color: props.color || '#4488ff',
-    metalness: props.metalness ?? 0.5,
-    roughness: props.roughness ?? 0.5,
-    emissive: props.emissive ? props.color || '#4488ff' : null,
-    emissiveIntensity: props.emissiveIntensity || 1,
-    doubleside: props.doubleside || false,
-    castShadow: true,
-    receiveShadow: true,
-  })
-  currentPrim.position.y += props.scaleY / 2
-
-  app.add(currentPrim)
-}
-
-// Initial creation
-updatePrimitive()
-
-// Watch for prop changes
-let lastProps = JSON.stringify(props)
 app.on('update', dt => {
-  // Check if props changed
-  const currentPropsString = JSON.stringify(props)
-  if (currentPropsString !== lastProps) {
-    lastProps = currentPropsString
-    updatePrimitive()
-  }
-
   // Auto rotate if enabled
   if (props.rotate && currentPrim) {
     currentPrim.rotation.y += dt * (props.rotationSpeed || 1)
