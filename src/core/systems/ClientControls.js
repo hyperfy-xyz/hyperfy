@@ -51,7 +51,7 @@ export class ClientControls extends System {
     this.actions = []
     this.buttonsDown = new Set()
     this.isUserGesture = false
-    this.isMac = /Mac/.test(navigator.platform)
+    this.isMac = typeof navigator !== 'undefined' ? /Mac/.test(navigator.platform) : false;
     this.pointer = {
       locked: false,
       shouldLock: false,

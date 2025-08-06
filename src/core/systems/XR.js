@@ -27,12 +27,21 @@ export class XR extends System {
   }
 
   async init() {
-    this.supportsVR = await navigator.xr?.isSessionSupported('immersive-vr')
-    this.supportsAR = await navigator.xr?.isSessionSupported('immersive-ar')
+    if (typeof navigator !== 'undefined' && navigator.xr) {
+      this.supportsVR = await navigator.xr.isSessionSupported?.('immersive-vr')
+      this.supportsAR = await navigator.xr.isSessionSupported?.('immersive-ar')
+    } else {
+      this.supportsVR = false
+      this.supportsAR = false
+    }
   }
 
   async enter() {
-    const session = await navigator.xr?.requestSession('immersive-vr', {
+    if (typeof navigator === 'undefined' || !navigator.xr) {
+      console.warn('XR.enter() called in an environment without navigator.xr support.')
+      return
+    }
+    const session = await navigator.xr.requestSession?.('immersive-vr', {
       requiredFeatures: ['local-floor'],
     })
     try {
