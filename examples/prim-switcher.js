@@ -91,25 +91,13 @@ app.configure([
     initial: 0.5,
   },
   {
-    type: 'toggle',
-    key: 'emissive',
-    label: 'Emissive (Glow)',
-    initial: false,
-  },
-  {
     type: 'range',
     key: 'emissiveIntensity',
     label: 'Glow Intensity',
     min: 0,
-    max: 3,
+    max: 10,
     step: 0.1,
     initial: 1,
-  },
-  {
-    type: 'toggle',
-    key: 'doubleside',
-    label: 'Double Sided',
-    initial: false,
   },
   {
     type: 'button',
@@ -137,15 +125,25 @@ const currentPrim = app.create('prim', {
   texture: props.texture?.url,
   metalness: props.metalness ?? 0.5,
   roughness: props.roughness ?? 0.5,
-  emissive: props.emissive ? props.color || '#4488ff' : null,
-  emissiveIntensity: props.emissiveIntensity || 1,
-  doubleside: props.doubleside || false,
+  emissive: props.color || '#4488ff',
+  emissiveIntensity: props.emissiveIntensity || 0,
+  doubleside: props.primType === 'plane',
   castShadow: true,
   receiveShadow: true,
 })
 currentPrim.position.y += props.scaleY / 2
 
 app.add(currentPrim)
+
+// for (let i = 0; i < 10000; i++) {
+//   const c = currentPrim.clone(true)
+//   c.position.set(
+//     num(-300, 300, 3),
+//     num(0, 10, 3),
+//     num(-300, 300, 3),
+//   )
+//   app.add(c)
+// }
 
 app.on('update', dt => {
   // Auto rotate if enabled
@@ -159,7 +157,7 @@ const info = app.create('ui', {
   width: 300,
   height: 50,
   size: 0.01,
-  position: [0, 5, 0],
+  position: [0, 3, 0],
   billboard: 'y',
   backgroundColor: 'rgba(0, 0, 0, 0.8)',
   borderRadius: 10,
@@ -187,9 +185,9 @@ info.add(title)
 info.add(subtitle)
 app.add(info)
 
-console.log('Primitive Switcher ready!')
-console.log('Use the props panel in your browser to:')
-console.log('- Switch between primitive types')
-console.log('- Adjust scale, color, and materials')
-console.log('- Toggle rotation and glow effects')
-console.log('- Current primitive:', props.primType || 'box')
+// console.log('Primitive Switcher ready!')
+// console.log('Use the props panel in your browser to:')
+// console.log('- Switch between primitive types')
+// console.log('- Adjust scale, color, and materials')
+// console.log('- Toggle rotation and glow effects')
+// console.log('- Current primitive:', props.primType || 'box')

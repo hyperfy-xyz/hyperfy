@@ -146,6 +146,7 @@ const applyTexture = (material, textureUrl, loader) => {
       let texture = loader.get('texture', textureUrl)
       if (!texture) texture = await loader.load('texture', textureUrl)
       material.map = texture
+      material._texApplied = true
       resolve()
     })
   }
