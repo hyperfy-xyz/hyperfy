@@ -964,16 +964,27 @@ function ActionIcon({ icon: Icon }) {
 function Reticle({ world }) {
   const [pointerLocked, setPointerLocked] = useState(world.controls.pointer.locked)
   const [buildMode, setBuildMode] = useState(world.builder.enabled)
+  const [customImage, setCustomImage] = useState(world.ui.state.reticleImage)
+  const [customScale, setCustomScale] = useState(world.ui.state.reticleScale)
+
   useEffect(() => {
+    const handleUI = state => {
+      setCustomImage(state.reticleImage)
+      setCustomScale(state.reticleScale)
+    }
     world.on('pointer-lock', setPointerLocked)
     world.on('build-mode', setBuildMode)
+    world.on('ui', handleUI)
     return () => {
       world.off('pointer-lock', setPointerLocked)
       world.off('build-mode', setBuildMode)
+      world.off('ui', handleUI)
     }
   }, [])
+
   const visible = isTouch ? true : pointerLocked
   if (!visible) return null
+
   return (
     <div
       className='reticle'
@@ -983,19 +994,72 @@ function Reticle({ world }) {
         display: flex;
         align-items: center;
         justify-content: center;
-        font-size: 1rem;
-        .reticle-item {
+        pointer-events: none;
+        .reticle-container {
+          position: relative;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+        }
+        /* Optimized build mode indicator */
+        .reticle-container.build-mode::before {
+          content: '';
+          position: absolute;
+          top: 50%;
+          left: 50%;
+          transform: translate(-50%, -50%);
+          width: 2.5rem;
+          height: 2.5rem;
+          border-radius: 50%;
+          pointer-events: none;
+          border: 2px solid transparent;
+          border-top-color: rgba(255, 120, 120, 0.8);
+          border-right-color: rgba(255, 120, 120, 0.5);
+          box-shadow: 0 0 20px rgba(255, 80, 80, 0.5);
+          animation: buildRotate 3s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+        }
+
+        @keyframes buildRotate {
+          0% {
+            transform: translate(-50%, -50%) rotate(0deg) scale(0.9);
+            opacity: 0.6;
+          }
+          50% {
+            transform: translate(-50%, -50%) rotate(180deg) scale(1.1);
+            opacity: 0.9;
+          }
+          100% {
+            transform: translate(-50%, -50%) rotate(360deg) scale(0.9);
+            opacity: 0.6;
+          }
+        }
+        .reticle-image {
+          width: ${2 * customScale}rem;
+          height: ${2 * customScale}rem;
+          background-size: contain;
+          background-repeat: no-repeat;
+          background-position: center;
+          position: relative;
+          z-index: 1;
+        }
+        .reticle-default {
           width: 0.25rem;
           height: 0.25rem;
           border-radius: 0.625rem;
-          /* border: 0.125rem solid ${buildMode ? '#ff4d4d' : 'white'}; */
-          background: ${buildMode ? '#ff4d4d' : 'white'};
+          background: white;
           border: 0.5px solid rgba(0, 0, 0, 0.3);
-          /* mix-blend-mode: ${buildMode ? 'normal' : 'difference'}; */
+          position: relative;
+          z-index: 1;
         }
       `}
     >
-      <div className='reticle-item' />
+      <div className={`reticle-container ${buildMode ? 'build-mode' : ''}`}>
+        {customImage ? (
+          <div className='reticle-image' style={{ backgroundImage: `url(${customImage})` }} />
+        ) : (
+          <div className='reticle-default' />
+        )}
+      </div>
     </div>
   )
 }
