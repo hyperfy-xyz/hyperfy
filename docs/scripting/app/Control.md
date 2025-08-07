@@ -2,33 +2,27 @@
 
 ## `app.control(options)`: Control
 
-The `app.control()` method gives you access to user inputs like keyboard and mouse. It's the primary way to create interactive experiences. You can have multiple active controls, and they are prioritized.
+The `app.control()` method gives you access to user inputs like keyboard and mouse and gives you control over the camera etc. It's the primary way to create interactive experiences.
 
 ```javascript
 // Get a control object
-const controls = app.control({ priority: 1 })
+const control = app.control()
 
 // The app will be cleaned up automatically, but if you need to manually release control:
-controls.release()
+control.release()
 ```
 
-**Options**
+### Buttons
 
-*   `priority` (Number): A number that determines the order of input processing. Higher numbers have higher priority. Defaults to `0`. Player controls usually have a low priority, so scripts can override them.
-*   `onButtonPress` (Function): A callback for any button press. `(prop, text) => {}`. `prop` is the button property name (e.g. `keyW`), `text` is the character for the key. Return `true` to consume the event.
-
-
-### Button Events
-
-You can listen to press and release events for keyboard keys and mouse buttons.
+Listen to press and release events for keyboard keys and mouse buttons.
 
 ```javascript
 // Listen for 'W' key press and release
-controls.keyW.onPress = () => { console.log('W pressed') }
-controls.keyW.onRelease = () => { console.log('W released') }
+control.keyW.onPress = () => { console.log('W pressed') }
+control.keyW.onRelease = () => { console.log('W released') }
 
 // Listen for left mouse button
-controls.mouseLeft.onPress = () => { console.log('Left mouse button pressed') }
+control.mouseLeft.onPress = () => { console.log('Left mouse button pressed') }
 ```
 
 Each button object has the following properties:
@@ -50,7 +44,7 @@ Access pointer (mouse) information.
 ```javascript
 // Get pointer delta every frame
 app.on('update', () => {
-  const pointerDelta = controls.pointer.delta
+  const pointerDelta = control.pointer.delta
   if (pointerDelta.x !== 0 || pointerDelta.y !== 0) {
     console.log('Pointer moved:', pointerDelta.x, pointerDelta.y)
   }
@@ -70,9 +64,33 @@ Get mouse scroll wheel changes.
 
 ```javascript
 // The value is the scroll delta for the current frame.
-const scrollDelta = controls.scrollDelta.value
+const scrollDelta = control.scrollDelta.value
 ```
 
 *   `scrollDelta.value` (Number): The scroll delta for the current frame.
 *   `scrollDelta.capture` (Boolean): If `true`, consumes the scroll event.
 
+### Camera
+
+Lets you read and also modify the camera position if needed.
+
+By default the camera information is read-only, set `write` to true when you want to take over control.
+
+```jsx
+control.camera.write = true
+control.camera.position.y = 4
+```
+
+*   `camera.position` (Vector3): The position of the camera in world space.
+*   `camera.quaternion` (Quaternion): The quaternion rotation of the camera in world space.
+*   `camera.rotation` (Euler): The euler rotation (radians) of the camera in world space.
+*   `camera.zoom` (Number): Third person zoom value, eg how far back the camera is from its position.
+*   `camera.write` (Boolean): Set this to `true` if you want to modify the camera in any way.
+
+
+### Screen
+
+Gives you the dimensions of the screen in pixels, useful when positioning UI.
+
+*   `screen.width` (Number): The width of the screen in px.
+*   `screen.height` (Number): The height of the screen in px.

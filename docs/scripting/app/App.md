@@ -65,8 +65,7 @@ Creates and returns a node of the specified name.
 
 ### `.control(options)`
 
-Gets a controller for handling user input. See [Input](/docs/scripting/app/Input.md) for more info.
-
+Gives you control to listen for inputs and modify things like camera position. See [Control(/docs/scripting/app/Control.md) for more info.
 
 #### `.configure(fields)`
 
