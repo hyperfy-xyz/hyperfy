@@ -63,11 +63,11 @@ NOTE: Blender GLTF exporter renames objects in some cases, eg by removing spaces
 
 Creates and returns a node of the specified name.
 
-#### `.control(options)`: Control
+### `.control(options)`
 
-TODO: provides control to a client to respond to inputs and move the camera etc
+Gets a controller for handling user input. See [Input](/docs/scripting/app/Input.md) for more info.
+
 
 #### `.configure(fields)`
 
 Configures custom UI for your app. See [Props](/docs/scripting/app/Props.md) for more info.
-
