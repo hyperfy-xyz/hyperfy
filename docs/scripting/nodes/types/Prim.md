@@ -2,6 +2,8 @@
 
 Creates primitive 3D shapes with built-in geometry caching for optimal performance.
 
+Primitives origins are the in the middle of their shapes.
+
 ## Properties
 
 ### `.type`: String
