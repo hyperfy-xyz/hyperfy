@@ -3,30 +3,13 @@ import { Node } from './Node'
 import * as THREE from '../extras/three'
 import { Reflector } from '../extras/Reflector.js'
 
-const pivots = [
-  'top-left',
-  'top-center',
-  'top-right',
-  'center-left',
-  'center',
-  'center-right',
-  'bottom-left',
-  'bottom-center',
-  'bottom-right',
-]
-
 const defaults = {
   width: 2,
   height: 2,
-  color: '#ffffff', // white
-  pivot: 'center',
-  castShadow: false,
-  receiveShadow: false,
+  tint: '#ffffff', // white
   textureWidth: 512,
   textureHeight: 512,
   clipBias: 0,
-  multisample: 4,
-  recursion: 0,
 }
 
 export class Mirror extends Node {
@@ -36,15 +19,10 @@ export class Mirror extends Node {
 
     this.width = data.width
     this.height = data.height
-    this.color = data.color
-    this.pivot = data.pivot
-    this.castShadow = data.castShadow
-    this.receiveShadow = data.receiveShadow
+    this.tint = data.tint
     this.textureWidth = data.textureWidth
     this.textureHeight = data.textureHeight
     this.clipBias = data.clipBias
-    this.multisample = data.multisample
-    this.recursion = data.recursion
 
     this.n = 0
   }
@@ -53,15 +31,10 @@ export class Mirror extends Node {
     super.copy(source, recursive)
     this._width = source._width
     this._height = source._height
-    this._color = source._color
-    this._pivot = source._pivot
-    this._castShadow = source._castShadow
-    this._receiveShadow = source._receiveShadow
+    this._tint = source._tint
     this._textureWidth = source._textureWidth
     this._textureHeight = source._textureHeight
     this._clipBias = source._clipBias
-    this._multisample = source._multisample
-    this._recursion = source._recursion
     return this
   }
 
@@ -92,15 +65,14 @@ export class Mirror extends Node {
     this.unbuild()
 
     const geometry = new THREE.PlaneGeometry(this._width, this._height)
-    applyPivot(geometry, this._width, this._height, this._pivot)
 
     const options = {
-      color: this._color,
+      color: this._tint,  // Reflector expects 'color' parameter
       textureWidth: this._textureWidth,
       textureHeight: this._textureHeight,
       clipBias: this._clipBias,
-      multisample: this._multisample,
-      recursion: this._recursion,
+      multisample: 4,  // Fixed value
+      recursion: 0,    // Fixed value
     }
 
     this.mesh = new Reflector(geometry, options)
@@ -121,8 +93,8 @@ export class Mirror extends Node {
       }
     }
 
-    this.mesh.castShadow = this._castShadow
-    this.mesh.receiveShadow = this._receiveShadow
+    this.mesh.castShadow = false
+    this.mesh.receiveShadow = false
     this.mesh.matrixWorld.copy(this.matrixWorld)
     this.mesh.matrixAutoUpdate = false
     this.mesh.matrixWorldAutoUpdate = false
@@ -180,61 +152,20 @@ export class Mirror extends Node {
     this.setDirty()
   }
 
-  get color() {
-    return this._color
+  get tint() {
+    return this._tint
   }
 
-  set color(value = defaults.color) {
+  set tint(value = defaults.tint) {
     if (!isString(value)) {
-      throw new Error('[mirror] color not a string')
+      throw new Error('[mirror] tint not a string')
     }
-    if (this._color === value) return
-    this._color = value
+    if (this._tint === value) return
+    this._tint = value
     this.needsRebuild = true
     this.setDirty()
   }
 
-  get pivot() {
-    return this._pivot
-  }
-
-  set pivot(value = defaults.pivot) {
-    if (!isPivot(value)) {
-      throw new Error('[mirror] pivot invalid')
-    }
-    if (this._pivot === value) return
-    this._pivot = value
-    this.needsRebuild = true
-    this.setDirty()
-  }
-
-  get castShadow() {
-    return this._castShadow
-  }
-
-  set castShadow(value = defaults.castShadow) {
-    if (!isBoolean(value)) {
-      throw new Error('[mirror] castShadow not a boolean')
-    }
-    if (this._castShadow === value) return
-    this._castShadow = value
-    this.needsRebuild = true
-    this.setDirty()
-  }
-
-  get receiveShadow() {
-    return this._receiveShadow
-  }
-
-  set receiveShadow(value = defaults.receiveShadow) {
-    if (!isBoolean(value)) {
-      throw new Error('[mirror] receiveShadow not a boolean')
-    }
-    if (this._receiveShadow === value) return
-    this._receiveShadow = value
-    this.needsRebuild = true
-    this.setDirty()
-  }
 
   get textureWidth() {
     return this._textureWidth
@@ -278,33 +209,6 @@ export class Mirror extends Node {
     this.setDirty()
   }
 
-  get multisample() {
-    return this._multisample
-  }
-
-  set multisample(value = defaults.multisample) {
-    if (!isNumber(value)) {
-      throw new Error('[mirror] multisample not a number')
-    }
-    if (this._multisample === value) return
-    this._multisample = value
-    this.needsRebuild = true
-    this.setDirty()
-  }
-
-  get recursion() {
-    return this._recursion
-  }
-
-  set recursion(value = defaults.recursion) {
-    if (!isNumber(value)) {
-      throw new Error('[mirror] recursion not a number')
-    }
-    if (this._recursion === value) return
-    this._recursion = value
-    this.needsRebuild = true
-    this.setDirty()
-  }
 
   getProxy() {
     if (!this.proxy) {
@@ -322,29 +226,11 @@ export class Mirror extends Node {
         set height(value) {
           self.height = value
         },
-        get color() {
-          return self.color
+        get tint() {
+          return self.tint
         },
-        set color(value) {
-          self.color = value
-        },
-        get pivot() {
-          return self.pivot
-        },
-        set pivot(value) {
-          self.pivot = value
-        },
-        get castShadow() {
-          return self.castShadow
-        },
-        set castShadow(value) {
-          self.castShadow = value
-        },
-        get receiveShadow() {
-          return self.receiveShadow
-        },
-        set receiveShadow(value) {
-          self.receiveShadow = value
+        set tint(value) {
+          self.tint = value
         },
         get textureWidth() {
           return self.textureWidth
@@ -364,45 +250,10 @@ export class Mirror extends Node {
         set clipBias(value) {
           self.clipBias = value
         },
-        get multisample() {
-          return self.multisample
-        },
-        set multisample(value) {
-          self.multisample = value
-        },
-        get recursion() {
-          return self.recursion
-        },
-        set recursion(value) {
-          self.recursion = value
-        },
       }
       proxy = Object.defineProperties(proxy, Object.getOwnPropertyDescriptors(super.getProxy())) // inherit Node properties
       this.proxy = proxy
     }
     return this.proxy
-  }
-}
-
-function isPivot(value) {
-  return pivots.includes(value)
-}
-
-function applyPivot(geometry, width, height, pivot) {
-  if (pivot === 'center') return
-  let offsetX = 0
-  let offsetY = 0
-  if (pivot.includes('left')) {
-    offsetX = width / 2
-  } else if (pivot.includes('right')) {
-    offsetX = -width / 2
-  }
-  if (pivot.includes('top')) {
-    offsetY = -height / 2
-  } else if (pivot.includes('bottom')) {
-    offsetY = height / 2
-  }
-  if (offsetX !== 0 || offsetY !== 0) {
-    geometry.translate(offsetX, offsetY, 0)
   }
 }
