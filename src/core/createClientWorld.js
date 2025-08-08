@@ -46,6 +46,6 @@ export function createClientWorld() {
   world.register('snaps', Snaps)
   world.register('wind', Wind)
   world.register('xr', XR)
-  world.register('appServerClient', AppServerClient)
+  if(env.PUBLIC_DEV_SERVER) world.register('appServerClient', AppServerClient)
   return world
 }

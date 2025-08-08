@@ -89,10 +89,7 @@ export class ClientLoader extends System {
     const remoteUrl = this.world.resolveURL(url)
     const file = this.files.get(remoteUrl) ?? this.files.get(url)
     if (!file) return null
-    if(this.files.has(url) && this.files.has(remoteUrl)) {
-      console.log('debug: delete cache', remoteUrl)
-      this.files.delete(url)
-    }
+    if(this.files.has(url) && this.files.has(remoteUrl)) this.files.delete(url) // delete `file://` entry
     return name ? 
       new File([file], name, {
         type: file.type, // Preserve the MIME type
@@ -248,14 +245,7 @@ export class ClientLoader extends System {
   insert(type, url, file) {
     const key = `${type}/${url}`
     const localUrl = URL.createObjectURL(file)
-
-    // Store the file immediately for quick access
-    console.log('debug: insert', { url, file })
-    console.log(this.files)
     this.files.set(url, file)
-    console.log('debug: inserted')
-    console.log(this.files)
-
     let promise
     if (type === 'hdr') {
       promise = this.rgbeLoader.loadAsync(localUrl).then(texture => {

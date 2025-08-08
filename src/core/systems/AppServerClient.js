@@ -28,11 +28,7 @@ export class AppServerClient extends System {
 
   init() {
     this.world.on('ready', () => {
-      console.log("isAdmin", this.world.entities.player?.isAdmin())
-      if (
-        !(env.PUBLIC_DEV_SERVER === 'true') || 
-        !this.world.entities.player?.isAdmin()
-      ) return
+      if (!this.world.entities.player?.isAdmin()) return
 
       this.setServerUrl("http://localhost:8080")
       this.worldUrl = this.world.network.apiUrl.split("/api")[0]
@@ -56,14 +52,6 @@ export class AppServerClient extends System {
   }
 
   setServerUrl(url) {
-    // Check if dev server feature is enabled
-    console.log('[AppServerClient] Checking if dev server is enabled:', env.PUBLIC_DEV_SERVER)
-    const isDevServerEnabled = env.PUBLIC_DEV_SERVER === 'true'
-    if (!isDevServerEnabled) {
-      console.log('[AppServerClient] Dev server feature is disabled, aborting setServerUrl')
-      return
-    }
-
     console.log('[AppServerClient] Setting server URL:', url)
     const isWebSocket = url.startsWith('ws')
     console.log('[AppServerClient] isWebSocket:', isWebSocket)
@@ -489,12 +477,6 @@ export class AppServerClient extends System {
    * @returns {Promise<boolean>} - Success status
    */
   async linkToDevServer(app) {
-    // Check if dev server feature is enabled
-    const isDevServerEnabled = env.PUBLIC_DEV_SERVER === 'true'
-    if (!isDevServerEnabled) {
-      throw new Error('Dev server feature is disabled')
-    }
-
     try {
       const { blueprint } = app
       let devServerApp = await fetch(`${this.url}/api/apps/${blueprint.name}`).then(res => res.json()).then(data => data.app)
@@ -568,12 +550,6 @@ export class AppServerClient extends System {
    * @returns {Promise<boolean>} - Success status
    */
   async unlinkApps(appName) {
-    // Check if dev server feature is enabled
-    const isDevServerEnabled = env.PUBLIC_DEV_SERVER === 'true'
-    if (!isDevServerEnabled) {
-      throw new Error('Dev server feature is disabled')
-    }
-
     try {
 
       await this.apiRequest(`/api/apps/${appName}/unlink`, {
@@ -595,12 +571,6 @@ export class AppServerClient extends System {
    */
   async isLinked(blueprintId) {
     try {
-      // Check if dev server feature is enabled
-      const isDevServerEnabled = env.PUBLIC_DEV_SERVER === 'true'
-      if (!isDevServerEnabled) {
-        return false
-      }
-
       if (!this.connected || !this.url) {
         return false
       }

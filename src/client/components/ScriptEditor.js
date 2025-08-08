@@ -142,22 +142,8 @@ export function ScriptEditor({ app, onHandle }) {
               newCode = script.code
             }
           }
-          
-          // Check if editor content has unsaved changes
-          // const currentCode = editor.getValue()
-          // const hasUnsavedChanges = currentCode !== (app.script?.code ?? '// …')
-          
-          // if (hasUnsavedChanges) {
-          //   // Ask user if they want to discard changes
-          //   const shouldDiscard = confirm('The script has been updated externally. Discard your local changes and load the new version?')
-          //   if (!shouldDiscard) return
-          // }
-          
-          // Update the editor with new content
           editor.setValue(newCode)
           codeRef.current = newCode
-          
-          // Clear cached state since we're loading new content
           if (cached.key === key) {
             cached.value = newCode
             cached.viewState = null
