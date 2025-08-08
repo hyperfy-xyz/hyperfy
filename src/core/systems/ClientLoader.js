@@ -86,16 +86,19 @@ export class ClientLoader extends System {
   }
 
   getFile(url, name) {
-    url = this.world.resolveURL(url)
-    const file = this.files.get(url)
+    const remoteUrl = this.world.resolveURL(url)
+    const file = this.files.get(remoteUrl) ?? this.files.get(url)
     if (!file) return null
-    if (name) {
-      return new File([file], name, {
+    if(this.files.has(url) && this.files.has(remoteUrl)) {
+      console.log('debug: delete cache', remoteUrl)
+      this.files.delete(url)
+    }
+    return name ? 
+      new File([file], name, {
         type: file.type, // Preserve the MIME type
         lastModified: file.lastModified, // Preserve the last modified timestamp
-      })
-    }
-    return file
+      }) 
+      : file
   }
 
   loadFile = async url => {
@@ -245,6 +248,14 @@ export class ClientLoader extends System {
   insert(type, url, file) {
     const key = `${type}/${url}`
     const localUrl = URL.createObjectURL(file)
+
+    // Store the file immediately for quick access
+    console.log('debug: insert', { url, file })
+    console.log(this.files)
+    this.files.set(url, file)
+    console.log('debug: inserted')
+    console.log(this.files)
+
     let promise
     if (type === 'hdr') {
       promise = this.rgbeLoader.loadAsync(localUrl).then(texture => {

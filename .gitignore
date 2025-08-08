@@ -7,3 +7,4 @@ localstorage.json
 node_modules/
 build/
 /world*
+data/
