@@ -193,14 +193,24 @@ export class Prim extends Node {
     this.tempVec3 = new THREE.Vector3()
     this.tempQuat = new THREE.Quaternion()
 
+    this.matrixWorldOffset = new THREE.Matrix4()
+    this.scaleOffset = new THREE.Vector3()
     this.n = 0
   }
 
   async mount() {
     this.needsRebuild = false
 
+    // do some trickery to get a unit geometry size with a scale offset we can apply.
+    // essentially lets us use unit-sized geometry and transfers the offset to scale.
+    // for example there will only ever be ONE box geometry used, scaling will form its size.
+    // but for shapes with varying config, eg cylinder top and bottom radii, these are normalized by ratio.
+    const { size, scaleOffset } = getGeometryConfig(this._type, this._size)
+    this.scaleOffset.fromArray(scaleOffset)
+    this.updateMatrixWorldOffset()
+
     // Get unit-sized geometry for this type
-    const geometry = getGeometry(this._type, this._size)
+    const geometry = getGeometry(this._type, size)
 
     // Get loader if available (client-side only)
     const loader = this.ctx.world.loader || null
@@ -230,17 +240,17 @@ export class Prim extends Node {
       material,
       castShadow: this._castShadow,
       receiveShadow: this._receiveShadow,
-      matrix: this.matrixWorld,
+      matrix: this.matrixWorldOffset,
       node: this,
     })
 
     // Create physics if enabled
     if (this._physics && !this.ctx.moving) {
-      this.mountPhysics()
+      this.mountPhysics(size)
     }
   }
 
-  mountPhysics() {
+  mountPhysics(size) {
     if (!PHYSX) return
 
     const type = this._physics // 'static' | 'kinematic' | 'dynamic'
@@ -250,7 +260,7 @@ export class Prim extends Node {
     const trigger = this._trigger
 
     // Create transform
-    this.matrixWorld.decompose(_v1, _q1, _v2)
+    this.matrixWorldOffset.decompose(_v1, _q1, _v2)
     if (!this._tm) this._tm = new PHYSX.PxTransform(PHYSX.PxIDENTITYEnum.PxIdentity)
     _v1.toPxTransform(this._tm)
     _q1.toPxTransform(this._tm)
@@ -274,14 +284,14 @@ export class Prim extends Node {
     let pmesh = null
 
     if (this._type === 'box') {
-      const [width, height, depth] = this._size
+      const [width, height, depth] = size
       pxGeometry = new PHYSX.PxBoxGeometry((width / 2) * _v2.x, (height / 2) * _v2.y, (depth / 2) * _v2.z)
     } else if (this._type === 'sphere' && isUniformScale(_v2)) {
-      const [radius] = this._size
+      const [radius] = size
       pxGeometry = new PHYSX.PxSphereGeometry(radius * _v2.x)
     } else {
       // Use convex mesh for cylinder, cone, torus, and plane
-      const threeGeometry = getGeometry(this._type, this._size)
+      const threeGeometry = getGeometry(this._type, size)
 
       // Create convex mesh
       pmesh = geometryToPxMesh(this.ctx.world, threeGeometry, true)
@@ -415,11 +425,12 @@ export class Prim extends Node {
       return
     }
     if (didMove) {
+      this.updateMatrixWorldOffset()
       if (this.handle) {
-        this.handle.move(this.matrixWorld)
+        this.handle.move(this.matrixWorldOffset)
       }
       if (this.actorHandle) {
-        this.actorHandle.move(this.matrixWorld)
+        this.actorHandle.move(this.matrixWorldOffset)
       }
     }
   }
@@ -462,6 +473,12 @@ export class Prim extends Node {
     this._onTriggerEnter = source._onTriggerEnter
     this._onTriggerLeave = source._onTriggerLeave
     return this
+  }
+
+  updateMatrixWorldOffset() {
+    this.matrixWorld.decompose(_v1, _q1, _v2)
+    _v2.multiply(this.scaleOffset)
+    this.matrixWorldOffset.compose(_v1, _q1, _v2)
   }
 
   applyStats(stats) {
@@ -1069,4 +1086,73 @@ export class Prim extends Node {
 
 function isUniformScale(vec3) {
   return vec3.x === vec3.y && vec3.y === vec3.z
+}
+
+function getGeometryConfig(type, requestedSize) {
+  let size
+  let scaleOffset
+
+  switch (type) {
+    case 'box': {
+      // Always use unit box [1,1,1] and put ALL size into scale
+      size = [1, 1, 1]
+      scaleOffset = [...requestedSize] // Direct mapping to scale
+      break
+    }
+
+    case 'sphere': {
+      // Unit sphere with radius 1
+      size = [1]
+      scaleOffset = [requestedSize[0], requestedSize[0], requestedSize[0]]
+      break
+    }
+
+    case 'cylinder': {
+      const [rt, rb, h] = requestedSize
+      // Only create different geometry if the taper ratio is different
+      // If rt === rb, it's a uniform cylinder - use unit cylinder
+      if (rt === rb) {
+        size = [1, 1, 1] // Unit cylinder (uniform radius)
+        scaleOffset = [rt, h, rt] // Scale X/Z for radius, Y for height
+      } else {
+        // Tapered cylinder - normalize by the ratio
+        const maxR = Math.max(rt, rb)
+        size = [rt / maxR, rb / maxR, 1]
+        scaleOffset = [maxR, h, maxR]
+      }
+      break
+    }
+
+    case 'cone': {
+      // All cones are the same shape (just a tapered cylinder with top radius 0)
+      // Use unit cone and scale it
+      size = [1, 1] // Unit cone
+      const [r, h] = requestedSize
+      scaleOffset = [r, h, r]
+      break
+    }
+
+    case 'torus': {
+      const [r, tube] = requestedSize
+      // Only the tube-to-main ratio matters for shape
+      // Normalize so main radius is 1
+      size = [1, tube / r]
+      scaleOffset = [r, r, r]
+      break
+    }
+
+    case 'plane': {
+      // Always use unit plane and scale it
+      size = [1, 1]
+      scaleOffset = [...requestedSize, 1] // Scale X/Y, keep Z at 1
+      break
+    }
+
+    default: {
+      size = [1, 1, 1]
+      scaleOffset = [1, 1, 1]
+    }
+  }
+
+  return { size, scaleOffset }
 }
