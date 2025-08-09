@@ -42,7 +42,7 @@ Teleports the player instantly to the new position. The `rotationY` value is in 
 
 Applies a short, impulse-like push to the local player in world-space. Multiple pushes accumulate vectorially and decay over time with high drag.
 
-- **force**: A direction/impulse vector. Accepts ea `Vector3`.
+- **force**: A direction/impulse vector. Accepts a `Vector3`.
 
 Behavior:
 - Adds the impulse to the player’s current push; subsequent calls add to the existing push rather than replacing it.
