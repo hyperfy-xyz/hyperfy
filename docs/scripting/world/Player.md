@@ -36,7 +36,32 @@ The players rotation in the world.
 
 ### `.teleport(position, rotationY)`
 
-Teleports the player instantly to the new position. The `rotationY` value is in radians, and if omitted the player will continue facing their current direction.    
+Teleports the player instantly to the new position. The `rotationY` value is in radians, and if omitted the player will continue facing their current direction.
+
+### `.push(force)`
+
+Applies a short, impulse-like push to the local player in world-space. Multiple pushes accumulate vectorially and decay over time with high drag.
+
+- **force**: A direction/impulse vector. Accepts a `Vector3`.
+
+Behavior:
+- Adds the impulse to the player’s current push; subsequent calls add to the existing push rather than replacing it.
+- Can only be called on a local player.
+
+Example:
+```js
+// Dash forward relative to camera yaw
+const FORWARD = new Vector3(0, 0, -1)
+const euler = new Euler(0, 0, 0, 'YXZ')
+const quat = new Quaternion()
+
+euler.setFromQuaternion(world.getPlayer().quaternion)
+euler.x = 0; euler.z = 0
+quat.setFromEuler(euler)
+
+const dir = FORWARD.clone().applyQuaternion(quat).normalize()
+world.getPlayer().push(dir.multiplyScalar(30)) // short forward burst
+```
 
 ### `.getBoneTransform(boneName)`: Matrix4
 
