@@ -296,8 +296,15 @@ export class Prim extends Node {
       // Create convex mesh
       pmesh = geometryToPxMesh(this.ctx.world, threeGeometry, true)
       if (pmesh && pmesh.value) {
-        const scale = new PHYSX.PxMeshScale(new PHYSX.PxVec3(_v2.x, _v2.y, _v2.z), new PHYSX.PxQuat(0, 0, 0, 1))
-        pxGeometry = new PHYSX.PxConvexMeshGeometry(pmesh.value, scale)
+        // Create scale and its components explicitly so we can free them
+        const _scaleVec = new PHYSX.PxVec3(_v2.x, _v2.y, _v2.z)
+        const _scaleQuat = new PHYSX.PxQuat(0, 0, 0, 1)
+        const _scale = new PHYSX.PxMeshScale(_scaleVec, _scaleQuat)
+        pxGeometry = new PHYSX.PxConvexMeshGeometry(pmesh.value, _scale)
+        // free temporary PhysX objects
+        PHYSX.destroy(_scale)
+        PHYSX.destroy(_scaleVec)
+        PHYSX.destroy(_scaleQuat)
         this.pmesh = pmesh // Store for cleanup
       } else {
         // TODO: think we can remove this? why would this happen?
@@ -384,6 +391,10 @@ export class Prim extends Node {
       this.shape = null
       this.actor.release()
       this.actor = null
+    }
+    if (this._tm) {
+      PHYSX.destroy(this._tm)
+      this._tm = null
     }
     if (this.pmesh) {
       this.pmesh.release()
