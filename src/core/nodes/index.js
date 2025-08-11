@@ -5,6 +5,7 @@ export { LOD as lod } from './LOD.js'
 export { Audio as audio } from './Audio.js'
 export { Video as video } from './Video.js'
 export { Image as image } from './Image.js'
+export { Mirror as mirror } from './Mirror.js'
 export { Snap as snap } from './Snap.js'
 export { Prim as prim } from './Prim.js'
 
