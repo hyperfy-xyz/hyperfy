@@ -1,5 +1,5 @@
 import { css } from '@firebolt-dev/css'
-import { MenuIcon, MicIcon, MicOffIcon, SettingsIcon, VRIcon } from './Icons'
+import { MenuIcon, MicIcon, MicOffIcon, VRIcon } from './Icons'
 import {
   BookTextIcon,
   BoxIcon,
@@ -12,6 +12,7 @@ import {
   UsersIcon,
   InfoIcon,
   LayersIcon,
+  LinkIcon,
   ListTreeIcon,
   LoaderPinwheelIcon,
   MessageSquareTextIcon,
@@ -32,6 +33,7 @@ import {
   Volume2Icon,
   HammerIcon,
   CircleArrowRightIcon,
+  SettingsIcon,
 } from 'lucide-react'
 import { cls } from './cls'
 import { useContext, useEffect, useMemo, useRef, useState } from 'react'
@@ -64,9 +66,10 @@ import { isTouch } from '../utils'
 import { uuid } from '../../core/utils'
 import { useRank } from './useRank'
 import { Ranks } from '../../core/extras/ranks'
+import { DevToolsPane } from './DevToolsPane'
 
 const mainSectionPanes = ['prefs']
-const worldSectionPanes = ['world', 'docs', 'apps', 'add']
+const worldSectionPanes = ['world', 'docs', 'apps', 'add', 'devtools']
 const appSectionPanes = ['app', 'script', 'nodes', 'meta']
 
 const e1 = new THREE.Euler(0, 0, 0, 'YXZ')
@@ -207,6 +210,15 @@ export function Sidebar({ world, ui }) {
               >
                 <CirclePlusIcon size='1.25rem' />
               </Btn>
+              {env.PUBLIC_DEV_SERVER === 'true' && 
+                <Btn
+                  active={activePane === 'devtools'}
+                  suspended={ui.pane === 'devtools' && !activePane}
+                  onClick={() => world.ui.togglePane('devtools')}
+                >
+                  <SettingsIcon size='1.25rem' />
+                </Btn>
+              }
             </Section>
           )}
           {ui.app && (
@@ -246,6 +258,7 @@ export function Sidebar({ world, ui }) {
         {ui.pane === 'world' && <World world={world} hidden={!ui.active} />}
         {ui.pane === 'apps' && <Apps world={world} hidden={!ui.active} />}
         {ui.pane === 'add' && <Add world={world} hidden={!ui.active} />}
+        {ui.pane === 'devtools' && <DevToolsPane world={world} hidden={!ui.active} />}
         {ui.pane === 'app' && <App key={ui.app.data.id} world={world} hidden={!ui.active} />}
         {ui.pane === 'script' && <Script key={ui.app.data.id} world={world} hidden={!ui.active} />}
         {ui.pane === 'nodes' && <Nodes key={ui.app.data.id} world={world} hidden={!ui.active} />}
@@ -1011,6 +1024,8 @@ function App({ world, hidden }) {
   const [pinned, setPinned] = useState(app.data.pinned)
   const [transforms, setTransforms] = useState(showTransforms)
   const [blueprint, setBlueprint] = useState(app.blueprint)
+  const [isLinked, setIsLinked] = useState(false)
+  const [isLinking, setIsLinking] = useState(false)
   useEffect(() => {
     showTransforms = transforms
   }, [transforms])
@@ -1019,9 +1034,36 @@ function App({ world, hidden }) {
     const onModify = bp => {
       if (bp.id === blueprint.id) setBlueprint(bp)
     }
+    const onAppLinked = ({ appName, linkInfo }) => {
+      if (linkInfo.blueprintId === blueprint.id || linkInfo.appId === app.data.id) {
+        setIsLinked(true)
+      }
+    }
+    const onAppUnlinked = ({ appName }) => {
+      if (appName === blueprint.name) {
+        setIsLinked(false)
+      }
+    }
+    
+    // Check if app is already linked on mount
+    const checkInitialLinkStatus = async () => {
+      try {
+        const linked = await world.appServerClient.isLinked(blueprint.id)
+        setIsLinked(linked)
+      } catch (error) {
+        console.warn('Failed to check initial link status:', error)
+      }
+    }
+    
+    checkInitialLinkStatus()
+    
     world.blueprints.on('modify', onModify)
+    world.on('app_linked', onAppLinked)
+    world.on('app_unlinked', onAppUnlinked)
     return () => {
       world.blueprints.off('modify', onModify)
+      world.off('app_linked', onAppLinked)
+      world.off('app_unlinked', onAppUnlinked)
     }
   }, [])
   const frozen = blueprint.frozen // TODO: disable code editor, model change, metadata editing, flag editing etc
@@ -1067,6 +1109,27 @@ function App({ world, hidden }) {
     world.network.send('entityModified', { id: app.data.id, pinned })
     setPinned(pinned)
   }
+
+  const toggleLinkToDevServer = async () => {
+    if (isLinking) return
+    
+    setIsLinking(true)
+    
+    try {
+      if (isLinked) {
+        await world.appServerClient.unlinkApps(blueprint.name)
+        setIsLinked(false)
+      } else {
+        await world.appServerClient.linkToDevServer(app)
+        setIsLinked(true)
+      }
+    } catch (error) {
+      const action = isLinked ? 'unlink' : 'link'
+      alert(`Failed to ${action} ${blueprint.name} ${isLinked ? 'from' : 'to'} development server:\n\n${error.message}`)
+    } finally {
+      setIsLinking(false)
+    }
+  }
   return (
     <Pane hidden={hidden}>
       <div
@@ -1104,6 +1167,13 @@ function App({ world, hidden }) {
             &:hover {
               cursor: pointer;
               color: white;
+            }
+            &.active {
+              color: #4088ff;
+            }
+            &.loading {
+              cursor: not-allowed;
+              opacity: 0.5;
             }
           }
           .app-toggles {
@@ -1157,6 +1227,15 @@ function App({ world, hidden }) {
             onPointerLeave={() => setHint(null)}
           >
             <DownloadIcon size='1.125rem' />
+          </div>
+          <div
+            className={`app-btn ${isLinked ? 'active' : ''} ${isLinking ? 'loading' : ''}`}
+            onClick={toggleLinkToDevServer}
+            onPointerEnter={() => setHint(isLinked ? 'Unlink from development server' : 'Link to development server')}
+            onPointerLeave={() => setHint(null)}
+            style={{ opacity: isLinking ? 0.5 : 1 }}
+          >
+            <LinkIcon size='1.125rem' />
           </div>
           {!frozen && (
             <AppModelBtn value={blueprint.model} onChange={changeModel}>
