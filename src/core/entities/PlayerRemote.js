@@ -141,6 +141,8 @@ export class PlayerRemote extends Entity {
       this.quaternion.update(delta)
     }
     this.avatar?.setEmote(this.data.emote)
+    // pass speaking state to animation system for blending
+    this.avatar?.instance?.setSpeaking(this.speaking)
     this.avatar?.instance?.setLocomotion(this.mode, this.axis, this.gaze)
   }
 

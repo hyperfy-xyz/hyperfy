@@ -49,21 +49,20 @@ const Modes = {
   FALL: 4,
   FLY: 5,
   TALK: 6,
+  FLIP: 7,
 }
 
 export function createVRMFactory(glb, setupMaterial) {
   // we'll update matrix ourselves
   glb.scene.matrixAutoUpdate = false
   glb.scene.matrixWorldAutoUpdate = false
-  // remove expressions from scene
-  const expressions = glb.scene.children.filter(n => n.type === 'VRMExpression') // prettier-ignore
-  for (const node of expressions) node.removeFromParent()
+  // NOTE: Preserve VRMExpression nodes so facial expressions (blink/viseme) can work
   // remove VRMHumanoidRig
   const vrmHumanoidRigs = glb.scene.children.filter(n => n.name === 'VRMHumanoidRig') // prettier-ignore
   for (const node of vrmHumanoidRigs) node.removeFromParent()
-  // remove secondary
-  const secondaries = glb.scene.children.filter(n => n.name === 'secondary') // prettier-ignore
-  for (const node of secondaries) node.removeFromParent()
+  // keep `secondary` (VRM0 spring bone container). Previously removed; needed for spring bones to function.
+  // const secondaries = glb.scene.children.filter(n => n.name === 'secondary')
+  // for (const node of secondaries) node.removeFromParent()
   // enable shadows
   glb.scene.traverse(obj => {
     if (obj.isMesh) {
@@ -156,7 +155,8 @@ export function createVRMFactory(glb, setupMaterial) {
     const vrm = cloneGLB(glb)
     const tvrm = vrm.userData.vrm
     const skinnedMeshes = getSkinnedMeshes(vrm.scene)
-    const skeleton = skinnedMeshes[0].skeleton // should be same across all skinnedMeshes
+    const skeleton = skinnedMeshes[0].skeleton // primary skeleton
+    const cloneSkeletons = Array.from(new Set(skinnedMeshes.map(m => m.skeleton)))
     const rootBone = skeleton.bones[0] // should always be 0
     rootBone.parent.remove(rootBone)
     rootBone.updateMatrixWorld(true)
@@ -175,13 +175,6 @@ export function createVRMFactory(glb, setupMaterial) {
       getEntity,
     }
     hooks.octree?.insert(sItem)
-
-    // debug capsule
-    // const foo = new THREE.Mesh(
-    //   sItem.geometry,
-    //   new THREE.MeshBasicMaterial({ transparent: true, opacity: 0.5 })
-    // )
-    // vrm.scene.add(foo)
 
     // link back entity for raycasts
 
@@ -212,6 +205,150 @@ export function createVRMFactory(glb, setupMaterial) {
       return mt.multiplyMatrices(vrm.scene.matrixWorld, bone.matrixWorld)
     }
 
+    // expressions setup (blink + mouth/viseme)
+    const origVRM = glb.userData.vrm
+    try {
+      const sm = origVRM?.springBoneManager
+      console.log('[vrmFactory] spring manager:', !!sm, 'joints:', sm?.joints?.size ?? 0)
+    } catch (_) { }
+    const expressionManager = origVRM?.expressionManager || null
+    // expressions from the cloned scene (fallback path if no manager)
+    // expressions live on the top-level scene of the GLB, not the skinned subtree
+    // when we cloned, `vrm.scene` is the cloned top-level scene, so look directly there
+    const expressionsByName = (() => {
+      const map = new Map()
+      // expressions are added as direct children in the VRM loader
+      for (const child of vrm.scene.children) {
+        if (child && child.type === 'VRMExpression') {
+          // cloning may drop the custom .expressionName; derive from .name if needed
+          let exprName = child.expressionName
+          if (!exprName && typeof child.name === 'string' && child.name.startsWith('VRMExpression_')) {
+            exprName = child.name.substring('VRMExpression_'.length)
+          }
+          if (exprName) map.set(exprName, child)
+        }
+      }
+      return map
+    })()
+    const expressionWeights = {
+      blink: 0,
+      blinkLeft: 0,
+      blinkRight: 0,
+      aa: 0,
+      ee: 0,
+      ih: 0,
+      oh: 0,
+      ou: 0,
+    }
+    const expressionsEnabled = !!expressionManager || expressionsByName.size > 0
+    // map canonical names -> actual names present in this VRM
+    const resolveName = (...candidates) => {
+      // prefer manager lookup
+      for (const c of candidates) {
+        const v = expressionManager?.getValue?.(c)
+        if (v !== null && v !== undefined) return c
+      }
+      // fallback to cloned expression nodes
+      for (const c of candidates) {
+        if (expressionsByName.has(c)) return c
+      }
+      return null
+    }
+    const nameMap = {
+      blink: resolveName('blink', 'Blink', 'BLINK'),
+      aa: resolveName('aa', 'A'),
+      ee: resolveName('ee', 'E'),
+      ih: resolveName('ih', 'I'),
+      oh: resolveName('oh', 'O'),
+      ou: resolveName('ou', 'U'),
+    }
+    let blinkingEnabled = true
+    // blink state
+    let blinkCooldown = 0
+    let blinkPhase = 0 // 0 = idle, 1 = closing, 2 = opening
+    let blinkTime = 0
+    const BLINK_INTERVAL_MIN = 2.5
+    const BLINK_INTERVAL_MAX = 5.0
+    const BLINK_CLOSE_DURATION = 0.06
+    const BLINK_OPEN_DURATION = 0.12
+    function resetBlinkCooldown() {
+      blinkCooldown = THREE.MathUtils.lerp(BLINK_INTERVAL_MIN, BLINK_INTERVAL_MAX, Math.random())
+    }
+    resetBlinkCooldown()
+    // mouth/viseme state (driven when talking)
+    const visemes = ['aa', 'ih', 'oh', 'ee', 'ou']
+    let currentViseme = 'aa'
+    let visemeTimer = 0
+    let visemeSwitchInterval = 0.18 + Math.random() * 0.12 // 180-300ms
+    let mouthTime = 0
+
+    function setExpression(name, weight) {
+      if (!expressionsEnabled) return
+      if (expressionWeights[name] === undefined) return
+      const clamped = THREE.MathUtils.clamp(weight, 0, 1)
+      expressionWeights[name] = clamped
+      const actual = nameMap[name] || name
+      expressionManager?.setValue?.(actual, clamped)
+    }
+
+    function clearMouth() {
+      setExpression('aa', 0)
+      setExpression('ee', 0)
+      setExpression('ih', 0)
+      setExpression('oh', 0)
+      setExpression('ou', 0)
+    }
+
+    function updateBlink(delta) {
+      if (!expressionsEnabled || !blinkingEnabled) return
+      if (blinkPhase === 0) {
+        blinkCooldown -= delta
+        if (blinkCooldown <= 0) {
+          blinkPhase = 1
+          blinkTime = 0
+        }
+      }
+      if (blinkPhase === 1) {
+        blinkTime += delta
+        const t = THREE.MathUtils.clamp(blinkTime / BLINK_CLOSE_DURATION, 0, 1)
+        const w = t // linear close
+        setExpression('blink', w)
+        if (t >= 1) {
+          blinkPhase = 2
+          blinkTime = 0
+        }
+      } else if (blinkPhase === 2) {
+        blinkTime += delta
+        const t = THREE.MathUtils.clamp(blinkTime / BLINK_OPEN_DURATION, 0, 1)
+        const w = 1 - t // open back to 0
+        setExpression('blink', w)
+        if (t >= 1) {
+          blinkPhase = 0
+          resetBlinkCooldown()
+        }
+      }
+    }
+
+    function updateMouth(delta, isTalking) {
+      if (!expressionsEnabled) return
+      if (!isTalking) {
+        clearMouth()
+        return
+      }
+      mouthTime += delta
+      visemeTimer += delta
+      if (visemeTimer >= visemeSwitchInterval) {
+        visemeTimer = 0
+        visemeSwitchInterval = 0.18 + Math.random() * 0.12
+        currentViseme = visemes[(Math.random() * visemes.length) | 0]
+      }
+      // simple oscillation for mouth opening while speaking
+      const oscillation = (Math.sin(mouthTime * 12 + Math.random() * 0.5) + 1) * 0.5 // 0..1
+      const weight = 0.4 + 0.6 * oscillation
+      clearMouth()
+      setExpression(currentViseme, weight)
+    }
+
     const loco = {
       mode: Modes.IDLE,
       axis: new THREE.Vector3(),
@@ -223,6 +360,12 @@ export function createVRMFactory(glb, setupMaterial) {
       loco.gazeDir = gazeDir
     }
 
+    // speaking state (drives mouth and optional talk overlay)
+    let talking = false
+    const setSpeaking = value => {
+      talking = !!value
+    }
+
     // world.updater.add(update)
     const emotes = {
       // [url]: {
@@ -232,6 +375,16 @@ export function createVRMFactory(glb, setupMaterial) {
       // }
     }
     let currentEmote
+    // auto-clear currentEmote when a non-looping emote finishes
+    mixer.addEventListener('finished', e => {
+      if (!currentEmote) return
+      if (e?.action === currentEmote.action) {
+        if (!currentEmote.loop) {
+          try { currentEmote.action?.fadeOut?.(0.15) } catch (_) { }
+          currentEmote = null
+        }
+      }
+    })
     const setEmote = url => {
       if (currentEmote?.url === url) return
       if (currentEmote) {
@@ -247,6 +400,7 @@ export function createVRMFactory(glb, setupMaterial) {
       if (emotes[url]) {
         currentEmote = emotes[url]
         if (currentEmote.action) {
+          currentEmote.loop = loop
           currentEmote.action.clampWhenFinished = !loop
           currentEmote.action.setLoop(loop ? THREE.LoopRepeat : THREE.LoopOnce)
           currentEmote.action.reset().fadeIn(0.15).play()
@@ -258,6 +412,7 @@ export function createVRMFactory(glb, setupMaterial) {
           loading: true,
           action: null,
           gaze,
+          loop,
         }
         emotes[url] = emote
         currentEmote = emote
@@ -300,16 +455,187 @@ export function createVRMFactory(glb, setupMaterial) {
       // console.log('rate per second', 1 / rate)
     }
 
+    // build morph mirroring map (original -> clone) once
+    let morphMirrorInit = false
+    const morphPairs = []
+    function initMorphMirror() {
+      if (morphMirrorInit) return
+      if (!origVRM?.scene) return
+      const src = []
+      const dst = []
+      origVRM.scene.traverse(o => {
+        if (o.isSkinnedMesh && o.morphTargetInfluences) src.push(o)
+      })
+      vrm.scene.traverse(o => {
+        if (o.isSkinnedMesh && o.morphTargetInfluences) dst.push(o)
+      })
+      for (let i = 0; i < src.length; i++) {
+        const s = src[i]
+        const d = dst.find(x => x.name === s.name) || dst[i]
+        if (d) morphPairs.push([s, d])
+      }
+      morphMirrorInit = true
+    }
+
+    // spring bone mirroring (original -> clone) and drive original with clone pose
+    let springMirrorInit = false
+    let hasSprings = false
+    const springPairs = []
+    const drivePairs = []
+    function initSpringMirror() {
+      if (springMirrorInit) return
+      const spring = origVRM?.springBoneManager
+      if (!spring) {
+        springMirrorInit = true
+        return
+      }
+      try {
+        hasSprings = spring.joints && spring.joints.size > 0
+        // optional global tuning (neutral by default; use hooks.springTuning to tweak)
+        const tuning = hooks.springTuning || { stiffness: 1.0, dragForce: 1.0, gravityPower: 1.0, hitRadius: 1.0 }
+        try {
+          spring.joints.forEach(joint => {
+            const s = joint.settings
+            if (!s) return
+            if (tuning.stiffness != null) s.stiffness *= tuning.stiffness
+            if (tuning.dragForce != null) s.dragForce *= tuning.dragForce
+            if (tuning.gravityPower != null) s.gravityPower *= tuning.gravityPower
+            if (tuning.hitRadius != null) s.hitRadius *= tuning.hitRadius
+            // Only disable colliders if explicitly requested
+            if (hooks.disableSpringColliders === true) {
+              joint.colliderGroups = []
+            }
+          })
+        } catch (_) { }
+        // re-init after tuning/collider changes so initial state is consistent
+        try { spring.setInitState() } catch (_) { }
+        // build spring joint pairs (orig -> clone) using clone skeleton lookup by name
+        spring.joints.forEach(joint => {
+          const src = joint.bone
+          if (!src || !src.name) return
+          let dst = skeleton.getBoneByName(src.name)
+          if (dst) springPairs.push([src, dst])
+        })
+        // build drive pairs (clone skeleton -> original bones) for joint ancestors
+        const origMeshes = []
+        glb.scene.traverse(o => { if (o.isSkinnedMesh && o.skeleton) origMeshes.push(o) })
+        const origSkeleton = origMeshes[0]?.skeleton
+        const addDrivePair = (origObj) => {
+          if (!origObj || !origObj.name) return
+          const cloneBone = skeleton.getBoneByName(origObj.name)
+          if (cloneBone) drivePairs.push([cloneBone, origObj])
+        }
+        spring.joints.forEach(joint => {
+          let p = joint.bone
+          while (p && p !== glb.scene) {
+            addDrivePair(p)
+            p = p.parent
+          }
+        })
+        // targeted alias mapping to help common hair/tail chains and path-based fallback
+        const alias = new Map([
+          ['Hair1', ['hair1', 'hair_1', 'Hair_1']],
+          ['Hair2', ['hair2', 'hair_2', 'Hair_2']],
+          ['Tail', ['tail', 'Tail_1', 'tail_1']],
+        ])
+        // rebuild springPairs using alias + path fallback for better coverage
+        springPairs.length = 0
+        spring.joints.forEach(joint => {
+          const src = joint.bone
+          if (!src || !src.name) return
+          let dst = skeleton.getBoneByName(src.name)
+          if (!dst) {
+            for (const [key, alts] of alias.entries()) {
+              if (src.name.toLowerCase().startsWith(key.toLowerCase())) {
+                for (const a of alts) {
+                  dst = skeleton.getBoneByName(a)
+                  if (dst) break
+                }
+                if (dst) break
+              }
+            }
+          }
+          if (!dst) {
+            // path fallback
+            const path = []
+            let n = src
+            while (n && n !== glb.scene) {
+              const p = n.parent
+              if (!p) break
+              const i = p.children.indexOf(n)
+              if (i < 0) break
+              path.push(i)
+              n = p
+            }
+            if (n === glb.scene) {
+              path.reverse()
+              let m = vrm.scene
+              for (const i of path) {
+                m = m.children?.[i]
+                if (!m) break
+              }
+              if (m && m.isBone) dst = m
+            }
+          }
+          if (dst) springPairs.push([src, dst])
+        })
+        // re-initialize springs after mapping (safe if already initialized)
+        try {
+          spring.setInitState()
+        } catch (_) { }
+        console.log('[vrmFactory] spring mapping counts', 'springs:', spring.joints.size, 'pairs:', springPairs.length, 'drive:', drivePairs.length)
+      } catch (_) {
+        // ignore
+      }
+      springMirrorInit = true
+    }
+
     const update = delta => {
       elapsed += delta
-      const should = rateCheck ? elapsed >= rate : true
-      if (should) {
-        mixer.update(elapsed)
+      // If the avatar has springs, always animate every frame for consistent driving
+      const doAnim = hasSprings ? true : (rateCheck ? elapsed >= rate : true)
+      if (doAnim) {
+        mixer.update(hasSprings ? delta : elapsed)
         skeleton.bones.forEach(bone => bone.updateMatrixWorld())
         skeleton.update = THREE.Skeleton.prototype.update
         if (!currentEmote) {
           updateLocomotion(delta)
         }
+        // facial expressions per frame
+        if (expressionsEnabled) {
+          updateBlink(elapsed)
+          updateMouth(elapsed, talking)
+          if (expressionManager) {
+            // push values to manager and update
+            for (const [canon, weight] of Object.entries(expressionWeights)) {
+              const actual = nameMap[canon] || canon
+              expressionManager.setValue(actual, weight)
+            }
+            expressionManager.update()
+            // mirror morph target influences from original to clone
+            if (!morphMirrorInit) initMorphMirror()
+            for (const [s, d] of morphPairs) {
+              const a = s.morphTargetInfluences
+              const b = d.morphTargetInfluences
+              if (!a || !b) continue
+              const len = Math.min(a.length, b.length)
+              for (let j = 0; j < len; j++) b[j] = a[j]
+            }
+          } else {
+            // fallback: apply directly to cloned VRMExpression nodes
+            expressionsByName.forEach(expr => expr.clearAppliedWeight())
+            for (const [canon, weight] of Object.entries(expressionWeights)) {
+              const actual = nameMap[canon] || canon
+              const expr = expressionsByName.get(actual)
+              if (!expr) continue
+              expr.weight = weight
+              if (weight > 0) expr.applyWeight({ multiplier: 1.0 })
+            }
+          }
+        }
+
+        // spring bones will also be stepped below every frame (not rate-limited)
+
         if (loco.gazeDir && distance < MAX_GAZE_DISTANCE && (currentEmote ? currentEmote.gaze : true)) {
           // aimBone('chest', loco.gazeDir, delta, {
           //   minAngle: -90,
@@ -330,10 +656,46 @@ export function createVRMFactory(glb, setupMaterial) {
             weight: 0.6,
           })
         }
-        // tvrm.humanoid.update(elapsed)
+        // tvrm.humanoid.update(delta)
         elapsed = 0
       } else {
         skeleton.update = noop
+      }
+
+      // spring bones per frame (not rate-limited): drive orig with clone pose, simulate, mirror back
+      if (!springMirrorInit) initSpringMirror()
+      if (origVRM && (springPairs.length || drivePairs.length)) {
+        const _pos = new THREE.Vector3()
+        const _quat = new THREE.Quaternion()
+        const _scl = new THREE.Vector3()
+        vrm.scene.matrix.decompose(_pos, _quat, _scl)
+        origVRM.scene.position.copy(_pos)
+        origVRM.scene.quaternion.copy(_quat)
+        origVRM.scene.scale.copy(_scl)
+        origVRM.scene.updateMatrixWorld(true)
+        // copy clone bone rotations into original skeleton so springs have correct inputs
+        for (const [cloneBone, origBone] of drivePairs) {
+          if (origBone && cloneBone) {
+            // many VRM spring bones have matrixAutoUpdate=false; force local matrix rebuild
+            origBone.quaternion.copy(cloneBone.quaternion)
+            origBone.updateMatrix()
+            origBone.updateMatrixWorld(true)
+          }
+        }
+        // advance VRM systems (includes node constraints + spring bones)
+        origVRM.update(delta)
+        // mirror spring joints back to clone only
+        for (const [src, dst] of springPairs) {
+          if (dst) {
+            dst.quaternion.copy(src.quaternion)
+            dst.updateMatrix()
+            dst.updateMatrixWorld(true)
+          }
+        }
+        // ensure skinned mesh bone matrices reflect new spring rotations
+        for (const m of skinnedMeshes) {
+          THREE.Skeleton.prototype.update.call(m.skeleton)
+        }
       }
     }
 
@@ -464,21 +826,6 @@ export function createVRMFactory(glb, setupMaterial) {
       aimBone(boneName, aimBoneDir, delta, options)
     }
 
-    // hooks.loader.load('emote', 'asset://rifle-aim.glb').then(emo => {
-    //   const clip = emo.toClip({
-    //     rootToHips,
-    //     version,
-    //     getBoneName,
-    //   })
-    //   // THREE.AnimationUtils.makeClipAdditive(clip, 0, clipI)
-    //   // clip.blendMode = THREE.AdditiveAnimationBlendMode
-    //   const action = mixer.clipAction(clip)
-    //   action.setLoop(THREE.LoopRepeat)
-    //   action.setEffectiveWeight(6)
-    //   action.reset().fadeIn(0.1).play()
-    //   console.log('hi2')
-    // })
-
     const poses = {}
     function addPose(key, url) {
       const opts = getQueryParams(url)
@@ -594,6 +941,9 @@ export function createVRMFactory(glb, setupMaterial) {
         poses.fly.target = 1
       } else if (mode === Modes.TALK) {
         poses.talk.target = 1
+      } else if (mode === Modes.FLIP) {
+        // play the dedicated flip emote; locomotion poses will be cleared by setEmote
+        setEmote(Emotes.FLIP)
       }
       const lerpSpeed = 16
       for (const key in poses) {
@@ -602,10 +952,6 @@ export function createVRMFactory(glb, setupMaterial) {
         pose.setWeight(weight)
       }
     }
-
-    // console.log('=== vrm ===')
-    // console.log('vrm', vrm)
-    // console.log('skeleton', skeleton)
 
     let firstPersonActive = false
     const setFirstPerson = active => {
@@ -620,6 +966,12 @@ export function createVRMFactory(glb, setupMaterial) {
       height,
       headToHeight,
       setEmote,
+      setSpeaking,
+      // expression controls
+      setExpression,
+      setBlinkEnabled(active) {
+        blinkingEnabled = !!active
+      },
       setFirstPerson,
       update,
       updateRate,

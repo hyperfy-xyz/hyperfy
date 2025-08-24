@@ -52,6 +52,7 @@ const Modes = {
   FALL: 4,
   FLY: 5,
   TALK: 6,
+  FLIP: 7, // air-jump / acrobatic mid-air move
 }
 
 export class PlayerLocal extends Entity {
@@ -85,9 +86,16 @@ export class PlayerLocal extends Entity {
     this.jumped = false
     this.jumping = false
     this.justLeftGround = false
+    this.canDoubleJump = true  // Track if we can perform a double jump
+    this.doubleJumpUsed = false  // Prevent multiple triggers per air session
 
     this.fallTimer = 0
     this.falling = false
+    // coyote time and jump buffering for robust jumping
+    this.coyoteTime = 0.12
+    this.coyoteTimer = 0
+    this.jumpBufferTime = 0.12
+    this.jumpBufferTimer = 0
 
     this.moveDir = new THREE.Vector3()
     this.moving = false
@@ -99,6 +107,11 @@ export class PlayerLocal extends Entity {
     this.flyForce = 100
     this.flyDrag = 300
     this.flyDir = new THREE.Vector3()
+
+    // flip state timing
+    this.flipStartAt = 0
+    this.flipUntil = 0
+    this.flipDuration = 0.6
 
     this.platform = {
       actor: null,
@@ -230,11 +243,11 @@ export class PlayerLocal extends Entity {
       Layers.player.group,
       Layers.player.mask,
       PHYSX.PxPairFlagEnum.eNOTIFY_TOUCH_FOUND |
-        PHYSX.PxPairFlagEnum.eNOTIFY_TOUCH_LOST |
-        PHYSX.PxPairFlagEnum.eNOTIFY_CONTACT_POINTS |
-        PHYSX.PxPairFlagEnum.eDETECT_CCD_CONTACT |
-        PHYSX.PxPairFlagEnum.eSOLVE_CONTACT |
-        PHYSX.PxPairFlagEnum.eDETECT_DISCRETE_CONTACT,
+      PHYSX.PxPairFlagEnum.eNOTIFY_TOUCH_LOST |
+      PHYSX.PxPairFlagEnum.eNOTIFY_CONTACT_POINTS |
+      PHYSX.PxPairFlagEnum.eDETECT_CCD_CONTACT |
+      PHYSX.PxPairFlagEnum.eSOLVE_CONTACT |
+      PHYSX.PxPairFlagEnum.eDETECT_DISCRETE_CONTACT,
       0
     )
     shape.setContactOffset(0.08) // just enough to fire contacts (because we muck with velocity sometimes standing on a thing doesn't contact)
@@ -373,6 +386,9 @@ export class PlayerLocal extends Entity {
        *
        */
     } else if (!this.flying) {
+      // timers for jump responsiveness
+      if (this.coyoteTimer > 0) this.coyoteTimer -= delta
+      if (this.jumpBufferTimer > 0) this.jumpBufferTimer -= delta
       /**
        *
        * STANDARD MODE
@@ -465,6 +481,10 @@ export class PlayerLocal extends Entity {
         this.grounded = false
         this.groundNormal.copy(UP)
         this.groundAngle = 0
+        // started falling this frame: start coyote timer
+        if (this.justLeftGround) {
+          this.coyoteTimer = this.coyoteTime
+        }
       }
 
       // if on a steep slope, unground and track slipping
@@ -511,7 +531,6 @@ export class PlayerLocal extends Entity {
       // this is to prevent animation jitter when only falling for a very small amount of time
       if (this.fallTimer > 0.1 && !this.falling) {
         this.jumping = false
-        this.airJumping = false
         this.falling = true
         this.fallStartY = this.base.position.y
       }
@@ -531,10 +550,15 @@ export class PlayerLocal extends Entity {
         this.jumping = false
       }
 
-      // if airJumping and we're now on the ground, clear it
-      if (this.airJumped && this.grounded) {
-        this.airJumped = false
-        this.airJumping = false
+      // Reset double jump when landing
+      if (this.grounded) {
+        this.canDoubleJump = true
+        this.doubleJumpUsed = false  // Reset for next jump
+        // Clear flip animation when landing
+        if (this.flipUntil > 0) {
+          this.flipStartAt = 0
+          this.flipUntil = 0
+        }
       }
 
       // if we're grounded we don't need gravity.
@@ -601,8 +625,6 @@ export class PlayerLocal extends Entity {
             // ensure other stuff is reset
             this.jumping = false
             this.falling = false
-            this.airJumped = false
-            this.airJumping = false
           }
         }
         velocity.add(this.pushForce)
@@ -636,10 +658,12 @@ export class PlayerLocal extends Entity {
       }
 
       // ground/air jump
+      const bufferedJump = this.jumpBufferTimer > 0
+      const hasCoyote = this.coyoteTimer > 0
       const shouldJump =
-        this.grounded && !this.jumping && this.jumpDown && !this.data.effect?.snare && !this.data.effect?.freeze
+        (this.grounded || hasCoyote) && !this.jumping && bufferedJump && !this.data.effect?.snare && !this.data.effect?.freeze
       const shouldAirJump =
-        false && !this.grounded && !this.airJumped && this.jumpPressed && !this.world.builder?.enabled // temp: disabled
+        !this.grounded && this.canDoubleJump && !this.doubleJumpUsed && this.jumpPressed && !this.world.builder?.enabled
       if (shouldJump || shouldAirJump) {
         // calc velocity needed to reach jump height
         let jumpVelocity = Math.sqrt(2 * this.effectiveGravity * this.jumpHeight)
@@ -651,14 +675,19 @@ export class PlayerLocal extends Entity {
         // ground jump init (we haven't left the ground yet)
         if (shouldJump) {
           this.jumped = true
+          this.coyoteTimer = 0
+          this.jumpBufferTimer = 0
         }
         // air jump init
         if (shouldAirJump) {
           this.falling = false
           this.fallTimer = 0
           this.jumping = true
-          this.airJumped = true
-          this.airJumping = true
+          this.canDoubleJump = false  // Prevent multiple double jumps
+          this.doubleJumpUsed = true  // Mark as used for this air session
+          // lock flip pose for a short, deterministic duration
+          this.flipStartAt = this.world.time
+          this.flipUntil = this.flipStartAt + this.flipDuration
         }
       }
     } else {
@@ -778,8 +807,15 @@ export class PlayerLocal extends Entity {
 
     // watch jump presses to either fly or air-jump
     this.jumpDown = isXR ? this.control.xrRightBtn1.down : this.control.space.down || this.control.touchA.down
-    if (isXR ? this.control.xrRightBtn1.pressed : this.control.space.pressed || this.control.touchA.pressed) {
+    // Reset double jump used flag when button is released (allows next press)
+    if (!this.jumpDown && this.doubleJumpUsed && !this.grounded) {
+      this.doubleJumpUsed = false
+    }
+    // capture jump press for buffering
+    const pressed = isXR ? this.control.xrRightBtn1.pressed : this.control.space.pressed || this.control.touchA.pressed
+    if (pressed) {
       this.jumpPressed = true
+      this.jumpBufferTimer = this.jumpBufferTime
     }
 
     // get our movement direction
@@ -901,15 +937,26 @@ export class PlayerLocal extends Entity {
       this.base.quaternion.slerp(q1, alpha)
     }
 
-    // apply emote
+    // apply emote (defer emote while flipping unless explicitly allowed with ?af=1)
     let emote
     if (this.data.effect?.emote) {
-      emote = this.data.effect.emote
+      const url = this.data.effect.emote
+      const allowDuringFlip = (() => {
+        try { const u = new URL(url); return u.searchParams.get('af') === '1' } catch (_) { return false }
+      })()
+      const aerial = this.world.time < this.flipUntil
+      if (!aerial || allowDuringFlip) emote = url
     }
-    if (this.emote !== emote) {
-      this.emote = emote
-    }
+    if (this.emote !== emote) this.emote = emote
     this.avatar?.setEmote(this.emote)
+    // pass speaking state to animation system for blending
+    this.avatar?.instance?.setSpeaking(this.speaking)
+
+    // Clear expired flip animation
+    if (this.flipUntil > 0 && this.world.time >= this.flipUntil) {
+      this.flipStartAt = 0
+      this.flipUntil = 0
+    }
 
     // get locomotion mode
     let mode
@@ -917,7 +964,8 @@ export class PlayerLocal extends Entity {
       // emote = this.data.effect.emote
     } else if (this.flying) {
       mode = Modes.FLY
-    } else if (this.airJumping) {
+    } else if (this.flipUntil > 0 && !this.grounded) {
+      // Only show flip animation when in air and timer is active
       mode = Modes.FLIP
     } else if (this.jumping) {
       mode = Modes.JUMP
@@ -925,8 +973,6 @@ export class PlayerLocal extends Entity {
       mode = this.fallDistance > 1.6 ? Modes.FALL : Modes.JUMP
     } else if (this.moving) {
       mode = this.running ? Modes.RUN : Modes.WALK
-    } else if (this.speaking) {
-      mode = Modes.TALK
     }
     if (!mode) mode = Modes.IDLE
     this.mode = mode

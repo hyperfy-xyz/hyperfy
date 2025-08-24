@@ -11,7 +11,7 @@ export const Emotes = {
   JUMP: 'asset://emote-jump.glb',
   FALL: 'asset://emote-fall.glb',
   FLY: 'asset://emote-float.glb',
-  FLIP: 'asset://emote-flip.glb?s=1.1',
+  FLIP: 'asset://emote-flip.glb?s=1.1&l=0',
   TALK: 'asset://emote-talk.glb',
 }
 
