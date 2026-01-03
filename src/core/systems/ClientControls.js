@@ -85,6 +85,9 @@ export class ClientControls extends System {
       delta: 0,
     }
     this.xrSession = null
+
+    this.pointerInteractionOccurred = false
+    document.addEventListener('pointerdown', () => this.pointerInteractionOccurred = true, { once: true })
   }
 
   start() {
@@ -546,6 +549,15 @@ export class ClientControls extends System {
           button.onRelease?.()
         }
       }
+    }
+  }
+
+  onInitialPointerInteraction(callback) {
+    if (this.pointerInteractionOccurred) {
+      callback.call()
+
+    } else {
+      document.addEventListener('pointerdown', callback, { once: true })
     }
   }
 
