@@ -159,6 +159,50 @@ if (world.isClient) {
   app.on('playRandomSound', (data) => {
     playRandomSound(data.sounds, data.volume)
   })
+
+  // ============================================================================
+  // CLIENT-SIDE POSITION SYNC (With Interpolation)
+  // ============================================================================
+
+  // Target position from server
+  let targetPos = null
+  let targetYaw = null
+
+  // Interpolation rate (0.125 matches Hyperfy's LerpVector3 rate)
+  const LERP_RATE = 0.125
+
+  // Receive pose updates from server
+  app.on('pose', ({ p, yaw }) => {
+    if (Array.isArray(p) && p.length === 3) {
+      targetPos = { x: p[0], y: p[1], z: p[2] }
+    }
+    if (typeof yaw === 'number') {
+      targetYaw = yaw
+    }
+  })
+
+  // Apply interpolation every frame
+  app.on('update', (delta) => {
+    if (!targetPos || !app.position) return
+
+    // Lerp position toward target
+    app.position.x += (targetPos.x - app.position.x) * LERP_RATE
+    app.position.y += (targetPos.y - app.position.y) * LERP_RATE
+    app.position.z += (targetPos.z - app.position.z) * LERP_RATE
+
+    // Lerp rotation toward target yaw
+    if (targetYaw !== null && app.rotation) {
+      // Shortest path interpolation for angles
+      let diff = targetYaw - app.rotation.y
+      // Normalize to [-PI, PI]
+      while (diff > Math.PI) diff -= 2 * Math.PI
+      while (diff < -Math.PI) diff += 2 * Math.PI
+
+      app.rotation.y += diff * LERP_RATE
+      app.rotation.x = 0
+      app.rotation.z = 0
+    }
+  })
 }
 
 // ============================================================================
