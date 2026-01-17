@@ -23,16 +23,23 @@ export class ClientAudio extends System {
     this.groupGains.music.connect(this.masterGain)
     this.groupGains.sfx.connect(this.masterGain)
     this.groupGains.voice.connect(this.masterGain)
+
     this.listener = this.ctx.listener
-    this.listener.positionX.value = 0
-    this.listener.positionY.value = 0
-    this.listener.positionZ.value = 0
-    this.listener.forwardX.value = 0
-    this.listener.forwardY.value = 0
-    this.listener.forwardZ.value = -1
-    this.listener.upX.value = 0
-    this.listener.upY.value = 1
-    this.listener.upZ.value = 0
+    if (!this.listener.positionX) {
+      this.listener.setPosition(0, 0, 0);
+      this.listener.setOrientation(0, 0, -1, 0, 1, 0);
+    } else {
+      this.listener.positionX.value = 0
+      this.listener.positionY.value = 0
+      this.listener.positionZ.value = 0
+      this.listener.forwardX.value = 0
+      this.listener.forwardY.value = 0
+      this.listener.forwardZ.value = -1
+      this.listener.upX.value = 0
+      this.listener.upY.value = 1
+      this.listener.upZ.value = 0
+    }
+
     this.lastDelta = 0
 
     this.queue = []

@@ -1,10 +1,13 @@
 export { Group as group } from './Group.js'
 export { Mesh as mesh } from './Mesh.js'
 export { SkinnedMesh as skinnedmesh } from './SkinnedMesh.js'
+export { StaticMesh as staticmesh } from './StaticMesh.js'
 export { LOD as lod } from './LOD.js'
 export { Audio as audio } from './Audio.js'
 export { Video as video } from './Video.js'
+export { IFrame as iframe } from './IFrame.js'
 export { Image as image } from './Image.js'
+export { HttpLiveStreaming as hls } from './HttpLiveStreaming.js'
 export { Snap as snap } from './Snap.js'
 export { Prim as prim } from './Prim.js'
 

@@ -22,6 +22,12 @@ export class ClientNetwork extends System {
     this.id = null
     this.isClient = true
     this.queue = []
+    this.streaks = true
+    this.m3u8 = ''
+    this.cb1 = () => { }
+    this.cb2 = () => { }
+    this.streaksCB = (cb) => { this.cb1 = cb }
+    this.m3u8CB = (cb) => { this.cb2 = cb }
   }
 
   init({ wsUrl, name, avatar }) {

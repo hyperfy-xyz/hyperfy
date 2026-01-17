@@ -759,14 +759,14 @@ export class PlayerLocal extends Entity {
       this.capsule.setAngularVelocity(zeroAngular.toPxVec3())
 
       // if non-xr and not in build mode, cancel flying
-      if (!this.world.builder?.enabled && !this.isXR) {
+      if (!this.world.builder?.enabled && !this.isXR && !this.world.flying) {
         this.toggleFlying()
       }
     }
 
     // double jump in build mode, toggle flying
     // double jump in xr and "can" build, toggle flying
-    if (this.jumpPressed && (this.world.builder?.enabled || (this.isXR && this.world.builder?.canBuild()))) {
+    if (this.jumpPressed && (this.world.builder?.enabled || (this.isXR && this.world.builder?.canBuild()) || this.world.flying)) {
       if (this.world.time - this.lastJumpAt < 0.4) {
         this.toggleFlying()
       }

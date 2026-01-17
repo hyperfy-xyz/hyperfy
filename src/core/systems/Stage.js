@@ -66,6 +66,10 @@ export class Stage extends System {
   }
 
   insert(options) {
+    if (this.world.network.isServer) {
+      return
+    }
+
     if (options.linked) {
       return this.insertLinked(options)
     } else {

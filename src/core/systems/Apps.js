@@ -50,6 +50,18 @@ export class Apps extends System {
       isClient(entity) {
         return world.network.isClient
       },
+      streaks(entity) {
+        return world.network.streaks
+      },
+      streaksCB(entity) {
+        return world.network.streaksCB
+      },
+      m3u8(entity) {
+        return world.network.m3u8
+      },
+      m3u8CB(entity) {
+        return world.network.m3u8CB
+      },
     }
     this.worldSetters = {
       // ...
@@ -268,6 +280,9 @@ export class Apps extends System {
       isMoving(entity) {
         return entity.mode === 'moving'
       },
+      three(entity) {
+        return THREE
+      }
     }
     this.appSetters = {
       state(entity, value) {

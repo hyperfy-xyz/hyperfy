@@ -59,6 +59,22 @@ export class Chat extends System {
     if (callback) {
       return callback({ playerId, cmd, value, args })
     }
+
+    if (args[0] === 'streaks') {
+      this.world.network.streaks = !this.world.network.streaks
+      this.world.network.cb1.call()
+      return
+    }
+    if (args[0] === 'm3u8') {
+      this.world.network.m3u8 = args[1]
+      this.world.network.cb2.call()
+      return
+    }
+    if (args[0] === 'fly') {
+      this.world.flying = !this.world.flying
+      return
+    }
+
     if (cmd !== 'admin') {
       this.world.events.emit('command', { playerId, cmd, value, args })
     }

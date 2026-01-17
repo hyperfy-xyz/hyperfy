@@ -306,6 +306,39 @@ export class ClientLoader extends System {
     }
     if (type === 'avatar') {
       promise = this.gltfLoader.loadAsync(localUrl).then(glb => {
+        if (glb.userData?.vrmMeta?.licenseName === 'Redistribution_Prohibited') {
+          if (glb.userData.vrmMeta.contactInformation === 'info@decentraland.org') {
+            const message = 'WARNING: this VRM is marked as Redistribution_Prohibited.\nBut since the contact information is "info@decentraland.org", this is likely a mistake, based on https://www.linkedin.com/posts/kimcurrier_what-to-watch-the-metaverse-is-still-evolving-activity-7111033569619152896-SsQS and https://www.youtube.com/watch?v=voHMmH46cxQ, so the VRM will still be loaded here anyway.\nTechnically you aren\'t allowed to use this VRM on other platforms ! Please contact the DCL Foundation about this.'
+            console.warn(message)
+
+            const hoverUI = createNode('ui')
+            hoverUI.backgroundColor = 'white'
+            hoverUI.width = 300
+            hoverUI.flexDirection = 'column'
+            hoverUI.height = 150
+            hoverUI.position.y = 2
+            // app.add(hoverUI)
+
+            const messageContainer = createNode('uiview')
+            messageContainer.width = 300
+            messageContainer.height = 75
+            messageContainer.backgroundColor = 'darkblue'
+            messageContainer.justifyContent = 'center'
+            messageContainer.alignItems = 'center'
+            messageContainer.alignContent = 'center'
+            hoverUI.add(messageContainer)
+
+            const text = createNode('uitext', { padding: 4, textAlign: 'center', color: 'white', value: message })
+            messageContainer.add(text)
+
+            hoverUI.activate({ world: this.world, entity: this })
+
+          } else {
+            createNode('ui', { padding: 4, textAlign: 'center', color: 'white', value: 'Error: VRM has Redistribution_Prohibited' })
+            return { error: 'VRM has Redistribution_Prohibited' }
+          }
+        }
+
         const factory = createVRMFactory(glb, this.world.setupMaterial)
         const hooks = this.vrmHooks
         const node = createNode('group', { id: '$root' })

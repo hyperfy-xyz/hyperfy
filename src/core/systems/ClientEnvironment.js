@@ -2,8 +2,9 @@ import * as THREE from '../extras/three'
 
 import { System } from './System'
 
-import { CSM } from '../libs/csm/CSM'
 import { isNumber, isString } from 'lodash-es'
+import { createGrassObject } from '../entities/GrassScene'
+import { CSM } from '../libs/csm/CSM'
 
 const csmLevels = {
   none: {
@@ -69,6 +70,8 @@ THREE.ShaderChunk.fog_vertex = `
  *
  */
 export class ClientEnvironment extends System {
+  grassObject
+
   constructor(world) {
     super(world)
 
@@ -87,6 +90,10 @@ export class ClientEnvironment extends System {
   async start() {
     this.buildCSM()
     this.updateSky()
+
+    // this.world.stage.scene.add((await createShaderDemo()).sceneObject)
+    this.grassObject = await createGrassObject()
+    this.world.stage.scene.add(this.grassObject.sceneObject)
 
     this.world.prefs.on('change', this.onPrefsChange)
     this.world.graphics.on('resize', this.onViewportResize)
@@ -198,6 +205,7 @@ export class ClientEnvironment extends System {
 
   update(delta) {
     this.csm.update()
+    if (this.grassObject) this.grassObject.update(delta)
   }
 
   lateUpdate(delta) {
