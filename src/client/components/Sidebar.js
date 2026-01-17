@@ -895,8 +895,27 @@ function Apps({ world, hidden }) {
 function Add({ world, hidden }) {
   // note: multiple collections are supported by the engine but for now we just use the 'default' collection.
   const collection = world.collections.get('default')
+  const [tab, setTab] = useState('apps')
+  const [mobsLoaded, setMobsLoaded] = useState(0) // Force re-render when mobs change
   const span = 4
   const gap = '0.5rem'
+
+  // Listen for world initialization/changes
+  useEffect(() => {
+    // Force update when component mounts (in case mobs already loaded)
+    setMobsLoaded(prev => prev + 1)
+
+    // Set up interval to check for mobs (will stop once mobs are loaded)
+    const checkMobs = setInterval(() => {
+      const blueprints = world.mobs.getMobBlueprints()
+      if (blueprints.length > 0) {
+        setMobsLoaded(prev => prev + 1)
+        clearInterval(checkMobs)
+      }
+    }, 500)
+
+    return () => clearInterval(checkMobs)
+  }, [])
   const add = blueprint => {
     blueprint = cloneDeep(blueprint)
     blueprint.id = uuid()
@@ -922,6 +941,33 @@ function Add({ world, hidden }) {
       world.builder.select(app)
     }, 100)
   }
+  const addMob = blueprint => {
+    blueprint = cloneDeep(blueprint)
+    blueprint.id = uuid()
+    blueprint.version = 0
+    world.blueprints.add(blueprint, true)
+    const transform = world.builder.getSpawnTransform(true)
+    world.builder.toggle(true)
+    world.builder.control.pointer.lock()
+    setTimeout(() => {
+      const data = {
+        id: uuid(),
+        type: 'mob',
+        blueprint: blueprint.id,
+        position: transform.position,
+        quaternion: transform.quaternion,
+        scale: [1, 1, 1],
+        mover: 'server',
+        uploader: null,
+        pinned: false,
+        state: {},
+        health: blueprint.props?.health || 100,
+        maxHealth: blueprint.props?.maxHealth || 100,
+      }
+      const mob = world.entities.add(data, true)
+      world.builder.select(mob)
+    }, 100)
+  }
   return (
     <Pane hidden={hidden}>
       <div
@@ -939,11 +985,29 @@ function Add({ world, hidden }) {
             border-bottom: 1px solid rgba(255, 255, 255, 0.05);
             display: flex;
             align-items: center;
+            gap: 1rem;
           }
           .add-title {
             font-weight: 500;
             font-size: 1rem;
             line-height: 1;
+          }
+          .add-tabs {
+            display: flex;
+            gap: 0.5rem;
+          }
+          .add-tab {
+            padding: 0.5rem 1rem;
+            border-radius: 0.5rem;
+            cursor: pointer;
+            color: rgba(255, 255, 255, 0.6);
+            &:hover {
+              color: rgba(255, 255, 255, 0.8);
+            }
+            &.active {
+              background: rgba(255, 255, 255, 0.1);
+              color: white;
+            }
           }
           .add-content {
             flex: 1;
@@ -977,21 +1041,46 @@ function Add({ world, hidden }) {
       >
         <div className='add-head'>
           <div className='add-title'>Add</div>
+          <div className='add-tabs'>
+            <div className={cls('add-tab', { active: tab === 'apps' })} onClick={() => setTab('apps')}>
+              Apps
+            </div>
+            <div className={cls('add-tab', { active: tab === 'mobs' })} onClick={() => setTab('mobs')}>
+              Mobs
+            </div>
+          </div>
         </div>
         <div className='add-content noscrollbar'>
-          <div className='add-items'>
-            {collection.blueprints.map(blueprint => (
-              <div className='add-item' key={blueprint.id} onClick={() => add(blueprint)}>
-                <div
-                  className='add-item-image'
-                  css={css`
-                    background-image: url(${world.resolveURL(blueprint.image?.url)});
-                  `}
-                ></div>
-                <div className='add-item-name'>{blueprint.name}</div>
-              </div>
-            ))}
-          </div>
+          {tab === 'apps' && (
+            <div className='add-items'>
+              {collection.blueprints.map(blueprint => (
+                <div className='add-item' key={blueprint.id} onClick={() => add(blueprint)}>
+                  <div
+                    className='add-item-image'
+                    css={css`
+                      background-image: url(${world.resolveURL(blueprint.image?.url)});
+                    `}
+                  ></div>
+                  <div className='add-item-name'>{blueprint.name}</div>
+                </div>
+              ))}
+            </div>
+          )}
+          {tab === 'mobs' && (
+            <div className='add-items'>
+              {world.mobs.getMobBlueprints().map(blueprint => (
+                <div className='add-item' key={blueprint.id} onClick={() => addMob(blueprint)}>
+                  <div
+                    className='add-item-image'
+                    css={css`
+                      background-image: url(${world.resolveURL(blueprint.image?.url)});
+                    `}
+                  ></div>
+                  <div className='add-item-name'>{blueprint.name}</div>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       </div>
     </Pane>

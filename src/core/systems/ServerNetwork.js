@@ -285,6 +285,7 @@ export class ServerNetwork extends System {
         apiUrl: process.env.PUBLIC_API_URL,
         maxUploadSize: process.env.PUBLIC_MAX_UPLOAD_SIZE,
         collections: this.world.collections.serialize(),
+        mobs: this.world.mobs.serialize(),
         settings: this.world.settings.serialize(),
         chat: this.world.chat.serialize(),
         ai: this.world.ai.serialize(),

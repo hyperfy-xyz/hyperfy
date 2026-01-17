@@ -98,57 +98,85 @@ export class ClientNetwork extends System {
   }
 
   onSnapshot(data) {
-    this.id = data.id
-    this.serverTimeOffset = data.serverTime - performance.now()
-    this.apiUrl = data.apiUrl
-    this.maxUploadSize = data.maxUploadSize
-    this.world.assetsUrl = data.assetsUrl
+    try {
+      console.log('[network] Processing snapshot...')
 
-    // preload environment model and avatar
-    // if (this.world.environment.base) {
-    //   this.world.loader.preload('model', this.world.environment.base.model)
-    // }
-    if (data.settings.avatar) {
-      this.world.loader.preload('avatar', data.settings.avatar.url)
-    }
-    // preload some blueprints
-    for (const item of data.blueprints) {
-      if (item.preload && !item.disabled) {
-        if (item.model) {
-          const type = item.model.endsWith('.vrm') ? 'avatar' : 'model'
-          this.world.loader.preload(type, item.model)
-        }
-        if (item.script) {
-          this.world.loader.preload('script', item.script)
-        }
-        for (const value of Object.values(item.props || {})) {
-          if (value === undefined || value === null || !value?.url || !value?.type) continue
-          this.world.loader.preload(value.type, value.url)
+      // Validate snapshot structure
+      if (!data.collections || !Array.isArray(data.collections)) {
+        throw new Error('Invalid snapshot: collections missing')
+      }
+      if (!data.mobs || !Array.isArray(data.mobs)) {
+        throw new Error('Invalid snapshot: mobs missing')
+      }
+      if (!data.blueprints || !Array.isArray(data.blueprints)) {
+        throw new Error('Invalid snapshot: blueprints missing')
+      }
+
+      this.id = data.id
+      this.serverTimeOffset = data.serverTime - performance.now()
+      this.apiUrl = data.apiUrl
+      this.maxUploadSize = data.maxUploadSize
+      this.world.assetsUrl = data.assetsUrl
+
+      // preload environment model and avatar
+      // if (this.world.environment.base) {
+      //   this.world.loader.preload('model', this.world.environment.base.model)
+      // }
+      if (data.settings.avatar) {
+        this.world.loader.preload('avatar', data.settings.avatar.url)
+      }
+      // preload some blueprints
+      for (const item of data.blueprints) {
+        if (item.preload && !item.disabled) {
+          if (item.model) {
+            const type = item.model.endsWith('.vrm') ? 'avatar' : 'model'
+            this.world.loader.preload(type, item.model)
+          }
+          if (item.script) {
+            this.world.loader.preload('script', item.script)
+          }
+          for (const value of Object.values(item.props || {})) {
+            if (value === undefined || value === null || !value?.url || !value?.type) continue
+            this.world.loader.preload(value.type, value.url)
+          }
         }
       }
-    }
-    // preload emotes
-    for (const url of emoteUrls) {
-      this.world.loader.preload('emote', url)
-    }
-    // preload local player avatar
-    for (const item of data.entities) {
-      if (item.type === 'player' && item.owner === this.id) {
-        const url = item.sessionAvatar || item.avatar
-        this.world.loader.preload('avatar', url)
+      // preload emotes
+      for (const url of emoteUrls) {
+        this.world.loader.preload('emote', url)
       }
-    }
-    this.world.loader.execPreload()
+      // preload local player avatar
+      for (const item of data.entities) {
+        if (item.type === 'player' && item.owner === this.id) {
+          const url = item.sessionAvatar || item.avatar
+          this.world.loader.preload('avatar', url)
+        }
+      }
 
-    this.world.collections.deserialize(data.collections)
-    this.world.settings.deserialize(data.settings)
-    this.world.settings.setHasAdminCode(data.hasAdminCode)
-    this.world.chat.deserialize(data.chat)
-    this.world.ai.deserialize(data.ai)
-    this.world.blueprints.deserialize(data.blueprints)
-    this.world.entities.deserialize(data.entities)
-    this.world.livekit?.deserialize(data.livekit)
-    storage.set('authToken', data.authToken)
+      // Deserialize in dependency order
+      this.world.collections.deserialize(data.collections)
+      this.world.mobs.deserialize(data.mobs)  // ← Will throw if invalid
+      this.world.settings.deserialize(data.settings)
+      this.world.settings.setHasAdminCode(data.hasAdminCode)
+      this.world.chat.deserialize(data.chat)
+      this.world.ai.deserialize(data.ai)
+      this.world.blueprints.deserialize(data.blueprints)
+      this.world.entities.deserialize(data.entities)
+      this.world.livekit?.deserialize(data.livekit)
+      storage.set('authToken', data.authToken)
+
+      // Start preloading assets (non-blocking)
+      this.world.loader.execPreload()
+
+      // Signal that snapshot is loaded
+      console.log('[network] ✓ Snapshot loaded')
+      this.world.emit('snapshot:loaded', data)
+
+    } catch (error) {
+      console.error('[network] FATAL: Snapshot processing failed:', error)
+      this.world.emit('error', error)
+      throw error
+    }
   }
 
   onSettingsModified = data => {

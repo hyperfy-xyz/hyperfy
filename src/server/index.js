@@ -16,6 +16,7 @@ import { getDB } from './db'
 import { Storage } from './Storage'
 import { assets } from './assets'
 import { collections } from './collections'
+import { mobs } from './mobs'
 import { cleaner } from './cleaner'
 
 const rootDir = path.join(__dirname, '../')
@@ -60,36 +61,70 @@ if (process.env.ASSETS === 's3' && !process.env.ASSETS_S3_URI) {
   throw new Error(`[envs] ASSETS_S3_URI must be set when using ASSETS=s3`)
 }
 
+async function bootstrap() {
+  console.log('[bootstrap] Starting server...')
+
+  try {
+    // Create world folder if needed
+    await fs.ensureDir(worldDir)
+
+    // Initialize assets
+    await assets.init({ rootDir, worldDir })
+
+    // Initialize collections (CRITICAL)
+    await collections.init({ rootDir, worldDir })
+    if (!collections.list || collections.list.length === 0) {
+      throw new Error('[FATAL] Collections failed to load')
+    }
+
+    // Initialize mobs (CRITICAL)
+    await mobs.init({ rootDir, worldDir })
+    if (!mobs.list || mobs.list.length === 0) {
+      throw new Error('[FATAL] Mobs failed to load')
+    }
+
+    // Initialize database
+    const db = await getDB({ worldDir })
+
+    // Initialize cleaner
+    await cleaner.init({ db })
+
+    // Initialize storage
+    const storage = new Storage(path.join(worldDir, '/storage.json'))
+
+    console.log('[bootstrap] ✓ All critical resources loaded')
+    return { db, storage }
+
+  } catch (error) {
+    console.error('[FATAL] Bootstrap failed:', error.message)
+    console.error(error.stack)
+    process.exit(1)  // ← FAIL FAST
+  }
+}
+
+// Execute bootstrap
+const { db, storage } = await bootstrap()
+
 const fastify = Fastify({ logger: { level: 'error' } })
 
-// create world folder if needed
-await fs.ensureDir(worldDir)
-
-// init assets
-await assets.init({ rootDir, worldDir })
-
-// init collections
-await collections.init({ rootDir, worldDir })
-
-// init db
-const db = await getDB({ worldDir })
-
-// init cleaner
-await cleaner.init({ db })
-
-// init storage
-const storage = new Storage(path.join(worldDir, '/storage.json'))
-
-// create world
+// Create world
 const world = createServerWorld()
-await world.init({
-  assetsDir: assets.dir,
-  assetsUrl: assets.url,
-  db,
-  assets,
-  storage,
-  collections: collections.list,
-})
+
+try {
+  await world.init({
+    assetsDir: assets.dir,
+    assetsUrl: assets.url,
+    db,
+    assets,
+    storage,
+    collections: collections.list,
+    mobs: mobs.list,
+  })
+} catch (error) {
+  console.error('[FATAL] World initialization failed:', error.message)
+  console.error(error.stack)
+  process.exit(1)  // ← FAIL FAST
+}
 
 fastify.register(cors)
 fastify.register(compress)
