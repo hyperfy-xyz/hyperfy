@@ -235,24 +235,14 @@ varying vec2 vUv;
 varying float frc;
 
 void main() {
-    // // csm_DiffuseColor = vec4(0.0, 1.0, 0.0, 1.0);
-    // // Get transparency information from alpha map
-    // // float alpha = texture2D(alphaMap, vUv).r;
-    // // If transparent, don't draw
-    // //  if(alpha < 0.15) discard;
-    // // Get colour data from texture
-    // vec4 col = vec4(texture2D(map, vUv));
-    // // Add more green towards root
-    // col = mix(vec4(tipColor, 1.0), col, frc);
-    // // //Add a shadow towards root
-    // // col = mix(vec4(bottomColor, 1.0), col, frc);
-    // gl_FragColor = col;
+    // Create gradient from bottom (darker, brownish-green) to tip (lighter green)
+    vec3 grassColor = mix(bottomColor, tipColor, frc);
 
-    gl_FragColor = vec4(0.0, 1.0, 0.0, 1.0);
+    // Add subtle variation and depth
+    float shadow = mix(0.7, 1.0, frc); // Darker at base, lighter at tip
+    grassColor *= shadow;
 
-    // csm_FragColor = col;
-    // csm_FragColor = vec4(0.0, 1.0, 0.0, 1.0);
-    // // csm_DiffuseColor = vec4(0.0, 0.0, 1.0, 1.0);
+    gl_FragColor = vec4(grassColor, 1.0);
 }
 `;
 
@@ -287,22 +277,62 @@ export async function createGrassObject(options = { bW: 0.01, bH: 0.5, joints: 7
     // baseMaterial: THREE.MeshBasicMaterial,
     vertexShader,
     fragmentShader,
-    side: THREE.FrontSide,
+    side: THREE.DoubleSide, // Render both sides for volume
     uniforms: {
       bladeHeight: { value: bH }, // Use actual blade height from options
       // map: { value: texture.source },
       // alphaMap: { value: alphaMap.source },
       time: { value: 0 },
-      tipColor: { value: new THREE.Color(0x009900).convertSRGBToLinear() }, // Converted from (0.0, 0.6, 0.0)
-      bottomColor: { value: new THREE.Color(0x001a00).convertSRGBToLinear() }, // Converted from (0.0, 0.1, 0.0)
+      tipColor: { value: new THREE.Color(0x5a8c46).convertSRGBToLinear() }, // Natural mid-green for tips
+      bottomColor: { value: new THREE.Color(0x3a4a2a).convertSRGBToLinear() }, // Darker brownish-green for base
     },
   });
 
-  // 3. Create Grass Blade Geometry (baseGeom)
-  const baseGeom = new THREE.PlaneGeometry(bW, bH, 1, joints).translate(0, bH / 2, 0);
-  const boxSize = 1.0;
-  // const baseGeom = new THREE.BoxGeometry(boxSize, boxSize, boxSize);
-  // const baseGeom = new THREE.PlaneGeometry();
+  // 3. Create Grass Blade Geometry with cross-quad for volume
+  const bladeWidth = bW * 3; // Make blades wider
+  const blade1 = new THREE.PlaneGeometry(bladeWidth, bH, 1, joints).translate(0, bH / 2, 0);
+  const blade2 = new THREE.PlaneGeometry(bladeWidth, bH, 1, joints).translate(0, bH / 2, 0);
+  blade2.rotateY(Math.PI / 2); // Rotate 90 degrees for cross effect
+
+  // Merge both blades into one geometry for volumetric grass
+  const baseGeom = new THREE.BufferGeometry();
+  const positions = [];
+  const normals = [];
+  const uvs = [];
+
+  // Add first blade
+  const pos1 = blade1.attributes.position.array;
+  const norm1 = blade1.attributes.normal.array;
+  const uv1 = blade1.attributes.uv.array;
+
+  for (let i = 0; i < pos1.length; i++) positions.push(pos1[i]);
+  for (let i = 0; i < norm1.length; i++) normals.push(norm1[i]);
+  for (let i = 0; i < uv1.length; i++) uvs.push(uv1[i]);
+
+  // Add second blade (crossed)
+  const pos2 = blade2.attributes.position.array;
+  const norm2 = blade2.attributes.normal.array;
+  const uv2 = blade2.attributes.uv.array;
+
+  for (let i = 0; i < pos2.length; i++) positions.push(pos2[i]);
+  for (let i = 0; i < norm2.length; i++) normals.push(norm2[i]);
+  for (let i = 0; i < uv2.length; i++) uvs.push(uv2[i]);
+
+  baseGeom.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
+  baseGeom.setAttribute('normal', new THREE.Float32BufferAttribute(normals, 3));
+  baseGeom.setAttribute('uv', new THREE.Float32BufferAttribute(uvs, 2));
+
+  // Set indices
+  const indices = [];
+  const indicesPerBlade = blade1.index.count;
+  for (let i = 0; i < indicesPerBlade; i++) {
+    indices.push(blade1.index.array[i]);
+  }
+  const vertexOffset = blade1.attributes.position.count;
+  for (let i = 0; i < indicesPerBlade; i++) {
+    indices.push(blade2.index.array[i] + vertexOffset);
+  }
+  baseGeom.setIndex(indices);
 
   // 4. Get Attribute Data for Instancing
   const attributeData = getAttributeData(instances, width);
