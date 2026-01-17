@@ -13,13 +13,13 @@ const __filename = fileURLToPath(import.meta.url)
 const __dirname = dirname(__filename)
 
 // Import the hyp module
-import('../../../modules/hyp/lib/index.js').then(async ({ buildHypBuffer, createAsset }) => {
+import('/Users/highlander/gamedev/DegenQuest-v33/modules/hyp/lib/index.js').then(async ({ buildHypBuffer, createAsset }) => {
   console.log('🐀 Building Sewer Rat with Avatar Image\n')
   console.log('═'.repeat(80))
 
   // Load assets
-  const MODEL_PATH = join(__dirname, '../../../modules/mob/assets/a_sewer_rat_v1.glb')
-  const SCRIPT_PATH = join(__dirname, '../../../modules/mob/templates/rat-v67-ses-safe.js')
+  const MODEL_PATH = '/Users/highlander/gamedev/DegenQuest-v33/modules/mob/assets/a_sewer_rat_v1.glb'
+  const SCRIPT_PATH = join(__dirname, '../assets/a18e5fe151c4eeaa68248884799d78a4fc0bd8b6e7ea2c368f9fa11f449884b4.js')
   const AVATAR_PATH = join(__dirname, 'rat.png')
 
   console.log('\n📦 Loading assets...')
@@ -45,9 +45,9 @@ import('../../../modules/hyp/lib/index.js').then(async ({ buildHypBuffer, create
   // Create blueprint
   const blueprint = {
     id: 'sewer-rat-v1',
-    name: 'Sewer Rat v1.0.21 (Game API Sound)',
-    version: 121,
-    desc: 'v1.0.21 - Mob with avatar image',
+    name: 'Sewer Rat v24 (Movement Fix + Avatar)',
+    version: 124,
+    desc: 'v24 - Client-side interpolation movement + avatar image for UI',
     model: modelAsset.url,
     script: scriptAsset.url,
     image: {
