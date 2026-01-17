@@ -1,5 +1,6 @@
 import { assets } from './assets'
 import { collections } from './collections'
+import { mobs } from './mobs'
 
 class Cleaner {
   constructor() {
@@ -60,6 +61,10 @@ class Cleaner {
     }
     // append all collection blueprints so we keep all their assets
     for (const blueprint of collections.blueprints) {
+      blueprints.add(blueprint)
+    }
+    // append all mob blueprints so we keep all their assets
+    for (const blueprint of mobs.blueprints) {
       blueprints.add(blueprint)
     }
     // keep all assets associated with remaining active blueprints
