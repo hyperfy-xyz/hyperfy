@@ -637,7 +637,8 @@ if (world.isServer) {
 
     for (const angle of angles) {
       const yaw = currentYaw + angle
-      const direction = { x: Math.sin(yaw), y: 0, z: Math.cos(yaw) }
+      // ✅ FIXED: Use Vector3 (exposed by Hyperfy sandbox, world.raycast requires Vector3 with isVector3 property)
+      const direction = new Vector3(Math.sin(yaw), 0, Math.cos(yaw))
 
       const hit = world.raycast(
         app.position,
