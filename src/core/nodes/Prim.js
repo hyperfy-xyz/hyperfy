@@ -225,32 +225,32 @@ export class Prim extends Node {
     this.scaleOffset.fromArray(scaleOffset)
     this.updateMatrixWorldOffset()
 
+    // Get unit-sized geometry for this type
+    const geometry = getGeometry(this._type, size)
+
+    // Create material with current properties
+    const material = getMaterial({
+      // color: this._color,
+      // emissive: this._emissive,
+      // emissiveIntensity: this._emissiveIntensity,
+      metalness: this._metalness,
+      roughness: this._roughness,
+      opacity: quantizeOpacity(this._opacity), // reduce material variations
+      texture: this._texture,
+      doubleside: this._doubleside,
+    })
+
+    // Get loader if available (client-side only)
+    const loader = this.ctx.world.loader || null
+
+    if (this._texture && !material._texApplied) {
+      const n = ++this.n
+      await applyTexture(material, this._texture, loader)
+      if (n !== this.n) return // remounted or destroyed
+    }
+
     // Create visual if visible
     if (this._opacity > 0) {
-      // Get unit-sized geometry for this type
-      const geometry = getGeometry(this._type, size)
-
-      // Get loader if available (client-side only)
-      const loader = this.ctx.world.loader || null
-
-      // Create material with current properties
-      const material = getMaterial({
-        // color: this._color,
-        // emissive: this._emissive,
-        // emissiveIntensity: this._emissiveIntensity,
-        metalness: this._metalness,
-        roughness: this._roughness,
-        opacity: quantizeOpacity(this._opacity), // reduce material variations
-        texture: this._texture,
-        doubleside: this._doubleside,
-      })
-
-      if (this._texture && !material._texApplied) {
-        const n = ++this.n
-        await applyTexture(material, this._texture, loader)
-        if (n !== this.n) return // remounted or destroyed
-      }
-
       // Create mesh
       this.handle = this.ctx.world.stage.insertLinked({
         geometry,
@@ -266,6 +266,17 @@ export class Prim extends Node {
       this.handle.setColor(this._color)
       this.handle.setEmissive(this._emissive)
       this.handle.setEmissiveIntensity(this._emissiveIntensity)
+      count++
+    } else {
+      // not visible but add to octree
+      this.sItem = {
+        matrix: this.matrixWorldOffset,
+        geometry,
+        material,
+        getEntity: () => this.ctx.entity,
+        node: this,
+      }
+      this.ctx.world.stage.octree.insert(this.sItem)
       count++
     }
 
@@ -468,6 +479,9 @@ export class Prim extends Node {
       if (this.actorHandle) {
         this.actorHandle.move(this.matrixWorldOffset)
       }
+      if (this.sItem) {
+        this.ctx.world.stage.octree.move(this.sItem)
+      }
     }
   }
 
@@ -477,6 +491,10 @@ export class Prim extends Node {
       this.handle.destroy()
       this.handle = null
       count--
+    }
+    if (this.sItem) {
+      this.ctx.world.stage.octree.remove(this.sItem)
+      this.sItem = null
     }
     this.unmountPhysics()
   }
