@@ -46,13 +46,15 @@ export class ClientNetwork extends System {
   }
 
   async upload(file) {
+    const authToken = storage.get('authToken')
+    const headers = authToken ? { Authorization: `Bearer ${authToken}` } : {}
     {
       // first check if we even need to upload it
       const hash = await hashFile(file)
       const ext = file.name.split('.').pop().toLowerCase()
       const filename = `${hash}.${ext}`
       const url = `${this.apiUrl}/upload-check?filename=${filename}`
-      const resp = await fetch(url)
+      const resp = await fetch(url, { headers })
       const data = await resp.json()
       if (data.exists) return // console.log('already uploaded:', filename)
     }
@@ -63,6 +65,7 @@ export class ClientNetwork extends System {
     await fetch(url, {
       method: 'POST',
       body: form,
+      headers,
     })
   }
 
