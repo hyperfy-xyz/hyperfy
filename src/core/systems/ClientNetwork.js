@@ -2,8 +2,8 @@ import moment from 'moment'
 import { emoteUrls } from '../extras/playerEmotes'
 import { readPacket, writePacket } from '../packets'
 import { storage } from '../storage'
-import { uuid } from '../utils'
-import { hashFile } from '../utils-client'
+import { uuid, sanitizeWsUrl } from '../utils'
+import { hashFile, navigateToServer } from '../utils-client'
 import { System } from './System'
 
 /**
@@ -21,10 +21,20 @@ export class ClientNetwork extends System {
     this.apiUrl = null
     this.id = null
     this.isClient = true
+    this.isServer = false
+    this.isOffline = false
+    this.maxUploadSize = 0
+    this.serverTimeOffset = 0
     this.queue = []
   }
 
   init({ wsUrl, name, avatar }) {
+    if (!wsUrl) {
+      this.id = uuid()
+      this.isOffline = true
+      this._registerCommands()
+      return
+    }
     const authToken = storage.get('authToken')
     let url = `${wsUrl}?authToken=${authToken}`
     if (name) url += `&name=${encodeURIComponent(name)}`
@@ -33,6 +43,24 @@ export class ClientNetwork extends System {
     this.ws.binaryType = 'arraybuffer'
     this.ws.addEventListener('message', this.onPacket)
     this.ws.addEventListener('close', this.onClose)
+    this._registerCommands()
+  }
+
+  _registerCommands() {
+    this.world.chat.bindCommand('connect', ({ value }) => {
+      const clean = sanitizeWsUrl(value)
+      if (!clean) {
+        this.world.chat.add({ body: 'Usage: /connect ws://host:port/ws' })
+        return
+      }
+      navigateToServer(clean)
+    })
+    this.world.chat.bindCommand('offline', () => {
+      this.ws?.close()
+    })
+    this.world.chat.bindCommand('reconnect', () => {
+      navigateToServer()
+    })
   }
 
   preFixedUpdate() {
@@ -40,12 +68,14 @@ export class ClientNetwork extends System {
   }
 
   send(name, data) {
+    if (!this.ws || this.ws.readyState !== WebSocket.OPEN) return
     // console.log('->', name, data)
     const packet = writePacket(name, data)
     this.ws.send(packet)
   }
 
   async upload(file) {
+    if (this.isOffline) return
     {
       // first check if we even need to upload it
       const hash = await hashFile(file)
@@ -82,7 +112,7 @@ export class ClientNetwork extends System {
   }
 
   getTime() {
-    return (performance.now() + this.serverTimeOffset) / 1000 // seconds
+    return (performance.now() + (this.serverTimeOffset ?? 0)) / 1000 // seconds
   }
 
   onPacket = e => {
@@ -206,6 +236,7 @@ export class ClientNetwork extends System {
   }
 
   onPong = time => {
+    this.world.emit('ping', Math.round(performance.now() - time))
     this.world.stats?.onPong(time)
   }
 
@@ -214,6 +245,7 @@ export class ClientNetwork extends System {
   }
 
   onClose = code => {
+    this.isOffline = true
     this.world.chat.add({
       id: uuid(),
       from: null,

@@ -24,3 +24,18 @@ export function num(min, max, dp = 0) {
   const value = Math.random() * (max - min) + min
   return parseFloat(value.toFixed(dp))
 }
+
+/**
+ * Sanitize a WebSocket URL: rebuild as origin+pathname only.
+ * Strips query/fragment to prevent auth token leakage.
+ * Returns clean URL string, or null if invalid/wrong protocol.
+ */
+export function sanitizeWsUrl(urlString) {
+  try {
+    const parsed = new URL(urlString)
+    if (parsed.protocol !== 'ws:' && parsed.protocol !== 'wss:') return null
+    return parsed.origin + parsed.pathname
+  } catch {
+    return null
+  }
+}

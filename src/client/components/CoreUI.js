@@ -1,6 +1,6 @@
 import { css } from '@firebolt-dev/css'
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { ChevronUpIcon, LoaderIcon, MessageSquareTextIcon, RefreshCwIcon, SendHorizonalIcon } from 'lucide-react'
+import { ChevronUpIcon, LoaderIcon, MessageSquareTextIcon, SendHorizonalIcon } from 'lucide-react'
 import moment from 'moment'
 
 import { AvatarPane } from './AvatarPane'
@@ -27,7 +27,6 @@ export function CoreUI({ world }) {
   const [confirm, setConfirm] = useState(null)
   const [code, setCode] = useState(false)
   const [avatar, setAvatar] = useState(null)
-  const [disconnected, setDisconnected] = useState(false)
   const [apps, setApps] = useState(false)
   const [kicked, setKicked] = useState(null)
   useEffect(() => {
@@ -40,7 +39,6 @@ export function CoreUI({ world }) {
     world.on('apps', setApps)
     world.on('avatar', setAvatar)
     world.on('kick', setKicked)
-    world.on('disconnect', setDisconnected)
     return () => {
       world.off('ready', setReady)
       world.off('player', setPlayer)
@@ -51,7 +49,6 @@ export function CoreUI({ world }) {
       world.off('apps', setApps)
       world.off('avatar', setAvatar)
       world.off('kick', setKicked)
-      world.off('disconnect', setDisconnected)
     }
   }, [])
 
@@ -91,19 +88,18 @@ export function CoreUI({ world }) {
         overflow: hidden;
       `}
     >
-      {disconnected && <Disconnected />}
       {!ui.reticleSuppressors && <Reticle world={world} />}
       {<Toast world={world} />}
-      {ready && <ActionsBlock world={world} />}
-      {ready && <Sidebar world={world} ui={ui} />}
-      {ready && <Chat world={world} />}
+      {ready && player && <ActionsBlock world={world} />}
+      {ready && player && <Sidebar world={world} ui={ui} />}
+      {ready && player && <Chat world={world} />}
       {/* {ready && <Side world={world} player={player} menu={menu} />} */}
       {avatar && <AvatarPane key={avatar.hash} world={world} info={avatar} />}
       {/* {apps && <AppsPane world={world} close={() => world.ui.toggleApps()} />} */}
       {!ready && <LoadingOverlay world={world} />}
       {kicked && <KickedOverlay code={kicked} />}
-      {ready && isTouch && <TouchBtns world={world} />}
-      {ready && isTouch && <TouchStick world={world} />}
+      {ready && player && isTouch && <TouchBtns world={world} />}
+      {ready && player && isTouch && <TouchStick world={world} />}
       {confirm && <Confirm options={confirm} />}
       <div id='core-ui-portal' />
     </div>
@@ -644,64 +640,6 @@ function Message({ msg, now }) {
   )
 }
 
-function Disconnected() {
-  // useEffect(() => {
-  //   document.body.style.filter = 'grayscale(100%)'
-  //   return () => {
-  //     document.body.style.filter = null
-  //   }
-  // }, [])
-  return (
-    <>
-      <div
-        css={css`
-          position: fixed;
-          top: 0;
-          left: 0;
-          width: 100%;
-          height: 100%;
-          backdrop-filter: grayscale(100%);
-          pointer-events: none;
-          z-index: 9999;
-          animation: fadeIn 3s forwards;
-          @keyframes fadeIn {
-            from {
-              opacity: 0;
-            }
-            to {
-              opacity: 1;
-            }
-          }
-        `}
-      />
-      <div
-        css={css`
-          pointer-events: auto;
-          position: absolute;
-          top: 50%;
-          left: 50%;
-          background: rgba(11, 10, 21, 0.85);
-          border: 0.0625rem solid #2a2b39;
-          backdrop-filter: blur(5px);
-          border-radius: 1rem;
-          height: 2.75rem;
-          padding: 0 1rem;
-          transform: translate(-50%, -50%);
-          display: flex;
-          align-items: center;
-          cursor: pointer;
-          > span {
-            margin-left: 0.4rem;
-          }
-        `}
-        onClick={() => window.location.reload()}
-      >
-        <RefreshCwIcon size='1.1rem' />
-        <span>Reconnect</span>
-      </div>
-    </>
-  )
-}
 
 function LoadingOverlay({ world }) {
   const [progress, setProgress] = useState(0)

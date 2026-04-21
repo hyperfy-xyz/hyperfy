@@ -50,6 +50,9 @@ export class Apps extends System {
       isClient(entity) {
         return world.network.isClient
       },
+      isOffline(entity) {
+        return !!world.network.isOffline
+      },
     }
     this.worldSetters = {
       // ...

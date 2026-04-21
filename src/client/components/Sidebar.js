@@ -32,6 +32,8 @@ import {
   Volume2Icon,
   HammerIcon,
   CircleArrowRightIcon,
+  WifiIcon,
+  WifiOffIcon,
 } from 'lucide-react'
 import { cls } from './cls'
 import { useContext, useEffect, useMemo, useRef, useState } from 'react'
@@ -61,7 +63,8 @@ import { AppsList } from './AppsList'
 import { DEG2RAD, RAD2DEG } from '../../core/extras/general'
 import * as THREE from '../../core/extras/three'
 import { isTouch } from '../utils'
-import { uuid } from '../../core/utils'
+import { uuid, sanitizeWsUrl } from '../../core/utils'
+import { navigateToServer } from '../../core/utils-client'
 import { useRank } from './useRank'
 import { Ranks } from '../../core/extras/ranks'
 
@@ -94,7 +97,35 @@ export function Sidebar({ world, ui }) {
       world.livekit.off('status', onLiveKitStatus)
     }
   }, [])
+  const [showConn, setShowConn] = useState(false)
+  const [isOffline, setIsOffline] = useState(() => !!world.network.isOffline)
+  const [ping, setPing] = useState(null)
+  const [serverUrl, setServerUrl] = useState(() => new URLSearchParams(location.search).get('connect') || '')
+  useEffect(() => {
+    const onPing = ms => setPing(ms)
+    const onDisconnect = () => {
+      setIsOffline(true)
+      setPing(null)
+    }
+    world.on('ping', onPing)
+    world.on('disconnect', onDisconnect)
+    return () => {
+      world.off('ping', onPing)
+      world.off('disconnect', onDisconnect)
+    }
+  }, [])
+  const handleConnect = () => {
+    const clean = sanitizeWsUrl(serverUrl)
+    if (!clean) return
+    navigateToServer(clean)
+  }
+  const handleDisconnect = () => {
+    world.network.ws?.close()
+  }
   const activePane = ui.active ? ui.pane : null
+  useEffect(() => {
+    if (activePane) setShowConn(false)
+  }, [activePane])
   return (
     <HintProvider>
       <div
@@ -181,6 +212,20 @@ export function Sidebar({ world, ui }) {
                 <VRIcon size='1.25rem' />
               </Btn>
             )}
+            <Btn
+              active={showConn}
+              onClick={() => {
+                if (!showConn && ui.active) world.ui.togglePane(ui.pane)
+                setShowConn(v => !v)
+              }}
+              title='Connection'
+            >
+              {isOffline ? (
+                <WifiOffIcon size='1.25rem' color='#6b7280' />
+              ) : (
+                <WifiIcon size='1.25rem' color='#4ade80' />
+              )}
+            </Btn>
           </Section>
           {isBuilder && (
             <Section active={activePane} top bottom>
@@ -254,6 +299,110 @@ export function Sidebar({ world, ui }) {
             </Section>
           )}
         </div>
+        {showConn && (
+          <div
+            className='conn-panel'
+            css={css`
+              background: rgba(11, 10, 21, 0.9);
+              border: 1px solid rgba(255, 255, 255, 0.05);
+              border-radius: 1.375rem;
+              width: 18rem;
+              padding: 0.6rem 0;
+              pointer-events: auto;
+              align-self: flex-start;
+              .conn-field {
+                display: flex;
+                align-items: center;
+                height: 2.5rem;
+                padding: 0 1rem;
+                gap: 0.5rem;
+                .conn-field-label {
+                  width: 4.5rem;
+                  flex-shrink: 0;
+                  font-size: 0.9375rem;
+                  color: rgba(255, 255, 255, 0.6);
+                }
+                input {
+                  flex: 1;
+                  font-size: 0.9375rem;
+                  text-align: right;
+                  &::placeholder {
+                    color: rgba(255, 255, 255, 0.3);
+                  }
+                  &::selection {
+                    background-color: white;
+                    color: rgba(0, 0, 0, 0.8);
+                  }
+                }
+                &:hover {
+                  background: rgba(255, 255, 255, 0.03);
+                }
+              }
+              .conn-status {
+                display: flex;
+                align-items: center;
+                height: 2.5rem;
+                padding: 0 1rem;
+                font-size: 0.9375rem;
+                color: rgba(255, 255, 255, 0.6);
+                gap: 0.5rem;
+                .conn-status-label {
+                  width: 4.5rem;
+                  flex-shrink: 0;
+                }
+                .conn-status-value {
+                  flex: 1;
+                  text-align: right;
+                  color: ${isOffline ? 'rgba(255,255,255,0.4)' : '#4ade80'};
+                }
+              }
+              .conn-sep {
+                height: 0.0625rem;
+                background: rgba(255, 255, 255, 0.05);
+                margin: 0.4rem 0;
+              }
+              .conn-action {
+                display: flex;
+                align-items: center;
+                height: 2.5rem;
+                padding: 0 1rem;
+                font-size: 0.9375rem;
+                color: ${isOffline ? '#4ade80' : 'rgba(255,255,255,0.6)'};
+                cursor: pointer;
+                &:hover {
+                  background: rgba(255, 255, 255, 0.03);
+                  color: ${isOffline ? '#6ee7a0' : 'rgba(255,255,255,0.9)'};
+                }
+              }
+            `}
+          >
+            <label className='conn-field'>
+              <span className='conn-field-label'>Server</span>
+              <input
+                type='text'
+                placeholder='ws://localhost:3000/ws'
+                value={serverUrl}
+                onChange={e => setServerUrl(e.target.value)}
+                onKeyDown={e => {
+                  if (e.code === 'Enter') {
+                    e.preventDefault()
+                    handleConnect()
+                  }
+                }}
+              />
+            </label>
+            <div className='conn-status'>
+              <span className='conn-status-label'>Status</span>
+              <span className='conn-status-value'>
+                {isOffline ? 'Offline' : `Online${ping != null ? ` · ${ping}ms` : ''}`}
+              </span>
+            </div>
+            <div className='conn-sep' />
+            <div className='conn-action' onClick={isOffline ? handleConnect : handleDisconnect}>
+              {isOffline ? 'Connect' : 'Disconnect'}
+            </div>
+          </div>
+        )}
         {ui.pane === 'prefs' && <Prefs world={world} hidden={!ui.active} />}
         {ui.pane === 'world' && <World world={world} hidden={!ui.active} />}
         {ui.pane === 'apps' && <Apps world={world} hidden={!ui.active} />}

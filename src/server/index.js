@@ -45,11 +45,14 @@ if (!process.env.SAVE_INTERVAL) {
 if (!process.env.PUBLIC_MAX_UPLOAD_SIZE) {
   throw new Error('[envs] PUBLIC_MAX_UPLOAD_SIZE not set')
 }
-if (!process.env.PUBLIC_WS_URL) {
-  throw new Error('[envs] PUBLIC_WS_URL not set')
-}
-if (!process.env.PUBLIC_WS_URL.startsWith('ws')) {
+const hasWebSocket = !!process.env.PUBLIC_WS_URL
+if (hasWebSocket && !process.env.PUBLIC_WS_URL.startsWith('ws')) {
   throw new Error('[envs] PUBLIC_WS_URL must start with ws:// or wss://')
+}
+if (!hasWebSocket) {
+  console.warn(
+    '[envs] PUBLIC_WS_URL not set — WebSocket endpoint disabled, serving HTTP only'
+  )
 }
 if (!process.env.PUBLIC_API_URL) {
   throw new Error('[envs] PUBLIC_API_URL must be set')
@@ -139,8 +142,10 @@ fastify.register(multipart, {
     fileSize: 200 * 1024 * 1024, // 200MB
   },
 })
-fastify.register(ws)
-fastify.register(worldNetwork)
+if (hasWebSocket) {
+  fastify.register(ws)
+  fastify.register(worldNetwork)
+}
 
 const publicEnvs = {}
 for (const key in process.env) {
