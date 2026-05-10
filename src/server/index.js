@@ -24,14 +24,11 @@ const execAsync = promisify(exec)
 
 const rootDir = path.join(__dirname, '../')
 const worldDir = path.join(rootDir, process.env.WORLD)
-const port = process.env.PORT
+const port = process.env.PORT || 3000
 
 // check envs
 if (!process.env.WORLD) {
   throw new Error('[envs] WORLD not set')
-}
-if (!process.env.PORT) {
-  throw new Error('[envs] PORT not set')
 }
 if (!process.env.JWT_SECRET) {
   throw new Error('[envs] JWT_SECRET not set')
@@ -62,6 +59,9 @@ if (!process.env.ASSETS_BASE_URL) {
 }
 if (process.env.ASSETS === 's3' && !process.env.ASSETS_S3_URI) {
   throw new Error(`[envs] ASSETS_S3_URI must be set when using ASSETS=s3`)
+}
+if (process.env.COLLECTIONS === 's3' && !process.env.COLLECTIONS_BASE_URL) {
+  throw new Error(`[envs] COLLECTIONS_BASE_URL must be set when using COLLECTIONS=s3`)
 }
 
 const fastify = Fastify({ logger: { level: 'error' } })
