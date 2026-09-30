@@ -99,10 +99,21 @@ fastify.register(cors, {
   origin: process.env.CORS_ORIGIN || true,
 })
 fastify.register(compress)
+
+// the world's public face: the page's link preview and /api/world read it from here so they never disagree
+function getWorldInfo() {
+  return {
+    title: world.settings.title || null,
+    desc: world.settings.desc || null,
+    image: world.resolveURL(world.settings.image?.url) || null,
+  }
+}
+
 fastify.get('/', async (req, reply) => {
-  const title = world.settings.title || 'World'
-  const desc = world.settings.desc || ''
-  const image = world.resolveURL(world.settings.image?.url) || ''
+  const info = getWorldInfo()
+  const title = info.title || 'World'
+  const desc = info.desc || ''
+  const image = info.image || ''
   const url = process.env.ASSETS_BASE_URL
   const filePath = path.join(__dirname, 'public', 'index.html')
   let html = fs.readFileSync(filePath, 'utf-8')
@@ -176,6 +187,11 @@ fastify.post('/api/upload', async (req, reply) => {
 fastify.get('/api/upload-check', async (req, reply) => {
   const exists = await assets.exists(req.query.filename)
   return { exists }
+})
+
+// title, description and image url for directories and hosts that list worlds, null when unset
+fastify.get('/api/world', async () => {
+  return getWorldInfo()
 })
 
 fastify.get('/api/backup', async (req, reply) => {
