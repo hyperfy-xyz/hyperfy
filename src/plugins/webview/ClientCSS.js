@@ -1,7 +1,7 @@
-import * as THREE from '../extras/three'
+import * as THREE from '@hyperfy/core/extras/three'
 import { CSS3DRenderer } from 'three/examples/jsm/renderers/CSS3DRenderer.js'
 
-import { System } from './System'
+import { System } from '@hyperfy/core/systems/System'
 
 /**
  * ClientCSS System

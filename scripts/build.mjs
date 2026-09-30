@@ -5,6 +5,7 @@ import { fork, execSync } from 'child_process'
 import * as esbuild from 'esbuild'
 import { fileURLToPath } from 'url'
 import { polyfillNode } from 'esbuild-plugin-polyfill-node'
+import { alias, pluginsPlugin } from './plugins.mjs'
 
 const dev = process.argv.includes('--dev')
 const dirname = path.dirname(fileURLToPath(import.meta.url))
@@ -45,9 +46,11 @@ const clientHtmlDest = path.join(rootDir, 'build/public/index.html')
     },
     alias: {
       react: 'react', // always use our own local react (jsx)
+      ...alias,
     },
     plugins: [
       polyfillNode({}),
+      pluginsPlugin('client'),
       {
         name: 'client-finalize-plugin',
         setup(build) {
@@ -108,7 +111,9 @@ let spawn
       'process.env.CLIENT': 'false',
       'process.env.SERVER': 'true',
     },
+    alias,
     plugins: [
+      pluginsPlugin('server'),
       {
         name: 'server-finalize-plugin',
         setup(build) {

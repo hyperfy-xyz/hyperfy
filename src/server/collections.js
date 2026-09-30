@@ -25,35 +25,39 @@ class Collections {
       return a.localeCompare(b)
     })
     for (const folderName of folderNames) {
-      const folderPath = path.join(this.dir, folderName)
-      const stats = fs.statSync(folderPath)
-      if (!stats.isDirectory()) continue
-      const manifestPath = path.join(folderPath, 'manifest.json')
-      if (!fs.existsSync(manifestPath)) continue
-      const manifest = fs.readJsonSync(manifestPath)
-      const blueprints = []
-      for (const appFilename of manifest.apps) {
-        const appPath = path.join(folderPath, appFilename)
-        const appBuffer = fs.readFileSync(appPath)
-        const appFile = new File([appBuffer], appFilename, {
-          type: 'application/octet-stream',
-        })
-        const app = await importApp(appFile)
-        for (const asset of app.assets) {
-          // const file = asset.file
-          // const assetFilename = asset.url.slice(8) // remove 'asset://' prefix
-          await assets.upload(asset.file)
-        }
-        blueprints.push(app.blueprint)
-      }
-      this.list.push({
-        id: folderName,
-        name: manifest.name,
-        blueprints,
+      await this.add(path.join(this.dir, folderName))
+    }
+  }
+
+  // installs a collection folder (manifest.json + .hyp files); plugins use this to ship their own apps
+  async add(folderPath) {
+    const stats = fs.statSync(folderPath)
+    if (!stats.isDirectory()) return
+    const manifestPath = path.join(folderPath, 'manifest.json')
+    if (!fs.existsSync(manifestPath)) return
+    const manifest = fs.readJsonSync(manifestPath)
+    const blueprints = []
+    for (const appFilename of manifest.apps) {
+      const appPath = path.join(folderPath, appFilename)
+      const appBuffer = fs.readFileSync(appPath)
+      const appFile = new File([appBuffer], appFilename, {
+        type: 'application/octet-stream',
       })
-      for (const blueprint of blueprints) {
-        this.blueprints.add(blueprint)
+      const app = await importApp(appFile)
+      for (const asset of app.assets) {
+        // const file = asset.file
+        // const assetFilename = asset.url.slice(8) // remove 'asset://' prefix
+        await assets.upload(asset.file)
       }
+      blueprints.push(app.blueprint)
+    }
+    this.list.push({
+      id: path.basename(folderPath),
+      name: manifest.name,
+      blueprints,
+    })
+    for (const blueprint of blueprints) {
+      this.blueprints.add(blueprint)
     }
   }
 }

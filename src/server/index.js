@@ -14,6 +14,7 @@ import statics from '@fastify/static'
 import multipart from '@fastify/multipart'
 
 import { createServerWorld } from '../core/createServerWorld'
+import plugins from 'hyperfy:plugins'
 import { getDB } from './db'
 import { Storage } from './Storage'
 import { assets } from './assets'
@@ -78,14 +79,20 @@ await collections.init({ rootDir, worldDir })
 // init db
 const db = await getDB({ worldDir })
 
-// init cleaner
-await cleaner.init({ db })
-
 // init storage
 const storage = new Storage(path.join(worldDir, '/storage.json'))
 
 // create world
 const world = createServerWorld()
+
+// plugins (before the cleaner, so assets of collections they add are kept)
+for (const [plugin, options] of plugins) {
+  await plugin(world, { fastify, db, assets, storage, collections, worldDir, rootDir }, options)
+}
+
+// init cleaner
+await cleaner.init({ db })
+
 await world.init({
   assetsDir: assets.dir,
   assetsUrl: assets.url,

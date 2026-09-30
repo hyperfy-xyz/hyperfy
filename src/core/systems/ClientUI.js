@@ -17,6 +17,16 @@ export class ClientUI extends System {
     }
     this.lastAppPane = 'app'
     this.control = null
+    this.panes = [] // registered by plugins, see docs/plugins.md
+  }
+
+  register(pane) {
+    this.panes.push(pane)
+    this.broadcast()
+  }
+
+  isAppPane(pane) {
+    return appPanes.includes(pane) || this.panes.some(p => p.id === pane && p.section === 'app')
   }
 
   start() {
@@ -60,7 +70,7 @@ export class ClientUI extends System {
       //   this.state.app = null
       // }
       this.state.pane = pane
-      if (appPanes.includes(pane)) {
+      if (this.isAppPane(pane)) {
         this.lastAppPane = pane
       }
     }

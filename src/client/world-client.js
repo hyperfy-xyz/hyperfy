@@ -4,6 +4,8 @@ import * as THREE from 'three'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { css } from '@firebolt-dev/css'
 
+import plugins from 'hyperfy:plugins'
+
 import { createClientWorld } from '../core/createClientWorld'
 import { CoreUI } from './components/CoreUI'
 
@@ -43,6 +45,9 @@ export function Client({ wsUrl, onSetup }) {
         if (wsUrl instanceof Promise) wsUrl = await wsUrl
       }
       const config = { viewport, cssLayer, ui, wsUrl, baseEnvironment }
+      for (const [plugin, options] of plugins) {
+        plugin(world, config, options)
+      }
       onSetup?.(world, config)
       world.init(config)
     }

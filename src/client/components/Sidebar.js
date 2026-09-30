@@ -95,6 +95,8 @@ export function Sidebar({ world, ui }) {
     }
   }, [])
   const activePane = ui.active ? ui.pane : null
+  const panes = { main: [], world: [], app: [] }
+  for (const pane of world.ui.panes) panes[pane.section]?.push(pane)
   return (
     <HintProvider>
       <div
@@ -181,6 +183,9 @@ export function Sidebar({ world, ui }) {
                 <VRIcon size='1.25rem' />
               </Btn>
             )}
+            {panes.main.map(pane => (
+              <PaneBtn key={pane.id} world={world} ui={ui} pane={pane} />
+            ))}
           </Section>
           {isBuilder && (
             <Section active={activePane} top bottom>
@@ -215,6 +220,9 @@ export function Sidebar({ world, ui }) {
               >
                 <CirclePlusIcon size='1.25rem' />
               </Btn>
+              {panes.world.map(pane => (
+                <PaneBtn key={pane.id} world={world} ui={ui} pane={pane} />
+              ))}
             </Section>
           )}
           {ui.app && (
@@ -251,6 +259,9 @@ export function Sidebar({ world, ui }) {
               >
                 <TagIcon size='1.25rem' />
               </Btn>
+              {panes.app.map(pane => (
+                <PaneBtn key={pane.id} world={world} ui={ui} pane={pane} />
+              ))}
             </Section>
           )}
         </div>
@@ -263,8 +274,32 @@ export function Sidebar({ world, ui }) {
         {ui.pane === 'nodes' && <Nodes key={ui.app.data.id} world={world} hidden={!ui.active} />}
         {ui.pane === 'meta' && <Meta key={ui.app.data.id} world={world} hidden={!ui.active} />}
         {ui.pane === 'players' && <Players world={world} hidden={!ui.active} />}
+        {world.ui.panes.map(pane =>
+          ui.pane === pane.id ? (
+            <pane.component
+              key={pane.section === 'app' ? ui.app.data.id : pane.id}
+              world={world}
+              ui={ui}
+              hidden={!ui.active}
+            />
+          ) : null
+        )}
       </div>
     </HintProvider>
+  )
+}
+
+function PaneBtn({ world, ui, pane }) {
+  const activePane = ui.active ? ui.pane : null
+  return (
+    <Btn
+      active={activePane === pane.id}
+      suspended={ui.pane === pane.id && !activePane}
+      onClick={() => world.ui.togglePane(pane.id)}
+      title={pane.label}
+    >
+      <pane.icon size='1.25rem' />
+    </Btn>
   )
 }
 
@@ -369,7 +404,7 @@ function Content({ width = '20rem', hidden, children }) {
   )
 }
 
-function Pane({ width = '20rem', hidden, children }) {
+export function Pane({ width = '20rem', hidden, children }) {
   return (
     <div
       className={cls('sidebarpane', { hidden })}

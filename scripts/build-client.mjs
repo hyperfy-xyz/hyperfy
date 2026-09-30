@@ -4,6 +4,7 @@ import path from 'path'
 import * as esbuild from 'esbuild'
 import { fileURLToPath } from 'url'
 import { polyfillNode } from 'esbuild-plugin-polyfill-node'
+import { alias, pluginsPlugin } from './plugins.mjs'
 
 const dev = process.argv.includes('--dev')
 const dirname = path.dirname(fileURLToPath(import.meta.url))
@@ -38,10 +39,8 @@ const buildDirectory = path.join(rootDir, 'build')
       '.js': 'jsx',
     },
     external: ['three', 'react', 'react-dom', 'ses'],
-    // alias: {
-    //   react: 'react', // always use our own local react (jsx)
-    // },
-    plugins: [polyfillNode({})],
+    alias,
+    plugins: [polyfillNode({}), pluginsPlugin('client')],
   })
   if (dev) {
     await clientCtx.watch()
