@@ -12,6 +12,7 @@ import cors from '@fastify/cors'
 import compress from '@fastify/compress'
 import statics from '@fastify/static'
 import multipart from '@fastify/multipart'
+import { escape } from 'lodash-es'
 
 import { createServerWorld } from '../core/createServerWorld'
 import { getDB } from './db'
@@ -106,10 +107,11 @@ fastify.get('/', async (req, reply) => {
   const url = process.env.ASSETS_BASE_URL
   const filePath = path.join(__dirname, 'public', 'index.html')
   let html = fs.readFileSync(filePath, 'utf-8')
-  html = html.replaceAll('{url}', url)
-  html = html.replaceAll('{title}', title)
-  html = html.replaceAll('{desc}', desc)
-  html = html.replaceAll('{image}', image)
+  // title, desc and image come from builders: escape them for the markup, and insert with a function so `$&` or `$'` stay literal
+  html = html.replaceAll('{url}', () => escape(url))
+  html = html.replaceAll('{title}', () => escape(title))
+  html = html.replaceAll('{desc}', () => escape(desc))
+  html = html.replaceAll('{image}', () => escape(image))
   reply.type('text/html').send(html)
 })
 fastify.register(statics, {
