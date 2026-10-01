@@ -33,10 +33,18 @@ export class ServerNetwork extends System {
     this.dirtyApps = new Set()
     this.isServer = true
     this.queue = []
+    this.identity = null
   }
 
   init({ db }) {
     this.db = db
+  }
+
+  // an identity provider, registered by a plugin: fn(params) resolves to { id, name, rank } for the
+  // connection's query params, or null for a guest. with one, it owns the ranks (see docs/plugins.md)
+  setIdentity(fn) {
+    this.identity = fn
+    this.world.settings.setHasIdentity(!!fn)
   }
 
   async start() {
@@ -222,12 +230,32 @@ export class ServerNetwork extends System {
       let name = params.name
       let avatar = params.avatar
 
+      // who this connection is according to the identity provider, null for a guest
+      const identity = this.identity ? await this.identity(params) : null
+
       // get or create user
       let user
-      if (authToken) {
+      if (identity) {
+        // the provider owns name and rank on every connection; the avatar stays the user's
+        user = await this.db('users').where('id', identity.id).first()
+        const fields = { name: identity.name || 'Anonymous', rank: isNumber(identity.rank) ? identity.rank : 0 }
+        if (user) {
+          await this.db('users').where('id', user.id).update(fields)
+          Object.assign(user, fields)
+        } else {
+          user = { id: identity.id, avatar: null, createdAt: moment().toISOString(), ...fields }
+          await this.db('users').insert(user)
+        }
+        name = null
+        authToken = await createJWT({ userId: user.id, identified: true })
+      }
+      if (!user && authToken) {
         try {
-          const { userId } = await readJWT(authToken)
-          user = await this.db('users').where('id', userId).first()
+          const { userId, identified } = await readJWT(authToken)
+          // with a provider, an identified user's token does not serve a guest
+          if (!(this.identity && identified)) {
+            user = await this.db('users').where('id', userId).first()
+          }
         } catch (err) {
           console.error('failed to read authToken:', authToken)
         }
@@ -242,6 +270,10 @@ export class ServerNetwork extends System {
         }
         await this.db('users').insert(user)
         authToken = await createJWT({ userId: user.id })
+      }
+      // with a provider the database never grants a rank: a guest is a visitor
+      if (this.identity && !identity) {
+        user.rank = Ranks.VISITOR
       }
 
       // disconnect if user already in this world
@@ -293,6 +325,7 @@ export class ServerNetwork extends System {
         livekit,
         authToken,
         hasAdminCode: !!process.env.ADMIN_CODE,
+        hasIdentity: !!this.identity,
       })
 
       this.sockets.set(socket.id, socket)
@@ -319,7 +352,9 @@ export class ServerNetwork extends System {
     // become admin command
     if (cmd === 'admin') {
       const code = arg1
-      if (process.env.ADMIN_CODE && process.env.ADMIN_CODE === code) {
+      if (this.identity) {
+        console.error('admin command refused: the identity provider owns ranks')
+      } else if (process.env.ADMIN_CODE && process.env.ADMIN_CODE === code) {
         const id = player.data.id
         const userId = player.data.userId
         const granted = !player.isAdmin()
@@ -395,6 +430,7 @@ export class ServerNetwork extends System {
   }
 
   onModifyRank = async (socket, data) => {
+    if (this.identity) return console.error('modifyRank refused: the identity provider owns ranks')
     if (!socket.player.isAdmin()) return
     const { playerId, rank } = data
     if (!playerId) return

@@ -23,7 +23,13 @@ export class Settings extends System {
     this.hasAdminCode = value
   }
 
+  setHasIdentity(value) {
+    this.hasIdentity = value
+  }
+
   get effectiveRank() {
+    // with an identity provider the floor is visitor: the provider owns ranks and free build is inert
+    if (this.hasIdentity) return Ranks.VISITOR
     return this.hasAdminCode ? this.rank : Ranks.ADMIN
   }
 

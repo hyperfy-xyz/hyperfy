@@ -22,6 +22,7 @@ export class ClientNetwork extends System {
     this.id = null
     this.isClient = true
     this.queue = []
+    this.params = {} // extra connection params, filled by plugins before init (see docs/plugins.md)
   }
 
   init({ wsUrl, name, avatar }) {
@@ -29,6 +30,9 @@ export class ClientNetwork extends System {
     let url = `${wsUrl}?authToken=${authToken}`
     if (name) url += `&name=${encodeURIComponent(name)}`
     if (avatar) url += `&avatar=${encodeURIComponent(avatar)}`
+    for (const key in this.params) {
+      url += `&${encodeURIComponent(key)}=${encodeURIComponent(this.params[key])}`
+    }
     this.ws = new WebSocket(url)
     this.ws.binaryType = 'arraybuffer'
     this.ws.addEventListener('message', this.onPacket)
@@ -137,6 +141,7 @@ export class ClientNetwork extends System {
     this.world.collections.deserialize(data.collections)
     this.world.settings.deserialize(data.settings)
     this.world.settings.setHasAdminCode(data.hasAdminCode)
+    this.world.settings.setHasIdentity(data.hasIdentity)
     this.world.chat.deserialize(data.chat)
     this.world.ai.deserialize(data.ai)
     this.world.blueprints.deserialize(data.blueprints)

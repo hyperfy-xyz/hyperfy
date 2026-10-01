@@ -84,6 +84,7 @@ src/
   client/          - React based browser client
   server/          - Fastify HTTP + WebSocket server
   world/           - Built-in assets (eg character animations), default scene app and app collection
+  plugins/         - Built-in plugins, listed in hyperfy.config.js (see docs/plugins.md)
 docs/              - Documentation and scripting API
 ```
 

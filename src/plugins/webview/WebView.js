@@ -1,8 +1,8 @@
 import { isBoolean, isNumber, isString } from 'lodash-es'
-import * as THREE from '../extras/three'
+import * as THREE from '@hyperfy/core/extras/three'
 import { CSS3DObject } from 'three/examples/jsm/renderers/CSS3DRenderer.js'
 
-import { Node } from './Node'
+import { Node } from '@hyperfy/core/nodes/Node'
 
 const defaults = {
   src: null,
