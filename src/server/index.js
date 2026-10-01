@@ -14,6 +14,7 @@ import statics from '@fastify/static'
 import multipart from '@fastify/multipart'
 
 import { createServerWorld } from '../core/createServerWorld'
+import { readJWT } from '../core/utils-server'
 import { getDB } from './db'
 import { Storage } from './Storage'
 import { assets } from './assets'
@@ -158,6 +159,16 @@ fastify.get('/env.js', async (req, reply) => {
 })
 
 fastify.post('/api/upload', async (req, reply) => {
+  // only a builder in the world uploads: the token is the one its socket connected with
+  const token = req.headers.authorization?.replace('Bearer ', '')
+  const userId = token ? (await readJWT(token))?.userId : null
+  const socket = userId ? world.network.sockets.get(userId) : null
+  if (!socket) {
+    return reply.code(401).send({ error: 'Not connected to this world' })
+  }
+  if (!socket.player.isBuilder()) {
+    return reply.code(403).send({ error: 'Builder rank required' })
+  }
   const mp = await req.file()
   // collect into buffer
   const chunks = []

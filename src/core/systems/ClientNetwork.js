@@ -62,6 +62,7 @@ export class ClientNetwork extends System {
     const url = `${this.apiUrl}/upload`
     await fetch(url, {
       method: 'POST',
+      headers: { Authorization: `Bearer ${storage.get('authToken')}` },
       body: form,
     })
   }

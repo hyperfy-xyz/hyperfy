@@ -8,6 +8,10 @@ import { cloneDeep, isNumber } from 'lodash-es'
 import * as THREE from '../extras/three'
 import { Ranks } from '../extras/ranks'
 
+// what a client may change about its own player: movement, emote, teleport, effect, name and avatar.
+// rank comes only from modifyRank or the admin command, and health only from the server.
+const ownPlayerFields = new Set(['p', 'q', 'm', 'a', 'g', 'e', 't', 'ef', 'name', 'avatar', 'sessionAvatar'])
+
 const SAVE_INTERVAL = parseInt(process.env.SAVE_INTERVAL || '60') // seconds
 const PING_RATE = 10 // seconds
 const defaultSpawn = '{ "position": [0, 0, 0], "quaternion": [0, 0, 0, 1] }'
@@ -466,6 +470,18 @@ export class ServerNetwork extends System {
   onEntityModified = async (socket, data) => {
     const entity = this.world.entities.get(data.id)
     if (!entity) return console.error('onEntityModified: no entity found', data)
+    if (entity.isPlayer) {
+      if (entity !== socket.player) {
+        return console.error('player attempted to modify another player')
+      }
+      for (const key in data) {
+        if (key !== 'id' && !ownPlayerFields.has(key)) {
+          return console.error(`player attempted to modify their own ${key}`)
+        }
+      }
+    } else if (!socket.player.isBuilder()) {
+      return console.error('player attempted to modify entity without builder permission')
+    }
     entity.modify(data)
     this.send('entityModified', data, socket.id)
     if (entity.isApp) {
@@ -507,6 +523,9 @@ export class ServerNetwork extends System {
   onSettingsModified = (socket, data) => {
     if (!socket.player.isBuilder())
       return console.error('player attempted to modify settings without builder permission')
+    // the rank setting is the free build switch: with it on everyone is a builder, so only an admin flips it
+    if (data.key === 'rank' && !socket.player.isAdmin())
+      return console.error('player attempted to modify rank setting without admin permission')
     this.world.settings.set(data.key, data.value)
     this.send('settingsModified', data, socket.id)
   }
