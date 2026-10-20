@@ -80,7 +80,7 @@ function wrapRawCode(code) {
   return `
   (function() {
     const shared = {}
-    return (world, app, fetch, props, setTimeout) => {
+    return (world, app, fetch, props, setTimeout, WebSocket) => {
       const config = props // deprecated
       ${code}
     }

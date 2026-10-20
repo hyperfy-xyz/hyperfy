@@ -11,6 +11,7 @@ import { getRef } from '../nodes/Node'
 import { Layers } from '../extras/Layers'
 import { createPlayerProxy } from '../extras/createPlayerProxy'
 import { serializeError } from '../extras/serializeError'
+import { createScriptWebSockets } from '../extras/scriptWebSockets'
 
 const hotEventNames = ['fixedUpdate', 'update', 'animate', 'lateUpdate']
 
@@ -138,8 +139,16 @@ export class App extends Entity {
     // (this.mode === Modes.MOVING && !this.resetOnMove && !this.scriptError)
     if (runScript) {
       this.abortController = new AbortController()
+      this.webSockets = createScriptWebSockets()
       try {
-        this.script.exec(this.getWorldProxy(), this.getAppProxy(), this.fetch, blueprint.props, this.setTimeout)
+        this.script.exec(
+          this.getWorldProxy(),
+          this.getAppProxy(),
+          this.fetch,
+          blueprint.props,
+          this.setTimeout,
+          this.webSockets.WebSocket
+        )
         this.scriptError = null
       } catch (err) {
         this.scriptError = serializeError(err)
@@ -199,6 +208,9 @@ export class App extends Entity {
     // abort fetch's etc
     this.abortController?.abort()
     this.abortController = null
+    // close websockets
+    this.webSockets?.closeAll()
+    this.webSockets = null
     // mark dead and re-create hook (timers, async etc)
     this.deadHook.dead = true
     this.deadHook = { dead: false }
