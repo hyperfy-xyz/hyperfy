@@ -54,3 +54,22 @@ if (world.isServer) {
 3. App 2 (server) listens for `cross-app-ping` via `world.on`, emits `cross-app-pong`.
 4. App 1 (server) listens for `cross-app-pong` via `world.on`, sends `end` to itself.
 5. App 1 (client) receives `end` via `app.on`, completing the loop.
+
+## WebSockets
+
+Scripts can connect to outside services over WebSockets, but only when the world owner allows it. List the allowed origins in `PUBLIC_SCRIPT_WEBSOCKET_ORIGINS`, comma separated:
+
+```
+PUBLIC_SCRIPT_WEBSOCKET_ORIGINS=wss://api.example.com,wss://live.example.com
+```
+
+When it is unset (the default), `WebSocket` is not defined in scripts. When it is set, scripts on the server and on clients get a `WebSocket` that can only open `ws://` or `wss://` URLs on those origins; any other URL throws.
+
+```js
+const ws = new WebSocket('wss://api.example.com/feed')
+ws.onopen = () => ws.send('hello')
+ws.onmessage = e => console.log('got', e.data)
+ws.onclose = e => console.log('closed', e.code)
+```
+
+The socket supports `send(data)`, `close(code, reason)`, `readyState`, `url`, `protocol`, and the `onopen`, `onmessage`, `onclose` and `onerror` handlers. Binary messages arrive as an `ArrayBuffer`. Every socket an app opens is closed when the app is rebuilt or removed.
