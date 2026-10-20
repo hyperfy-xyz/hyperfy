@@ -12,7 +12,11 @@
  */
 
 export function scriptWebSocketOrigins() {
-  const raw = (globalThis.process?.env?.PUBLIC_SCRIPT_WEBSOCKET_ORIGINS || globalThis.env?.PUBLIC_SCRIPT_WEBSOCKET_ORIGINS || '').trim()
+  const raw = (
+    globalThis.process?.env?.PUBLIC_SCRIPT_WEBSOCKET_ORIGINS ||
+    globalThis.env?.PUBLIC_SCRIPT_WEBSOCKET_ORIGINS ||
+    ''
+  ).trim()
   if (!raw) return []
   return raw
     .split(',')
@@ -55,13 +59,26 @@ export function createScriptWebSockets(origins = scriptWebSocketOrigins()) {
     ws.binaryType = 'arraybuffer'
     sockets.add(ws)
     const handlers = { open: null, message: null, close: null, error: null }
-    ws.onopen = () => handlers.open?.({})
-    ws.onmessage = e => handlers.message?.({ data: e.data })
-    ws.onerror = () => handlers.error?.({})
-    ws.onclose = e => {
+    let opened = false
+    let closed = false
+    const finish = e => {
+      if (closed) return
+      closed = true
       sockets.delete(ws)
-      handlers.close?.({ code: e.code, reason: e.reason, wasClean: e.wasClean })
+      handlers.close?.({ code: e?.code ?? 1006, reason: e?.reason ?? '', wasClean: e?.wasClean ?? false })
     }
+    ws.onopen = () => {
+      opened = true
+      handlers.open?.({})
+    }
+    ws.onmessage = e => handlers.message?.({ data: e.data })
+    ws.onerror = () => {
+      handlers.error?.({})
+      // Node's WebSocket reports a failed connection with an error event only, where browsers follow it with
+      // close: close it here too so scripts see the same events on the server and on clients.
+      if (!opened) queueMicrotask(() => finish())
+    }
+    ws.onclose = e => finish(e)
     const wrapper = {
       send: data => ws.send(data),
       close: (code, reason) => ws.close(code, reason),
