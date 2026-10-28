@@ -26,6 +26,13 @@ const names = [
   'ai',
   'ping',
   'pong',
+  'billingStatus',
+  'billingBlocked',
+  'billingUpgrade',
+  'progressionUpdate',
+  'claimMission',
+  'equipCosmetic',
+  'startTrial',
 ]
 
 const byName = {}
@@ -66,3 +73,6 @@ export function readPacket(packet) {
     return []
   }
 }
+
+export const packets = names
+

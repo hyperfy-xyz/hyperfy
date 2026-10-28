@@ -10,6 +10,7 @@ import cors from '@fastify/cors'
 import compress from '@fastify/compress'
 import statics from '@fastify/static'
 import multipart from '@fastify/multipart'
+import rateLimit from '@fastify/rate-limit'
 
 import { createServerWorld } from '../core/createServerWorld'
 import { getDB } from './db'
@@ -17,6 +18,10 @@ import { Storage } from './Storage'
 import { assets } from './assets'
 import { collections } from './collections'
 import { cleaner } from './cleaner'
+import { registerMonetizationRoutes } from './routes'
+import { isBillingEnabled } from '../core/billing'
+import { hasRank, Ranks } from '../core/extras/ranks'
+import { readJWT } from '../core/utils-server'
 
 const rootDir = path.join(__dirname, '../')
 const worldDir = path.join(rootDir, process.env.WORLD)
@@ -59,6 +64,20 @@ if (!process.env.ASSETS_BASE_URL) {
 if (process.env.ASSETS === 's3' && !process.env.ASSETS_S3_URI) {
   throw new Error(`[envs] ASSETS_S3_URI must be set when using ASSETS=s3`)
 }
+// production safety: a public world must not hand everyone admin or use the example JWT secret
+if (process.env.NODE_ENV === 'production') {
+  if (!process.env.ADMIN_CODE) {
+    throw new Error('[envs] ADMIN_CODE must be set in production (otherwise every visitor is an admin)')
+  }
+  if (process.env.JWT_SECRET === 'hyper' || process.env.JWT_SECRET.length < 32) {
+    throw new Error('[envs] JWT_SECRET must be a random value of at least 32 characters in production')
+  }
+}
+if (isBillingEnabled()) {
+  for (const key of ['STRIPE_SECRET_KEY', 'STRIPE_WEBHOOK_SECRET', 'STRIPE_PRICE_ID']) {
+    if (!process.env[key]) throw new Error(`[envs] BILLING_ENABLED=true requires ${key}`)
+  }
+}
 
 const fastify = Fastify({ logger: { level: 'error' } })
 
@@ -91,8 +110,10 @@ await world.init({
   collections: collections.list,
 })
 
-fastify.register(cors)
-fastify.register(compress)
+await fastify.register(cors)
+await fastify.register(compress)
+// rate limits apply per route (config.rateLimit) so asset-heavy page loads are never throttled
+await fastify.register(rateLimit, { global: false })
 fastify.get('/', async (req, reply) => {
   const title = world.settings.title || 'World'
   const desc = world.settings.desc || ''
@@ -104,7 +125,8 @@ fastify.get('/', async (req, reply) => {
   html = html.replaceAll('{title}', title)
   html = html.replaceAll('{desc}', desc)
   html = html.replaceAll('{image}', image)
-  reply.type('text/html').send(html)
+  // async handlers must return the reply, otherwise compressed responses are sent empty
+  return reply.type('text/html').send(html)
 })
 fastify.register(statics, {
   root: path.join(__dirname, 'public'),
@@ -136,6 +158,8 @@ fastify.register(multipart, {
 fastify.register(ws)
 fastify.register(worldNetwork)
 
+await registerMonetizationRoutes(fastify, { db, world })
+
 const publicEnvs = {}
 for (const key in process.env) {
   if (key.startsWith('PUBLIC_')) {
@@ -148,10 +172,30 @@ const envsCode = `
   globalThis.env = ${JSON.stringify(publicEnvs)}
 `
 fastify.get('/env.js', async (req, reply) => {
-  reply.type('application/javascript').send(envsCode)
+  return reply.type('application/javascript').send(envsCode)
 })
 
-fastify.post('/api/upload', async (req, reply) => {
+// only builders can upload files (stops anonymous visitors filling the disk)
+async function canUpload(req) {
+  const token = req.headers.authorization?.replace(/^Bearer\s+/i, '')
+  let userRank = Ranks.VISITOR
+  if (token) {
+    try {
+      const { userId } = await readJWT(token)
+      const live = world.network.getLiveUser?.(userId)
+      const user = live || (await db('users').where('id', userId).first())
+      userRank = user?.rank || Ranks.VISITOR
+    } catch {
+      userRank = Ranks.VISITOR
+    }
+  }
+  return hasRank(Math.max(userRank, world.settings.effectiveRank ?? Ranks.VISITOR), Ranks.BUILDER)
+}
+
+fastify.post('/api/upload', { config: { rateLimit: { max: 60, timeWindow: '1 minute' } } }, async (req, reply) => {
+  if (!(await canUpload(req))) {
+    return reply.code(403).send({ error: 'Builder permission required to upload' })
+  }
   const mp = await req.file()
   // collect into buffer
   const chunks = []
@@ -165,6 +209,7 @@ fastify.post('/api/upload', async (req, reply) => {
   })
   // upload
   await assets.upload(file)
+  return { success: true }
 })
 
 fastify.get('/api/upload-check', async (req, reply) => {

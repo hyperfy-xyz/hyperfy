@@ -32,9 +32,11 @@ import {
   Volume2Icon,
   HammerIcon,
   CircleArrowRightIcon,
+  TrophyIcon,
 } from 'lucide-react'
 import { cls } from './cls'
 import { useContext, useEffect, useMemo, useRef, useState } from 'react'
+import { MissionsPane } from './MissionsPane'
 import {
   FieldBtn,
   FieldCurve,
@@ -138,6 +140,13 @@ export function Sidebar({ world, ui }) {
               onClick={() => world.ui.togglePane('players')}
             >
               <UsersIcon size='1.25rem' />
+            </Btn>
+            <Btn
+              active={activePane === 'missions'}
+              suspended={ui.pane === 'missions' && !activePane}
+              onClick={() => world.ui.togglePane('missions')}
+            >
+              <TrophyIcon size='1.25rem' />
             </Btn>
             {isTouch && (
               <Btn
@@ -251,6 +260,7 @@ export function Sidebar({ world, ui }) {
         {ui.pane === 'nodes' && <Nodes key={ui.app.data.id} world={world} hidden={!ui.active} />}
         {ui.pane === 'meta' && <Meta key={ui.app.data.id} world={world} hidden={!ui.active} />}
         {ui.pane === 'players' && <Players world={world} hidden={!ui.active} />}
+        {ui.pane === 'missions' && <MissionsPane world={world} hidden={!ui.active} onOpenUpgrade={() => world.emit('open-upgrade-modal')} />}
       </div>
     </HintProvider>
   )

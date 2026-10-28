@@ -60,10 +60,13 @@ export class ClientNetwork extends System {
     const form = new FormData()
     form.append('file', file)
     const url = `${this.apiUrl}/upload`
-    await fetch(url, {
+    const authToken = storage.get('authToken')
+    const resp = await fetch(url, {
       method: 'POST',
       body: form,
+      headers: authToken ? { Authorization: `Bearer ${authToken}` } : {},
     })
+    if (!resp.ok) throw new Error(`upload failed (${resp.status})`)
   }
 
   enqueue(method, data) {
@@ -142,7 +145,38 @@ export class ClientNetwork extends System {
     this.world.blueprints.deserialize(data.blueprints)
     this.world.entities.deserialize(data.entities)
     this.world.livekit?.deserialize(data.livekit)
+    if (data.billing) {
+      this.world.billing = data.billing
+      this.world.emit('billing', data.billing)
+    }
+    if (data.progression) {
+      this.world.progression = data.progression
+      this.world.emit('progression', data.progression)
+    }
+    if (data.storyline) {
+      this.world.storyline = data.storyline
+      this.world.emit('storyline', data.storyline)
+    }
     storage.set('authToken', data.authToken)
+  }
+
+  onBillingStatus = data => {
+    this.world.billing = data
+    this.world.emit('billing', data)
+  }
+
+  onBillingBlocked = data => {
+    // apply the fresh billing state first so the upgrade modal never shows stale trial info
+    if (data?.billing) {
+      this.world.billing = data.billing
+      this.world.emit('billing', data.billing)
+    }
+    this.world.emit('billing-blocked', data)
+  }
+
+  onProgressionUpdate = data => {
+    this.world.progression = data
+    this.world.emit('progression', data)
   }
 
   onSettingsModified = data => {
