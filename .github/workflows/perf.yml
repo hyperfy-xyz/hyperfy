@@ -1,0 +1,114 @@
+name: Build performance metrics
+
+on:
+  pull_request:
+    branches:
+      - main
+    paths:
+      - "src/**"
+      - "package.json"
+      - "package-lock.json"
+      - ".github/workflows/perf.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  build-performance:
+    name: Informational production build metrics
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run production build
+        id: build_step
+        continue-on-error: true
+        shell: bash
+        run: |
+          mkdir -p perf-results
+          start_time=$(date +%s)
+
+          set +e
+          npm run build
+          build_status=$?
+          set -e
+
+          end_time=$(date +%s)
+          duration_seconds=$((end_time - start_time))
+
+          echo "duration_seconds=$duration_seconds" >> "$GITHUB_OUTPUT"
+          echo "build_exit_code=$build_status" >> "$GITHUB_OUTPUT"
+          echo "Production build duration: ${duration_seconds}s"
+          exit "$build_status"
+
+      - name: Evaluate build status and collect metrics
+        if: always()
+        shell: bash
+        run: |
+          mkdir -p perf-results
+          {
+            echo "Build performance report"
+            echo "========================"
+            echo "Build step outcome: ${{ steps.build_step.outcome }}"
+            echo "Build step conclusion: ${{ steps.build_step.conclusion }}"
+
+            if [[ "${{ steps.build_step.outcome }}" == "failure" ]]; then
+              echo "::warning::Production build failed. The failure is recorded in steps.build_step.outcome."
+              echo "Build status: FAILED (reported; workflow continues for diagnostics)"
+            elif [[ "${{ steps.build_step.outcome }}" == "success" ]]; then
+              echo "Build status: SUCCESS"
+            else
+              echo "::warning::Production build did not run; inspect earlier setup or dependency-installation steps."
+              echo "Build status: NOT RUN"
+            fi
+
+            if [[ -n "${{ steps.build_step.outputs.duration_seconds }}" ]]; then
+              echo "Build duration: ${{ steps.build_step.outputs.duration_seconds }} seconds"
+            else
+              echo "Build duration: unavailable"
+            fi
+
+            if [[ -d build ]]; then
+              echo "Build directory: present"
+              echo "Build directory size: $(du -sh build | cut -f1)"
+              echo "Build file count: $(find build -type f | wc -l | tr -d ' ')"
+            else
+              echo "::warning::Root build/ directory was not produced."
+              echo "Build directory: missing"
+            fi
+
+            if [[ -f build/meta.json ]]; then
+              echo "Esbuild metadata: present (build/meta.json)"
+              node --input-type=module -e '
+                import fs from "node:fs";
+                const meta = JSON.parse(fs.readFileSync("build/meta.json", "utf8"));
+                console.log("Esbuild input count: " + Object.keys(meta.inputs ?? {}).length);
+                console.log("Esbuild output count: " + Object.keys(meta.outputs ?? {}).length);
+              '
+            else
+              echo "::warning::build/meta.json was not found; retaining raw build-directory metrics only."
+              echo "Esbuild metadata: unavailable; raw metrics fallback used"
+            fi
+          } | tee perf-results/metrics.txt
+
+      - name: Upload build performance artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-performance-${{ github.run_id }}-${{ github.run_attempt }}
+          path: |
+            build/
+            perf-results/
+          if-no-files-found: warn
+          retention-days: 14
