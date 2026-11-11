@@ -1,0 +1,9 @@
+{
+  "lint": {
+    "exclude": [
+      "src/core/physx-js-webidl.js",
+      "dist/",
+      "public/"
+    ]
+  }
+}

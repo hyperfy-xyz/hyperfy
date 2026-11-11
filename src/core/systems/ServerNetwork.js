@@ -7,6 +7,22 @@ import { createJWT, readJWT } from '../utils-server'
 import { cloneDeep, isNumber } from 'lodash-es'
 import * as THREE from '../extras/three'
 import { Ranks } from '../extras/ranks'
+import {
+  getBillingStatus,
+  canUserBuild,
+  startUserTrial,
+  upgradeUserPlan,
+  BillingPlans,
+  SubscriptionStatuses,
+} from '../billing'
+import {
+  getProgressionStatus,
+  calculateTier,
+  MISSIONS,
+  COSMETIC_ITEMS,
+  formatHighIntensityEvent,
+  STORYLINE,
+} from '../progression'
 
 const SAVE_INTERVAL = parseInt(process.env.SAVE_INTERVAL || '60') // seconds
 const PING_RATE = 10 // seconds
@@ -232,12 +248,30 @@ export class ServerNetwork extends System {
           console.error('failed to read authToken:', authToken)
         }
       }
+      if (user) {
+        user.plan = user.plan || BillingPlans.FREE
+        user.subscriptionStatus = user.subscriptionStatus || SubscriptionStatuses.INACTIVE
+        user.xp = user.xp || 0
+        user.tier = user.tier || 1
+        user.unlockedCosmetics = user.unlockedCosmetics || JSON.stringify(['item_quantum_visor', 'badge_initiate'])
+        user.missionProgress = user.missionProgress || JSON.stringify({})
+      }
       if (!user) {
         user = {
           id: uuid(),
           name: 'Anonymous',
           avatar: null,
           rank: 0,
+          plan: BillingPlans.FREE,
+          trialStartedAt: null,
+          trialEndsAt: null,
+          subscriptionStatus: SubscriptionStatuses.INACTIVE,
+          subscriptionPlan: null,
+          xp: 0,
+          tier: 1,
+          unlockedCosmetics: JSON.stringify(['item_quantum_visor', 'badge_initiate']),
+          missionProgress: JSON.stringify({}),
+          storylineSeen: false,
           createdAt: moment().toISOString(),
         }
         await this.db('users').insert(user)
@@ -257,6 +291,7 @@ export class ServerNetwork extends System {
 
       // create socket
       const socket = new Socket({ id: user.id, ws, network: this })
+      socket.user = user
 
       // spawn player
       socket.player = this.world.entities.add(
@@ -293,6 +328,9 @@ export class ServerNetwork extends System {
         livekit,
         authToken,
         hasAdminCode: !!process.env.ADMIN_CODE,
+        billing: getBillingStatus(user),
+        progression: getProgressionStatus(user),
+        storyline: STORYLINE,
       })
 
       this.sockets.set(socket.id, socket)
@@ -428,19 +466,58 @@ export class ServerNetwork extends System {
     this.world.livekit.setMuted(data.playerId, data.muted)
   }
 
-  onBlueprintAdded = (socket, blueprint) => {
+  checkBuilderEntitlement = async socket => {
+    const user = socket.user
+    if (!user) return false
+    const billing = getBillingStatus(user)
+    if (billing.canBuildAndHost) return true
+
+    // Free user starting builder mode for the first time: automatically activate 14-day trial
+    if (user.plan === BillingPlans.FREE && !user.trialStartedAt) {
+      const trial = startUserTrial(user)
+      Object.assign(user, trial)
+      await this.db('users').where('id', user.id).update({
+        plan: trial.plan,
+        trialStartedAt: trial.trialStartedAt,
+        trialEndsAt: trial.trialEndsAt,
+      })
+      const updatedBilling = getBillingStatus(user)
+      socket.send('billingStatus', updatedBilling)
+      socket.send('chatAdded', {
+        id: uuid(),
+        from: null,
+        fromId: null,
+        body: '⚡ 14-Day Architect Trial activated! You can now build and host sectors.',
+        createdAt: moment().toISOString(),
+      })
+      return true
+    }
+
+    // Trial expired and not subscribed: reject!
+    socket.send('billingBlocked', {
+      action: 'builder',
+      reason: 'trial_expired',
+      message: 'Architect Trial has expired. Upgrade to Architect Pro to modify or host worlds.',
+      billing,
+    })
+    return false
+  }
+
+  onBlueprintAdded = async (socket, blueprint) => {
     if (!socket.player.isBuilder()) {
       return console.error('player attempted to add blueprint without builder permission')
     }
+    if (!(await this.checkBuilderEntitlement(socket))) return
     this.world.blueprints.add(blueprint)
     this.send('blueprintAdded', blueprint, socket.id)
     this.dirtyBlueprints.add(blueprint.id)
   }
 
-  onBlueprintModified = (socket, data) => {
+  onBlueprintModified = async (socket, data) => {
     if (!socket.player.isBuilder()) {
       return console.error('player attempted to modify blueprint without builder permission')
     }
+    if (!(await this.checkBuilderEntitlement(socket))) return
     const blueprint = this.world.blueprints.get(data.id)
     // if new version is greater than current version, allow it
     if (data.version > blueprint.version) {
@@ -454,10 +531,11 @@ export class ServerNetwork extends System {
     }
   }
 
-  onEntityAdded = (socket, data) => {
+  onEntityAdded = async (socket, data) => {
     if (!socket.player.isBuilder()) {
       return console.error('player attempted to add entity without builder permission')
     }
+    if (!(await this.checkBuilderEntitlement(socket))) return
     const entity = this.world.entities.add(data)
     this.send('entityAdded', data, socket.id)
     if (entity.isApp) this.dirtyApps.add(entity.data.id)
@@ -496,17 +574,19 @@ export class ServerNetwork extends System {
     entity?.onEvent(version, name, data, socket.id)
   }
 
-  onEntityRemoved = (socket, id) => {
+  onEntityRemoved = async (socket, id) => {
     if (!socket.player.isBuilder()) return console.error('player attempted to remove entity without builder permission')
+    if (!(await this.checkBuilderEntitlement(socket))) return
     const entity = this.world.entities.get(id)
     this.world.entities.remove(id)
     this.send('entityRemoved', id, socket.id)
     if (entity.isApp) this.dirtyApps.add(id)
   }
 
-  onSettingsModified = (socket, data) => {
+  onSettingsModified = async (socket, data) => {
     if (!socket.player.isBuilder())
       return console.error('player attempted to modify settings without builder permission')
+    if (!(await this.checkBuilderEntitlement(socket))) return
     this.world.settings.set(data.key, data.value)
     this.send('settingsModified', data, socket.id)
   }
@@ -515,6 +595,7 @@ export class ServerNetwork extends System {
     if (!socket.player.isBuilder()) {
       return console.error('player attempted to modify spawn without builder permission')
     }
+    if (!(await this.checkBuilderEntitlement(socket))) return
     const player = socket.player
     if (op === 'set') {
       this.spawn = { position: player.data.position.slice(), quaternion: player.data.quaternion.slice() }
@@ -554,11 +635,180 @@ export class ServerNetwork extends System {
     this.sendTo(data.networkId, 'playerSessionAvatar', data.avatar)
   }
 
-  onAi = (socket, action) => {
+  onAi = async (socket, action) => {
     if (!socket.player.isBuilder()) {
       return console.error('player attempted to use ai but they are not a builder')
     }
+    if (!(await this.checkBuilderEntitlement(socket))) return
     this.world.ai.onAction(action)
+  }
+
+  onBillingUpgrade = async (socket, data) => {
+    const user = socket.user
+    if (!user) return
+    const planName = data?.plan || 'architect_pro'
+    const upgrade = upgradeUserPlan(user, planName)
+    Object.assign(user, upgrade)
+    await this.db('users').where('id', user.id).update({
+      plan: upgrade.plan,
+      subscriptionStatus: upgrade.subscriptionStatus,
+      subscriptionPlan: upgrade.subscriptionPlan,
+    })
+    const billing = getBillingStatus(user)
+    socket.send('billingStatus', billing)
+    socket.send('chatAdded', {
+      id: uuid(),
+      from: null,
+      fromId: null,
+      body: '⭐ ARCHITECT PRO ACTIVATED! Unlimited persistent hosting and building unlocked.',
+      createdAt: moment().toISOString(),
+    })
+  }
+
+  onStartTrial = async socket => {
+    const user = socket.user
+    if (!user) return
+    if (!user.trialStartedAt) {
+      const trial = startUserTrial(user)
+      Object.assign(user, trial)
+      await this.db('users').where('id', user.id).update({
+        plan: trial.plan,
+        trialStartedAt: trial.trialStartedAt,
+        trialEndsAt: trial.trialEndsAt,
+      })
+      const billing = getBillingStatus(user)
+      socket.send('billingStatus', billing)
+      socket.send('chatAdded', {
+        id: uuid(),
+        from: null,
+        fromId: null,
+        body: '⚡ 14-Day Architect Trial activated! You can now build and host sectors.',
+        createdAt: moment().toISOString(),
+      })
+    }
+  }
+
+  onClaimMission = async (socket, missionId) => {
+    const user = socket.user
+    if (!user) return
+    const mission = MISSIONS.find(m => m.id === missionId)
+    if (!mission) return
+
+    let missionProgress = {}
+    try {
+      missionProgress =
+        typeof user.missionProgress === 'string'
+          ? JSON.parse(user.missionProgress)
+          : user.missionProgress || {}
+    } catch {
+      missionProgress = {}
+    }
+
+    const currentProg = missionProgress[missionId] || { progress: 0, completed: false, claimed: false }
+    if (currentProg.claimed) return // already claimed
+
+    // Mark completed and claimed
+    missionProgress[missionId] = {
+      progress: Math.max(currentProg.progress, mission.target),
+      completed: true,
+      claimed: true,
+      claimedAt: moment().toISOString(),
+    }
+
+    // Award XP
+    const newXp = (user.xp || 0) + mission.xp
+    user.xp = newXp
+
+    // Check tier advancement
+    const tierInfo = calculateTier(newXp)
+    user.tier = tierInfo.tier
+
+    // Unlock cosmetic if mission provides one or tier provides one
+    let unlocked = []
+    try {
+      unlocked =
+        typeof user.unlockedCosmetics === 'string'
+          ? JSON.parse(user.unlockedCosmetics)
+          : user.unlockedCosmetics || []
+    } catch {
+      unlocked = []
+    }
+
+    const rewardId = mission.rewardId || mission.rewardItem
+    if (rewardId && !unlocked.includes(rewardId)) {
+      unlocked.push(rewardId)
+    }
+    if (tierInfo.rewardId && !unlocked.includes(tierInfo.rewardId)) {
+      unlocked.push(tierInfo.rewardId)
+    }
+
+    user.unlockedCosmetics = unlocked
+    user.missionProgress = missionProgress
+
+    // Persist to database
+    await this.db('users').where('id', user.id).update({
+      xp: user.xp,
+      tier: user.tier,
+      unlockedCosmetics: JSON.stringify(unlocked),
+      missionProgress: JSON.stringify(missionProgress),
+    })
+
+    // Send updated progression to client
+    const progression = getProgressionStatus(user)
+    socket.send('progressionUpdate', progression)
+
+    // Send high-intensity chat notification
+    socket.send('chatAdded', {
+      id: uuid(),
+      from: null,
+      fromId: null,
+      body: formatHighIntensityEvent('mission_claimed', { title: mission.title }),
+      createdAt: moment().toISOString(),
+    })
+    socket.send('chatAdded', {
+      id: uuid(),
+      from: null,
+      fromId: null,
+      body: formatHighIntensityEvent('xp_gain', { amount: mission.xp }),
+      createdAt: moment().toISOString(),
+    })
+  }
+
+  onEquipCosmetic = async (socket, cosmeticId) => {
+    const user = socket.user
+    if (!user) return
+    const item = COSMETIC_ITEMS.find(c => c.id === cosmeticId)
+    if (!item) return
+
+    let unlocked = []
+    try {
+      unlocked =
+        typeof user.unlockedCosmetics === 'string'
+          ? JSON.parse(user.unlockedCosmetics)
+          : user.unlockedCosmetics || []
+    } catch {
+      unlocked = []
+    }
+
+    if (!unlocked.includes(cosmeticId)) {
+      return console.warn(`[progression] user ${user.id} tried to equip locked cosmetic: ${cosmeticId}`)
+    }
+
+    const player = socket.player
+    if (item.type === 'skin' && item.avatarUrl) {
+      player.data.avatar = item.avatarUrl
+      player.modify({ avatar: item.avatarUrl })
+      this.send('entityModified', { id: player.data.id, avatar: item.avatarUrl })
+      await this.db('users').where('id', user.id).update({ avatar: item.avatarUrl })
+    }
+
+    socket.send('chatAdded', {
+      id: uuid(),
+      from: null,
+      fromId: null,
+      body: `✨ Equipped [${item.name}]!`,
+      createdAt: moment().toISOString(),
+    })
   }
 
   onPing = (socket, time) => {

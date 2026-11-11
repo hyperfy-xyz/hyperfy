@@ -31,7 +31,8 @@
     "lint": "eslint . --ext .js,.jsx",
     "lint:fix": "eslint . --ext .js,.jsx --fix",
     "format": "prettier --write .",
-    "check": "npm run lint && npm run format"
+    "check": "npm run lint && npm run format",
+    "test": "node --test test/**/*.test.js"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.60.0",
@@ -39,6 +40,7 @@
     "@fastify/compress": "^8.0.1",
     "@fastify/cors": "^10.0.1",
     "@fastify/multipart": "^9.0.1",
+    "@fastify/rate-limit": "^10.3.0",
     "@fastify/static": "^8.0.1",
     "@fastify/websocket": "^11.0.1",
     "@firebolt-dev/css": "^0.4.3",

@@ -17,6 +17,8 @@ import { ControlPriorities } from '../../core/extras/ControlPriorities'
 // import { MenuApp } from './MenuApp'
 import { ChevronDoubleUpIcon, HandIcon } from './Icons'
 import { Sidebar } from './Sidebar'
+import { TrialBanner } from './TrialBanner'
+import { UpgradeModal } from './UpgradeModal'
 
 export function CoreUI({ world }) {
   const ref = useRef()
@@ -30,6 +32,7 @@ export function CoreUI({ world }) {
   const [disconnected, setDisconnected] = useState(false)
   const [apps, setApps] = useState(false)
   const [kicked, setKicked] = useState(null)
+  const [upgradeOpen, setUpgradeOpen] = useState(false)
   useEffect(() => {
     world.on('ready', setReady)
     world.on('player', setPlayer)
@@ -41,6 +44,12 @@ export function CoreUI({ world }) {
     world.on('avatar', setAvatar)
     world.on('kick', setKicked)
     world.on('disconnect', setDisconnected)
+    const onOpenUpgrade = () => setUpgradeOpen(true)
+    const onBillingBlocked = (data) => {
+      setUpgradeOpen(true)
+    }
+    world.on('open-upgrade-modal', onOpenUpgrade)
+    world.on('billing-blocked', onBillingBlocked)
     return () => {
       world.off('ready', setReady)
       world.off('player', setPlayer)
@@ -52,6 +61,8 @@ export function CoreUI({ world }) {
       world.off('avatar', setAvatar)
       world.off('kick', setKicked)
       world.off('disconnect', setDisconnected)
+      world.off('open-upgrade-modal', onOpenUpgrade)
+      world.off('billing-blocked', onBillingBlocked)
     }
   }, [])
 
@@ -104,6 +115,8 @@ export function CoreUI({ world }) {
       {kicked && <KickedOverlay code={kicked} />}
       {ready && isTouch && <TouchBtns world={world} />}
       {ready && isTouch && <TouchStick world={world} />}
+      {ready && <TrialBanner world={world} onOpenUpgrade={() => setUpgradeOpen(true)} onOpenMissions={() => world.ui.togglePane('missions')} />}
+      {ready && <UpgradeModal world={world} open={upgradeOpen} onClose={() => setUpgradeOpen(false)} />}
       {confirm && <Confirm options={confirm} />}
       <div id='core-ui-portal' />
     </div>

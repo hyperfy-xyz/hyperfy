@@ -441,4 +441,28 @@ const migrations = [
       await trx.schema.renameTable('_config_new', 'config')
     })
   },
+  // add billing, trial, progression, and storyline fields to users table
+  async db => {
+    await db.schema.alterTable('users', table => {
+      table.string('plan').notNullable().defaultTo('free')
+      table.timestamp('trialStartedAt').nullable()
+      table.timestamp('trialEndsAt').nullable()
+      table.string('subscriptionStatus').notNullable().defaultTo('inactive')
+      table.string('subscriptionPlan').nullable()
+      table.integer('xp').notNullable().defaultTo(0)
+      table.integer('tier').notNullable().defaultTo(1)
+      table.text('unlockedCosmetics').nullable()
+      table.text('missionProgress').nullable()
+      table.boolean('storylineSeen').notNullable().defaultTo(false)
+    })
+    const users = await db('users')
+    for (const user of users) {
+      await db('users')
+        .where('id', user.id)
+        .update({
+          unlockedCosmetics: JSON.stringify(['item_quantum_visor', 'badge_initiate']),
+          missionProgress: JSON.stringify({}),
+        })
+    }
+  },
 ]
